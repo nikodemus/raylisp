@@ -1,0 +1,162 @@
+(in-package :raylisp)
+
+;;;# Floating Point Format
+;;;
+;;; Raylisp can be built to use any Common Lisp floating point format.
+;;; The choice depends on the value of *READ-DEFAULT-FLOAT-FORMAT* at
+;;; build-time; the format used is saved in *FLOAT-FORMAT*.
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *float-format* '#.*read-default-float-format*)
+  (setf *read-default-float-format* *float-format*))
+
+(deftype float (&optional min max)
+  `(,*float-format* ,min ,max))
+
+(declaim (inline float))
+(defun float (x)
+  (coerce x 'float))
+
+(declaim (inline floatp))
+(defun floatp (x)
+  (typep x 'float))
+
+(macrolet ((def (name)
+	     `(defconstant ,(intern (format nil "~A-FLOAT" name))
+		,(intern (format nil "~A-~A" name *float-format*)))))
+  (def most-positive)
+  (def least-positive-normalized)
+  (def least-positive)
+  (def least-negative)
+  (def least-negative-normalized)
+  (def most-negative))
+
+(macrolet ((def (name)
+	     `(defconstant ,(intern (format nil "FLOAT-~A" name))
+		,(intern (format nil "~A-~A" *float-format* name)))))
+  (def epsilon))
+
+(defconstant float-positive-infinity (/ 1.0 0.0))
+(defconstant float-negative-infinity (/ -1.0 0.0))
+
+;;;# Utilities
+;;;
+;;; Note: RAYLISP shadows VECTOR and SIMPLE-VECTOR; we set up things
+;;; to that SIMPLE-VECTOR function works as CL:VECTOR, and represents
+;;; the same type and class as CL:SIMPLE-VECTOR.
+
+(deftype simple-vector (&optional size)
+  "Alias for CL:VECTOR type."
+  `(cl:simple-vector ,size))
+
+(defun simple-vector (&rest args)
+  "Alias for CL:VECTOR function."
+  (apply #'cl:vector args))
+
+(define-compiler-macro simple-vector (&rest args)
+  `(cl:vector ,@args))
+
+(defun float-vector (&rest contents)
+  (let ((array (make-array (length contents) :element-type 'float))
+        (i -1))
+    (declare (fixnum i))
+    (dolist (elt contents)
+      (setf (aref array (incf i)) elt))
+    array))
+
+(define-compiler-macro float-vector (&rest contents)
+  (declare (list contents))
+  (if (not contents)
+      #.(make-array 0 :element-type 'float)
+      (let ((form
+             (with-gensyms (array)
+               `(let ((,array (make-array ,(length contents) :element-type 'float)))
+                  ,@(let ((i -1))
+                         (mapcar (lambda (elt)
+                                   `(setf (aref ,array ,(incf i)) ,elt))
+                                 contents))
+                  ,array))))
+        (if (every #'floatp contents)
+            `(load-time-value ,form)
+            form))))
+
+(defmacro with-arrays (arrays &body body)
+  "Provides a corresponding accessor for each array as a local macro,
+so that (ARRAY ...) corresponds to (AREF ARRAY ...)."
+  `(macrolet ,(mapcar (lambda (array)
+			`(,array (&rest indices) `(aref ,',array ,@indices)))
+		      arrays)
+     ,@body))
+
+;;; Note: our EPSILON formula is purely experimental.
+
+(defconstant epsilon (/ 2.0 (expt 2 (/ (float-precision float-epsilon) 2)))
+  "Used as a liminal value to work around floating point inaccuracy.")
+
+(declaim (inline significantp))
+(defun significantp (x)
+  "True if X is greater then EPSILON."
+  (declare (type float x))
+  (< epsilon x))
+
+(defun approximates (x y)
+  "An loose equality. Two floats approximate each other if they are within
+EPSILON of each other. Two sequences approximate each other if all their
+elements are approximate each other. Everything else is an approximate only if
+they are EQUAL."
+  (cond ((and (floatp x) (floatp y))
+         (>= epsilon (abs (- x y))))
+        ((and (typep x 'sequence) (typep y 'sequence))
+          (every #'approximates x y))
+        (t
+         (equal x y))))
+
+(declaim (inline square))
+(defun square (x)
+  (* x x))
+
+(defmacro let-values (bindings &body forms)
+  "MULTIPLE-VALUE-BIND equivalent for multiple bindings."
+  (labels ((rec (binds)
+	     (if binds
+		 (destructuring-bind ((vars values-form) &rest tail) binds
+		   `((multiple-value-bind ,vars ,values-form
+		       ,@(rec tail))))
+		 forms)))
+    (first (rec bindings))))
+
+(defmacro definterface (name keywords target)
+  "Interace macro generator for BOA functions: specify a list of keywords and
+defaults in order. Macro expands to a call to target with the arguments in
+specified order while preserving the order of evaluation apparent at the call
+site."
+  (let ((keys (mapcar (lambda (spec)
+                        (intern (string (if (consp spec) (car spec) spec))
+                                :keyword))
+                      keywords))
+        (defaults (mapcar (lambda (spec)
+                            (if (consp spec)
+                                (second spec)
+                                `(required-argument
+                                  ,(intern (string spec) :keyword))))
+                          keywords)))
+    `(defmacro ,name (&rest args &key ,@keywords)       
+       (declare (ignore ,@(mapcar (lambda (spec)
+                                    (if (consp spec) (car spec) spec))
+                                  keywords)))
+       (let ((alist nil))
+         (do ((key (pop args) (pop args))
+              (value (pop args) (pop args)))
+             ((not key))
+           (push (list key (gensym (string key)) value) alist))
+         `(let ,(mapcar (lambda (elt)
+                          (list (second elt) (third elt)))
+                        (reverse alist))
+            (,',target ,@(mapcar (lambda (key default)
+                                (let ((cell (assoc key alist)))
+                                  (if cell
+                                      (second cell)
+                                      default)))
+                              ',keys
+                              ',defaults)))))))
+

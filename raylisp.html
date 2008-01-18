@@ -1,0 +1,577 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+  <title>Raylisp Manual</title>
+  <link rel="stylesheet" type="text/css" href="raylisp.css"/>
+</head>
+<body>
+  <h1>Raylisp</h1>
+  <p>Last updated 2007-03-09.</p>
+  <hr/>
+  <p class="first"><i>A Common Lisp Raytracing Engine<br/>by Nikodemus Siivola
+      &lt;nikodemus@random-state.net&gt;</i></p>
+
+  <h2>Introduction</h2>
+
+  <p class="first">Raylisp is an simple Common Lisp raytracer. It is neither
+    "complete" nor "good", but the author feels it has some
+    interesting design features that might be worth stealing and using
+    in more serious raytracers.</p>
+
+  <h3>Shader Based</h3>
+
+  <p class="first">Raylisp is shader based. Each scene object has a shader that
+    determines how that object is rendered. Shaders have full access
+    to the rest of the scene being rendered, and can be optimized
+    based on the features of the scene.</p>
+
+  <h3>Multiple Scene Representations</h3>
+  
+  <p class="first">Raylisp uses two different internal scene
+    representations.</p>
+
+  <p><i>The high-level representation</i> is used to construct a scene
+    &#8211; either directly, programmatically, using a domain specific
+    language, or possibly with a graphical tool. The high level
+    representation is designed for flexibility and is extensible.</p>
+
+  <p><i>The low-level representation</i> is used internally during
+    rendering, and is designed mainly for efficiency. It is not
+    extensible.</p>
+
+  <p>Scenes are compiled from the high-level representation
+    into the low-level as the first stage of rendering.</p>
+
+  <h3>Compilation Protocols</h3>
+
+  <p class="first">The compilation from high-level to low-level
+    representation is controlled by a number of protocols.</p>
+    
+
+  <h4>Geometry Protocol</h4>
+
+  <p class="first">Geometry protocol controls the compilation of the
+    scene objects into intersection and normal functions used in the
+    low-level scene representation.</p>
+
+  <p>There must be an applicable method for every scene object
+    on <a class="symbol"
+    href="#object-functions">object-functions</a>, which returns the
+    intersection and normal functions for that object.</p>
+
+  <h4>Bounding Protocol</h4>
+
+  <p class="first">Bounding protocol controls the generation of
+    secondary data structures used by the low-level representation to
+    optimize ray- and shadowcasting.</p>
+
+  <p>For a scene object to take advantage of these optimizations there
+    must be an applicable method for it on <a class="symbol"
+    href="#object-extents">object-extents</a>.</p>
+
+  <h4>CSG Protocol</h4>
+
+  <p class="first">CSG (Constructive Solid Geometry) protocol controls
+    the compilation of composite objects constructed with boolean
+    operations.</p>
+
+  <p>For an object to participate in CSG there must be an applicable
+    method for it on <tt>CSG-FUNCTIONS</tt>, which returns a CSG
+    intersection function and an inside function for the object.</p>
+
+  <p><i>The CSG protocol is implemented entirely using public features
+      of the geometry protocol, and could equally well have been
+      an extension library for Raylisp.</i></p>
+
+  <h4>Light Protocol</h4>
+
+  <p class="first">The light protocol controls the compilation of
+  lightsources and is responsible for shadowcasting.</p>
+
+  <p>There must be an applicable method for each lightsource on the
+    generic function <tt>LIGHT-FUNCTIONS</tt>, which returns a
+    direction function and an illumination function for the
+    lightsource.</p>
+
+  <h4>Shader Protocol</h4>
+
+  <p class="first">The shader protocol controls the compilation of
+    shaders into functions. A shader function is called with
+    intersection data and returns the apparent color.</p>
+
+  <p>There must be an applicable method for each shader
+    on <tt>SHADER-FUNCTION</tt>, which returns the corresponsing
+    shader function.</p>
+
+  <h2>Dictionary</h2>
+  
+  <h3>Protocol Classes</h3>
+  
+  <p class="first">Protocol classes are all <tt>standard-classes</tt>,
+    and are never ment to be instantiated directly. Only documented
+    and user-implemented subclasses of protocol classes may be
+    instantiated.</p>
+
+  <dl>
+    <dt>protocol-class <tt>LIGHT</tt></dt>
+    <dd><p class="first">Superclass of all lightsources.</p></dd>
+    
+    <dt>protocol-class <tt>OBJECT</tt></dt>
+    <dd><p class="first">Superclass of all scene objects</p></dd>
+
+    <dt>protocol-class <tt>SHADER</tt></dt>
+    <dd><p class="first">Superclass of all shaders.</p></dd>
+  </dl>
+
+  <h3>Protocol Functions</h3>
+
+  <p class="first">Protocol functions are
+    all <tt>standard-generic-functions</tt>, and are never ment to be
+    called by directly. Implementors of protocol classes should
+    implement the appropriate methods specialized on their classes for
+    the correct protocol functions.</p>
+
+  <dl>
+    <dt>procotol-function <tt>LIGHT-FUNCTIONS</tt> light scene</dt>
+    <dd>
+      <p class="first">Called with a lightsource and the current
+	scene, returns a direction function and an illumination
+	function as multiple values.</p>
+      <p>The <i>direction function</i> must accept a location vector
+	and return a light vector for that position (apparent
+	direction of the lightsource from the point). The returned
+	vector may be unnormalized, and it's length can be used to
+	communicate with the illumination function.</p>
+      <p>The <i>illumination function</i> must accept a location
+	vector and a light vector returned by an earlier call to the
+	direction function, and return the color of incident light at
+	point, and the length of the light vector. The illumination
+	function is responsible for shadowcasting for the lightsource
+	it represents.
+	See: <a class="symbol"
+		href="#shadow-function">shadow-function</a>.</p>
+    </dd>
+    
+    <dt>protocol-function <tt>OBJECT-FUNCTIONS</tt> object scene</dt>
+    <dd>
+      <p class="first">Called with a scene object and the current scene, returns
+	an intersection function and a normal function as multiple values.</p>
+      
+      <p>The <i>intersection function</i> is called with
+	a <a class="symbol" href="#ray">ray</a> to determine if it
+	intersects the object at a distance between <a class="symbol"
+	href="#epsilon">epsilon</a> and <a class="symbol"
+	href="#ray-extent">ray-extent</a>. If so, the function sets
+	the ray-extent to this distance and returns <tt>t</tt>.
+	Otherwise it returns <tt>nil</tt>. The intersection function
+	may also return as secondary value a surrogate object
+	constructed by <a class="symbol"
+	href="#compile-object">compile-object</a> to be used instead
+	of the original object for shading and normal calculations
+	(although it is possible to call <tt>compile-object</tt> every time
+	intersection function is called, it is highly preferable to call it
+	only once, at the time when <tt>object-functions</tt> is called).</p>
+
+      <p>The <i>normal function</i> is called with a position vector, and
+	must return the surface normal of the object at that point.</p>
+    </dd>
+    
+    <dt id="object-extents">
+      protocol-function <tt>OBJECT-EXTENTS</tt> object scene</dt>
+    <dd>
+      <p>Called with a scene object and the current scene, returns either
+	<tt>nil</tt> to indicate unboundedness or the position vectors
+	for extreme corners of an axis-aligned bounding box containing
+	the object as multiple values.</p>
+    </dd>
+
+    <dt id="object-csg-functions">
+      protocol-function <tt>OBJECT-CSG-FUNCTIONS</tt> object scene</dt>
+    <dd>
+      <p class="first">Called with a scene object and the current
+	scene, returns the CSG intersection function and an inside function
+	for the object as multiple values.</p>
+      <p>The <i>all intersections function</i> is called with two
+	vectors, and origin and a direction, and returns
+	a <tt>simple-vector</tt> of <tt>csg-intersection</tt>
+	structures, with one instance for each intersection distance
+	greater then <a class="symbol" href="#epsilon">epsilon</a>,
+	sorted in order from closest to most distant from the given
+	origin. The <tt>object</tt> slot of each structure must be
+	filled either with the result of calling <a class="symbol"
+	href="#compile-object">compile-object</a> with the object
+	argument of the call to <tt>csg-functions</tt> or a surrogate
+	object to be used in further calculations for that
+	intersection.</p>
+
+      <p>The <i>inside function</i> is called with a position vector, and
+	returns true if the designated location is inside the object.</p>
+    </dd>
+
+    <dt id="shader-function">
+      protocol-function <tt>SHADER-FUNCTION</tt> shader scene</dt>
+    <dd>
+      <p class="first">Called with a shader and the current scene, returns
+	the corresponding shader function.
+      </p>
+      <p>The <i>shader function</i> is called with an <tt>intersection</tt>
+	and a <tt>ray</tt>, and returns the apparent color of the
+	intersection point for the ray.</p>
+    </dd>
+
+  </dl>
+
+  <h3>Types</h3>
+
+  <dl>
+    <dt id="float.type">
+      type <tt>FLOAT</tt> [min [max]] </dt>
+    <dd>
+      <p class="first">Shadows <tt>cl:float</tt>. Equivalent to the
+	floating point type specified
+	by <tt>*read-default-float-format*</tt> at the time Raylisp
+	was compiled. Unless otherwise specified, all floating point
+	values referred to either by Raylisp or this manual are of
+	this type.</p>
+    </dd>
+
+    <dt id="simple-vector.type">
+      type <tt>SIMPLE-VECTOR</tt> [size]</dt>
+    <dd>
+      <p class="first">Shadows <tt>cl:simple-vector</tt>, but is
+	equivalent to it as a type specifier.</p>
+      <p>See also:
+	type <a href="#vector.type">vector</a>, and
+	functions <a href="#vector.fun">vector</a>
+	and <a href="#simple-vector.fun">simple-vector</a>.</p></dd>
+
+    <dt id="vector.type">
+      type <tt>VECTOR</tt></dt>
+    <dd>
+      <p class="first">Shadows <tt>cl:vector</tt>. Equivalent to the
+	type specifier <tt>(cl:simple-array raylisp:float (3))</tt>.
+	Denotes a mathematical 3-dimensional vector. Unless otherwise
+	specified, all vectors referred to by Raylisp or this manual
+	are of this type.</p>
+      <p>See also:
+	type <a href="#simple-vector.type">simple-vector</a>, and
+	functions <a href="#vector.fun">vector</a>
+	and <a href="#simple-vector.fun">simple-vector</a>.</p></dd>
+  </dl>
+
+  <h3>Constants</h3>
+
+  <dl>
+    <dt id="epsilon.const">
+      constant <tt>EPSILON</tt></dt>
+    <dd>
+      <p class="first">A small value of type <a href="#float.type"
+        class="symbol">float</a>, used as a liminal value in rendering:
+	distances upto <tt>epsilon</tt> are typically considered zero.</p>
+
+      <p>See
+	also: <a href="#float-epsilon.const">float-epsilon</a>.</p></dd>
+
+    <dt id="float-epsilon.const">
+      constant <tt>FLOAT-EPSILON</tt></dt>
+    <dd>
+      <p class="first">Floating point epsilon of
+	type <a href="#float.type" class="symbol">float</a>.</p>
+
+      <p>See also: <a class="symbol"
+	href="epsilon.const">epsilon</a>.</p></dd>
+
+    <dt id="float-negative-infinity.const">
+      constant <tt>FLOAT-NEGATIVE-INFINITY</tt></dt>
+    <dd>
+      <p class="first">Negative inifinity of
+      type <a href="#float.type" class="symbol">float</a>.</p></dd>
+
+    <dt id="float-positive-infinity.const">
+      constant <tt>FLOAT-POSITIVE-INFINITY</tt></dt>
+    <dd>
+      <p class="first">Positive inifinity of
+      type <a href="#float.type" class="symbol">float</a>.</p></dd>
+
+    <dt id="least-positive-float.const">
+      constant <tt>LEAST-POSITIVE-FLOAT</tt></dt>
+    <dd>
+      <p class="first">Smallest positive (possibly denormalized) value
+	of type <a href="#float.type" class="symbol">float</a> that is
+	not zero.</p></dd>
+
+    <dt id="least-positive-normalized-float.const">
+      constant <tt>LEAST-POSITIVE-NORMALIZED-FLOAT</tt></dt>
+    <dd>
+      <p class="first">Smallest positive normalized value of
+	type <a href="#float.type" class="symbol">float</a> that is
+	not zero.</p></dd>
+    
+    <dt id="least-neagtive-float.const">
+      constant <tt>LEAST-NEGATIVE-FLOAT</tt></dt>
+    <dd>
+      <p class="first">Smallest negative (possibly denormalized) value
+	of type <a href="#float.type" class="symbol">float</a> that is
+	not zero.</p></dd>
+
+    <dt id="least-neagtive-normalized-float.const">
+      constant <tt>LEAST-POSITIVE-NORMALIZED-FLOAT</tt></dt>
+    <dd>
+      <p class="first">Smallest neagtive normalized value of
+	type <a href="#float.type" class="symbol">float</a> that is
+	not zero.</p></dd>
+    
+    <dt id="most-negative-float.const">
+      constant <tt>MOST-NEGATIVE-FLOAT</tt></dt>
+    <dd>
+      <p class="first">Largest positive value of type <a href="#float.type"
+	class="symbol">float</a> that is not infinite.</p></dd>
+      
+    <dt id="most-positive-float.const">
+      constant <tt>MOST-POSITIVE-FLOAT</tt></dt>
+    <dd>
+      <p class="first">Largest positive value of type <a href="#float.type"
+	class="symbol">float</a> that is not infinite.</p></dd>
+  </dl>
+
+  <h3>Operators</h3>
+
+  <dl>
+    <dt id="float.fun">
+      function <tt>FLOAT real &rArr; float</tt></dt>
+    <dd>
+      <p class="first">Called with a real number, returns
+	a <a class="symbol" href="#float.type">float</a> numerically
+	equal to it.</p>
+    </dd>
+
+    <dt id="floatp.fun">
+      function <tt>FLOATP object &rArr; boolean</tt></dt>
+    <dd>
+      <p class="first">Called with any object, returns <tt>t</tt> if
+	the object is a <a class="symbol" href="#float.type">float</a>,
+	and <tt>nil</tt> otherwise.</p>
+    </dd>
+
+    <dt id="least-positive-quadratic-root.fun">
+      function <tt>LEAST-POSITIVE-QUADRATIC-ROOT a b c &rArr; float</tt></dt>
+    <dd>
+      <p class="first">Returns the smallest positive real root
+	of <tt>ax<sup>2</sup>+bx+c</tt>, or -1.0 if there are no
+	positive real roots. Arguments <i>a</i>, <i>b</i>,
+	and <i>c</i> must be of type <a href="#float.type"
+	class="symbol">float</a>.</p></dd>
+
+    <dt id="map-positive-quadratic-roots.fun">
+      function <tt>MAP-POSITIVE-QUADRATIC-ROOTS function a b c &rArr;
+	list</tt></dt>
+    <dd>
+      <p class="first">Returns a <tt>list</tt> containing the results
+	  of calling <i>function</i> with positive real roots
+	  of <tt>ax<sup>2</sup>+bx+c</tt>, from the smallest to the
+	  largest. Arguments <i>a</i>, <i>b</i>, and <i>c</i> must be
+	  of type <a href="#float.type"
+	  class="symbol">float</a>.</p></dd>
+
+    <dt id="simple-vector.fun">
+      function <tt>SIMPLE-VECTOR &rest elements &rArr; simple-vector</tt></dt>
+    <dd>
+      <p class="first">Shadows <tt>cl:simple-vector</tt>, and is
+	equivalent to the function <tt>cl:vector</tt>.</p>
+      <p>See also:
+	function <a class="symbol" href="#vector.fun">vector</a>, and
+	types <a class="symbol"
+	href="#simple-vector.type">simple-vector</a>
+	and <a class="symbol" href="#vector.type">vector</a>.</p></dd>
+  </dl>  
+
+  <h3>Vector Operations</h3>
+
+  <dl>
+    <dt id="cros-product.fun">
+      
+
+    <dt id="dot-product.fun">
+      function <tt>DOT-PRODUCT a b &rArr; float</tt></dt>
+    <dd>
+      <p class="first">Returns the scalar product
+	of <a href="#vector.type" class="symbol">vectors</a> <i>a</i>
+	and <i>b</i>.</p>
+      <pre>a&sdot;b = a<sub>x</sub>b<sub>x</sub> + a<sub>y</sub>b<sub>y</sub> + a<sub>z</sub>b<sub>z</sub></pre>
+      <p>See also: <a href="dot-product*.fun"
+		      class="symbol">dot-product*</a>.</p></dd>
+
+    <dt id="dot-product*.fun">
+      function <tt>DOT-PRODUCT* ax ay az bx by bz &rArr; float</tt></dt>
+    <dd>
+      <p class="first">Returns the scalar product of vector <tt>a</tt>
+	denoted by <i>ax</i>, <i>ay</i>, and <i>az</i>, and
+	vector <tt>b</tt> denoted by <i>bx</i>, <i>by</i>,
+	and <i>bz</i>.</p>
+      <pre>a&sdot;b = a<sub>x</sub>b<sub>x</sub> + a<sub>y</sub>b<sub>y</sub> + a<sub>z</sub>b<sub>z</sub></pre>
+      <p>See also: <a href="dot-product.fun"
+		      class="symbol">dot-product</a>.</p></dd>
+    
+    <dt id="hadamard-product.fun">
+      function <tt>HADAMARD-PRODUCT a b &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the hadamard product
+	of <a href="#vector.type" class="symbol">vectors</a> <i>a</i>
+	and <i>b</i>.</p>
+      <pre>hadamard(a,b) = a<sub>x</sub>b<sub>x</sub>i + a<sub>y</sub>b<sub>y</sub>j + a<sub>z</sub>b<sub>z</sub>k</pre>
+    </dd>
+
+    <dt id="vector.fun">
+      function <tt>VECTOR x y z &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Shadows <tt>cl:vector</tt>. Constructs and
+	returns a <a href="#vector.type" class="symbol">vector</a>
+	with <a class="symbol"
+	href="#float.type">floats</a> <i>x</i>, <i>y</i>, and <i>z</i>
+	as initial elements.</p>
+      <pre>v = xi + yj + zk</pre>
+      <p>See also:
+	function <a class="symbol"
+	href="#simpl-vector.fun">simple-vector</a>, and
+	types <a class="symbol"
+	href="#simple-vector.type">simple-vector</a>
+	and <a class="symbol" href="#vector.type">vector</a>.</p></dd>
+    
+    <dt id="vector-add.fun">
+      function <tt>VECTOR-ADD a b &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the result of ddition
+	of <a href="#vector.type" class="symbol">vectors</a> <i>a</i>
+	and <i>b</i>.</p>
+      <pre>a+b = (a<sub>x</sub>+b<sub>x</sub>)i + (a<sub>y</sub>+b<sub>y</sub>)j + (a<sub>z</sub>+b<sub>z</sub>)k</pre>
+    </dd>
+
+    <dt id="vector-add-fraction">
+      function <tt>VECTOR-ADD-FRACTION a b f &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Return the result of adding
+	to <a href="#vector.type" class="symbol">vector</a> <i>a</i>
+	the <a href="#vector.type" class="symbol">vector</a> <i>b</i>
+	multiplied by the <a href="#float.type" class="symbol">float</a>
+	<i>f</i>.</p>
+      <pre>a+bf = (a<sub>x</sub>+b<sub>x</sub>f)i + (a<sub>y</sub>+b<sub>y</sub>f)j + (a<sub>z</sub>+b<sub>z</sub>f)k</pre></dt>
+
+    <dt id="vector-div.fun">
+      function <tt>VECTOR-DIV v f &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the result of
+	dividing <a href="#vector.type"
+	class="symbol">vector</a> <i>v</i> by <a href="#float.type"
+	class="symbol">float</a> <i>f</i>.</p>
+      <pre>v/f = (v<sub>x</sub>/f)i + (v<sub>y</sub>/f)j + (v<sub>z</sub>/f)k</pre>
+    </dd>
+
+    <dt id="vector-inverse.fun">
+      function <tt>VECTOR-INVERSE v &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the inverse of <a href="#vector.type"
+	class="symbol">vector</a> <i>v</i> with respect to
+	addition.</p>
+      <pre>-v = -v<sub>x</sub>i - v<sub>y</sub>j - v<sub>z</sub>k</pre></dd>
+
+    <dt id="vector-lerp.fun">
+      function <tt>VECTOR-LERP a b f &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the result of linear interpolation
+	between <a href="#vector.type"
+	class="symbol">vectors</a> <i>a</i> and <i>b</i> using the
+	interpolation coefficient <i>f</i>.</p>
+      <pre>lerp(a,b,f) = (1-f)a + fb</pre>
+
+    <dt id="vector-length.fun">
+      function <tt>VECTOR-LENGTH v &rArr; float</tt></dt>
+    <dd>
+      <p class="first">Returns the length of
+      the <a href="#vector.type"
+      class="symbol">vector</a> <i>v</i>.</p>
+      <pre>|v| = &radic;(v<sub>x</sub><sup>2</sup> + v<sub>y</sub><sup>2</sup> + v<sub>z</sub><sup>2</sup>)</pre>
+
+    <dt id="vector-mul.fun">
+      function <tt>VECTOR-MUL v f &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the result of
+	multiplying <a href="#vector.type"
+	class="symbol">vector</a> <i>v</i> by <a href="#float.type"
+	class="symbol">float</a> <i>f</i>.</p>
+      <pre>fv = fv<sub>x</sub>i + fv<sub>y</sub>j + fv<sub>z</sub>k</pre>
+    </dd>
+
+    <dt id="vector-sub.fun">
+      function <tt>VECTOR-SUB a b &rArr; vector</tt></dt>
+    <dd>
+      <p class="first">Returns the result of substraction
+	of <a href="#vector.type" class="symbol">vectors</a> <i>a</i>
+	and <i>b</i>.</p>
+      <pre>a-b = (a<sub>x</sub>-b<sub>x</sub>)i + (a<sub>y</sub>-b<sub>y</sub>)j + (a<sub>z</sub>-b<sub>z</sub>)k</pre>
+    </dd>
+  </dl>
+
+  <h3>Tools</h3>
+
+  <dl>
+    <dt id="shadow-function">
+      function <tt>SHADOW-FUNCTION</tt> vector scene</dt>
+    <dd>
+      <p class="first">Called with a location vector for a lightsource
+	and the current scene. Returns a shadowcasting function for
+	the location.</p>
+      <p>The shadowcasting function is called with an intersection point,
+	normalized light vector, and the distance of the lightsource from
+	the intersection. It returns a solid object casting a shadow from
+	the lightsource to the point, or NIL if no shadow is cast.</p>
+      <p><b>FIXME</b>: Implementing translucent shadows will require
+	this to change.</p>
+    </dd>
+  </dl>
+
+  <h2>Future Work</h2>
+  <ul>
+    <li>Translucent shadows.</li>
+    <li>Fake IOR.</li>
+    <li>Explain SHADER-WEIGHT.</li>
+    <li>Surface syntax for terser scene specifications.</li>
+    <li>Graphical scene editor.</li>
+    <li>Support for exploiting spatial hierarchies exists in the
+      design, but is not utilized yet: adding a KD-tree for
+      intersection testing and using hierarchical bounding for CSG
+      remains to be done.</li>
+    <li>Vista buffer.</li>
+    <li>SHADOW-FUNCTION basically has the necessary infrastructure to
+      support light buffers (or multi-object caches), but they are not
+      yet implemented.</li>
+    <li>Have RAYTRACE return a function for computing the color
+      instead of the color. This function's return value would depend
+      on shaders: by changing shaders the color would directly change
+      without full re-rendering. Symbolic raytracing of sorts:
+      raytrace and get a raster consisting of functions. Set shaders
+      and call each function to get the color for that pixel.</li>
+    <li>A real color type as opposed to RGB vectors.</li>
+    <li>Support for both wavelength and RGB representations.</li>
+    <li>Few rotations are currently missing. It might also be more
+      efficient to have transformations represented by functions
+      (especially as we could call COMPILE on them to inline the
+      constants) instead. Support for shearing.</li>
+    <li>Various turbulent shaders (needs noise), more ways to combine
+      & blend shaders. Variant reflection. Faked surface normals.</li>
+    <li>Area lights.</li>
+    <li>Light groups.</li>
+    <li>Objects: Box, cylinder, torus, faster & general sphere & plane,
+      meshes, heightfields.</li>
+    <li>Cameras: Orthogonal, fisheye, panorama, focal blur.</li>
+    <li>Better antialiazing.</li>
+    <li>Ray attenuation. Heterogenous media.</li>
+    <li>Backwards raytracing: Light maps for real refraction effects.</li>
+    <li>Radiosity.</li>
+    <li>Shader for angle-dependent reflection.</li>
+    <li>Environment sensitive shaders: dirt in hard to reach places. etc.</li>
+    <li></li>
+    <li></li>
+  </ul>
+</body>
+</html>
