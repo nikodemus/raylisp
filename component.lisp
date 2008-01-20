@@ -455,14 +455,14 @@ source such as the sun or moon."))
                  (point (intersection-point intersection))
                  (ratio (mod (* (aref point axis) scale) 2.0)))
             (if (> 1.0 ratio)
-                (blend-vectors start end (* ratio 0.5))
-                (blend-vectors end start (* ratio 0.5)))))
+                (vector-lerp start end (* ratio 0.5))
+                (vector-lerp end start (* ratio 0.5)))))
         (lambda (intersection ray)
           (let* ((start (funcall start intersection ray))
                  (end (funcall end intersection ray))
                  (point (intersection-point intersection))
                  (ratio (mod (* (aref point axis) scale) 1.0)))
-            (blend-vectors start end ratio))))))
+            (vector-lerp start end ratio))))))
 
 ;;;## Checker Shader
 ;;;
