@@ -10,7 +10,7 @@
   (defvar *float-format* '#.*read-default-float-format*)
   (setf *read-default-float-format* *float-format*))
 
-(deftype float (&optional min max)
+(deftype float (&optional (min '*) (max '*))
   `(,*float-format* ,min ,max))
 
 (declaim (inline float))
