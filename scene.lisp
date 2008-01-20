@@ -18,7 +18,29 @@
    (find-default :adaptive-limit '(float 0.0 1.0)) :type (float 0.0 1.0))
   (background-color (find-default :background-color 'vector) :type vector)
   (ambient-light (find-default :ambient-light 'vector) :type vector)
+  (default-camera)
   (compiled-scene))
+
+(defvar *scenes* (make-hash-table))
+
+(defmacro define-scene (name &body alist)
+  (flet ((get-key (name &optional use-default-type)
+           (let ((forms (cdr (assoc name alist))))
+             (cond (use-default-type
+                    (assert (not (cdr forms)))
+                    (or (car forms) (find-default name use-default-type)))
+                   (t
+                    `(list ,@forms))))))
+    `(progn
+       (setf (gethash ',name *scenes*)
+             (make-scene :objects ,(get-key :objects)
+                         :lights ,(get-key :lights)
+                         :background-color ,(get-key :background-color 'vector)
+                         :ambient-light ,(get-key :ambient-light 'vector)
+                         :adaptive-limit ,(get-key :adaptive-limit '(float 0.0 1.0))
+                         :depth-limit ,(get-key :depth-limit 'fixnum)
+                         :default-camera ,(get-key :default-camera t)))
+       ',name)))
 
 (defstruct compiled-scene
   (objects nil :type list)
