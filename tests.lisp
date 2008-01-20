@@ -1,5 +1,229 @@
 (in-package :raylisp)
 
+(define-scene test-0
+  (:objects 
+   (make-instance 'sphere 
+                  :shader
+                  (make-instance 'flat :color red))
+   (make-instance 'sphere 
+                  :location (@ 0 -0.5 0)
+                  :transform (scale (@ 3 0.5 0.5))
+                  :shader
+                  (make-instance 'flat :color blue)))
+  (:lights 
+   (make-instance 'point-light 
+                  :location (@ 10 5 -20)))
+  (:default-camera 
+      (make-instance 'pinhole
+                     :location (@ 0 3 -20)
+                     :look-at origin
+                     :focal-length 4.0)))
+
+(define-scene test-1
+  (:objects 
+   (make-instance 'sphere 
+                  :shader
+                  (make-instance 'solid :color red))
+   (make-instance 'sphere 
+                  :location (@ 0 -0.5 0)
+                  :transform (scale (@ 3 0.5 0.5))
+                  :shader
+                  (make-instance
+                   'gradient
+                   :start (make-instance 'solid :color blue)
+                   :end (make-instance 'solid :color green)
+                   :axis 0
+                   :scale 3.0)))
+  (:lights
+   (make-instance 'point-light 
+                  :location (@ 10 5 -20)))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 3 -20)
+                     :look-at origin
+                     :focal-length 4.0)))
+
+(define-scene test-2
+  (:objects 
+   (make-instance 'sphere
+                  :shader
+                  (make-instance
+                   'composite
+                   :shaders
+                   (list
+                    (make-instance 'raytrace
+                                   :specular 0.1
+                                   :transmit 0.9
+                                   :ior 1.6)
+                    (make-instance 'phong
+                                   :specular 0.5
+                                   :size 40.0
+                                   :diffuse 0.3
+                                   :ambient 0.2
+                                   :color yellow))))
+   (make-instance 'plane
+                  :location (@ 0 -1 0)
+                  :shader
+                  (make-instance 'checker
+                                 :odd
+                                 (make-instance 'phong :color black)
+                                 :even
+                                 (make-instance 'phong :color white))))
+  (:lights 
+   (make-instance 'point-light 
+                  :location (@ -30 30 -30)))
+  (:background-color blue)
+  (:ambient-light white)
+  (:adaptive-limit 0.01)
+  (:depth-limit 12)
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 0.5 -4)
+                     :look-at origin
+                     :focal-length 3.0)))
+
+(define-scene test-3
+    (:objects 
+     (make-instance
+      'csg
+      :type 'intersection
+      :objects (list
+                (make-instance 'sphere
+                               :location (@ -0.5 0 0)
+                               :shader
+                               (make-instance 'solid :color red))
+                (make-instance 'sphere
+                               :location (@ 0.5 0 0)
+                               :shader
+                               (make-instance 'solid
+                                              :color blue))
+                (make-instance 'sphere
+                               :location (@ 0 -0.1 0)
+                               :shader
+                               (make-instance 'solid
+                                              :color green)))))
+  (:lights 
+   (make-instance 'solar-light :direction y-axis))
+  (:background-color black)
+  (:ambient-light white)
+  (:adaptive-limit 0.01)
+  (:depth-limit 5)
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 1.5 -10)
+                     :look-at origin
+                     :focal-length 3.0)))
+
+(define-scene test-4
+  (:objects 
+   (make-instance 'csg
+                  :type 'difference
+                  :objects
+                  (list
+                   (make-instance 'sphere
+                                  :shader
+                                  (make-instance 'solid
+                                                 :color red))
+                   (make-instance 'sphere
+                                  :location (@ 0 1 0)
+                                  :shader
+                                  (make-instance 'solid
+                                                 :color blue))
+                   (make-instance 'sphere
+                                  :location (@ 1 0 0)
+                                  :shader
+                                  (make-instance 'solid
+                                                 :color green)))))
+  (:lights 
+   (make-instance 'solar-light :direction (@ 1 1 0.5)))
+  (:background-color black)
+  (:ambient-light white)
+  (:adaptive-limit 0.01)
+  (:depth-limit 5)
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 8 6.5 -2)
+                     :look-at origin
+                     :focal-length 3.0)))
+
+(define-scene test-5
+  (:objects 
+   (make-instance 'sphere 
+                  :radius 0.3
+                  :shader (make-instance 'solid :color white))
+   (make-instance 
+    'csg
+    :type 'intersection
+    :objects
+    (list
+     (make-instance 'plane
+                    :normal (@ -0.5 1 0)
+                    :shader
+                    (make-instance 'solid
+                                   :color green))
+     (make-instance 'plane
+                    :normal (@ 0.5 1 0)
+                    :shader
+                    (make-instance 'solid
+                                   :color red)))
+    :transform (translate (@ -1 0 0))))
+  (:lights 
+   #+nil
+   (make-instance 'solar-light :direction y-axis)
+   (make-instance 'point-light :location (@ 0 200 0)))
+  (:background-color black)
+  (:ambient-light white)
+  (:adaptive-limit 0.01)
+  (:depth-limit 5)
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 3 -10)
+                     :look-at origin
+                     :focal-length 3.0)))
+
+(define-scene test-6
+  (:objects 
+   (make-instance 'sphere
+                  :shader
+                  (make-instance
+                   'composite
+                   :shaders
+                   (list
+                    (make-instance 'raytrace
+                                   :specular 0.1
+                                   :transmit 0.9
+                                   :ior 1.6)
+                    (make-instance 'phong
+                                   :specular 0.5
+                                   :size 40.0
+                                   :diffuse 0.3
+                                   :ambient 0.1
+                                   :color yellow))))
+   (make-instance 
+    'plane
+    :location (@ 0 -1 0)
+    :shader
+    (make-instance 'checker
+                   :odd
+                   (make-instance 'phong :color black)
+                   :even
+                   (make-instance 'phong :color white
+                                         :ambient 0.1))))
+  (:lights 
+   (make-instance 'spotlight
+                  :location (@ -30 30 -30)
+                  :direction (@ 30 -30 30)
+                  :aperture 0.999))
+  (:background-color blue)
+  (:ambient-light white)
+  (:adaptive-limit 0.01)
+  (:depth-limit 12)
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 0.5 -4)
+                     :look-at origin
+                     :focal-length 3.0)))
+
 ;;;# Tests
 ;;;
 ;;; Raylisp includes both test scenes, and a number of functional
@@ -39,14 +263,6 @@
       (format t "~&~A tests of ~A passed. (~A%)~%"
 	      *passed-test-count* total 
 	      (* 100.0 (/ *passed-test-count* total))))))
-
-(defun render-tests (&optional (n 5))
-  (dotimes (i n)
-    (let* ((d (1+ i))
-	   (name (intern (format nil "TEST-RENDER.~D" d) :raylisp)))
-      (print name)
-      (terpri)
-      (funcall name))))
 
 (defun test-math ()
   (test math.1
@@ -171,267 +387,5 @@
       (test plane.3.1
 	    (intersect p origin (@ 0 -1 0))
 	    1.0))))
-	    
-(defun test-pathname (n)
-  (print (make-pathname :name (format nil "test.~D" n) :type "ppm")))
 
-(defun test-render.0 (&optional (pathname (test-pathname 0)) (x 400) (y 300))
-  (let ((scene (make-scene
-		:objects 
-		(list 
-		 (make-instance 'sphere 
-				:shader
-				(make-instance 'flat :color red))
-		 (make-instance 'sphere 
-				:location (@ 0 -0.5 0)
-				:transform (scale (@ 3 0.5 0.5))
-				:shader
-				(make-instance 'flat :color blue)))
-		:lights 
-		(list
-		 (make-instance 'point-light 
-				:location (@ 10 5 -20))))))
-    (save-ppm (render scene (make-instance 'pinhole
-					   :location (@ 0 3 -20)
-					   :look-at origin
-					   :focal-length 4.0)
-		      x y)
-	      pathname)))
-
-(defun test-render.1 (&optional (pathname (test-pathname 1)) (x 400) (y 300))
-  (let ((scene (make-scene
-		:objects 
-		(list 
-		 (make-instance 'sphere 
-				:shader
-				(make-instance 'solid :color red))
-		 (make-instance 'sphere 
-				:location (@ 0 -0.5 0)
-				:transform (scale (@ 3 0.5 0.5))
-				:shader
-				(make-instance
-                                 'gradient
-                                 :start (make-instance 'solid :color blue)
-                                 :end (make-instance 'solid :color green)
-                                 :axis 0
-                                 :scale 3.0)))
-		:lights 
-		(list
-		 (make-instance 'point-light 
-				:location (@ 10 5 -20))))))
-    (save-ppm (render scene (make-instance 'pinhole
-					   :location (@ 0 3 -20)
-					   :look-at origin
-					   :focal-length 4.0)
-		      x y)
-	      pathname)))
-
-(defun test-render.2 (&optional (pathname (test-pathname 2)) (x 200) (y 150))
-  (let ((scene (make-scene 
-		:objects 
-		(list 
-		 (make-instance 'sphere
-				:shader
-				(make-instance
-                                 'composite
-                                 :shaders
-                                 (list
-                                  (make-instance 'raytrace
-                                                 :specular 0.1
-                                                 :transmit 0.9
-                                                 :ior 1.6)
-                                  (make-instance 'phong
-                                                 :specular 0.5
-                                                 :size 40.0
-                                                 :diffuse 0.3
-                                                 :ambient 0.2
-                                                 :color yellow))))
-		 (make-instance 
-		  'plane
-		  :location (@ 0 -1 0)
-		  :shader
-		  (make-instance 'checker
-				 :odd
-				 (make-instance 'phong :color black)
-				 :even
-				 (make-instance 'phong :color white))))
-		:lights (list 
-			 (make-instance 'point-light 
-					:location (@ -30 30 -30)))
-		:background-color blue
-		:ambient-light white
-		:adaptive-limit 0.01
-		:depth-limit 12)))
-    
-    (save-ppm (nth-value 0 (render scene (make-instance 'pinhole
-							:location (@ 0 0.5 -4)
-							:look-at origin
-							:focal-length 3.0)
-				   x y
-				   nil))
-	      pathname)))
-
-
-(defun test-render.3 (&optional (pathname (test-pathname 3)) (x 400) (y 300))
-  (let ((scene (make-scene 
-		:objects 
-		(list 
-		 (make-instance
-                  'csg
-                  :type 'intersection
-                  :objects
-                  (list
-                   (make-instance 'sphere
-                                  :location (@ -0.5 0 0)
-                                  :shader
-                                  (make-instance 'solid :color red))
-                   (make-instance 'sphere
-                                  :location (@ 0.5 0 0)
-                                  :shader
-                                  (make-instance 'solid
-                                                 :color blue))
-                   (make-instance 'sphere
-                                  :location (@ 0 -0.1 0)
-                                  :shader
-                                  (make-instance 'solid
-                                                 :color green)))))
-		:lights (list 
-			 (make-instance 'solar-light :direction y-axis))
-		:background-color black
-		:ambient-light white
-		:adaptive-limit 0.01
-		:depth-limit 5)))
-    
-    (save-ppm (render scene (make-instance 'pinhole
-					   :location (@ 0 1.5 -10)
-					   :look-at origin
-					   :focal-length 3.0)
-		      x y)
-	      pathname)))
-
-
-(defun test-render.4 (&optional (pathname (test-pathname 4)) (x 400) (y 300))
-  (let ((scene (make-scene 
-		:objects 
-		(list 
-		 (make-instance 'csg
-				:type 'difference
-				:objects
-				(list
-				 (make-instance 'sphere
-						:shader
-						(make-instance 'solid
-							       :color red))
-				 (make-instance 'sphere
-						:location (@ 0 1 0)
-						:shader
-						(make-instance 'solid
-							       :color blue))
-				 (make-instance 'sphere
-						:location (@ 1 0 0)
-						:shader
-						(make-instance 'solid
-							       :color green)))))
-		:lights (list 
-			 (make-instance 'solar-light :direction (@ 1 1 0.5)))
-		:background-color black
-		:ambient-light white
-		:adaptive-limit 0.01
-		:depth-limit 5)))
-    
-    (save-ppm (render scene (make-instance 'pinhole
-					   :location (@ 8 6.5 -2)
-					   :look-at origin
-					   :focal-length 3.0)
-		      x y)
-	      pathname)))
-
-
-(defun test-render.5  (&optional (pathname (test-pathname 5)) (x 400) (y 300))
-  (let ((scene (make-scene 
-		:objects 
-		(list
-		 (make-instance 'sphere 
-				:radius 0.3
-				:shader (make-instance 'solid :color white))
-		 (make-instance 
-		  'csg
-		  :type 'intersection
-		  :objects
-		  (list
-		   (make-instance 'plane
-				  :normal (@ -0.5 1 0)
-				  :shader
-				  (make-instance 'solid
-						 :color green))
-		   (make-instance 'plane
-				  :normal (@ 0.5 1 0)
-				  :shader
-				  (make-instance 'solid
-						 :color red)))
-		  :transform (translate (@ -1 0 0))))
-		:lights (list 
-			 #+nil
-			 (make-instance 'solar-light :direction y-axis)
-			 (make-instance 'point-light 
-					:location (@ 0 200 0)))
-		:background-color black
-		:ambient-light white
-		:adaptive-limit 0.01
-		:depth-limit 5)))
-    
-    (save-ppm (render scene (make-instance 'pinhole
-					   :location (@ 0 3 -10)
-					   :look-at origin
-					   :focal-length 3.0)
-		      x y)
-	      pathname)))
-
-(defun test-render.6 (&optional (pathname (test-pathname 6)) (x 200) (y 150))
-  (let ((scene (make-scene 
-		:objects 
-		(list 
-		 (make-instance 'sphere
-				:shader
-				(make-instance
-                                 'composite
-                                 :shaders
-                                 (list
-                                  (make-instance 'raytrace
-                                                 :specular 0.1
-                                                 :transmit 0.9
-                                                 :ior 1.6)
-                                  (make-instance 'phong
-                                                 :specular 0.5
-                                                 :size 40.0
-                                                 :diffuse 0.3
-                                                 :ambient 0.1
-                                                 :color yellow))))
-		 (make-instance 
-		  'plane
-		  :location (@ 0 -1 0)
-		  :shader
-		  (make-instance 'checker
-				 :odd
-				 (make-instance 'phong :color black)
-				 :even
-				 (make-instance 'phong :color white
-                                                :ambient 0.1))))
-		:lights (list 
-			 (make-instance 'spotlight
-					:location (@ -30 30 -30)
-                                        :direction (@ 30 -30 30)
-                                        :aperture 0.999))
-		:background-color blue
-		:ambient-light white
-		:adaptive-limit 0.01
-		:depth-limit 12)))
-    
-    (save-ppm (nth-value 0 (render scene (make-instance 'pinhole
-							:location (@ 0 0.5 -4)
-							:look-at origin
-							:focal-length 3.0)
-				   x y
-				   t))
-	      pathname)))
 
