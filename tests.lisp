@@ -270,6 +270,8 @@
 	(normalize (@ 1 1 1)))
   (test math.2 (vector 1.0 2.0 4.654) (@ 1 2 4.654)))
 
+;;; FIXME: OBSOLETE
+#+nil
 (defun test-ray ()
   (let* ((from (@ 1 0 -1))
 	 (direction (normalize (@ -1 0 1)))

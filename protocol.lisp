@@ -266,8 +266,7 @@ intersections."
 	 (normal (funcall (object-normal object) point))
 	 (n.d (dot-product normal (ray-direction ray))))
     (funcall (object-shader object)
-	     (make-intersection 
-	      :point point 
-	      :normal (if (plusp n.d) (reverse-vector normal) normal)
-	      :n.d n.d)
+             point 
+             (if (plusp n.d) (reverse-vector normal) normal)
+             n.d
 	     ray)))

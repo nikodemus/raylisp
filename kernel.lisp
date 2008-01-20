@@ -43,24 +43,12 @@
                         (weight 1.0) (depth 0) (environment *global-environment*))
   %make-ray)
 
-;;; INTERSECTION stores additional data about an intersection point. 
-
-(defstruct (intersection
-             (:constructor
-              %make-intersection (point normal n.d)))
-  (point (required-argument) :type vector)
-  (normal (required-argument) :type vector)
-  (n.d (required-argument) :type float))
-
-(definterface make-intersection (point normal n.d)
-  %make-intersection)
-
 ;;; Spawning new rays. The SPAWN-RAYS is quite ugly and should be fixed.
 
-(defun reflected-ray (intersection ray specular)
-  (declare (type intersection intersection)
+(defun reflected-ray (point normal dot ray specular)
+  (declare (type vector point normal)
            (type ray ray)
-           (type float specular))
+           (type float dot specular))
   (note-reflected-ray)
   ;; Intersection normal is always on the side of ray origin, but
   ;; precalculated N.D may be negative:
@@ -72,22 +60,21 @@
   ;;
   ;; => R = D + 2*Ry = D + 2*N*|N.D|
   (make-ray
-   :origin (intersection-point intersection)
+   :origin point
    :direction
    ;; The code below is really this, but avoid intermediate vectors.
    ;; FIXME: It would be nice if we had compiler-macros for this...
    ;;
    ;;  (normalize
    ;;   (adjust-vector (ray-direction ray) 
-   ;;                  (intersection-normal intersection)
-   ;;                  (* 2.0 (abs (intersection-n.d intersection)))))
+   ;;                  normal
+   ;;                  (* 2.0 (abs dot))))
    ;;
    (let ((d (ray-direction ray))
-         (n (intersection-normal intersection))
-         (f (* 2.0 (abs (intersection-n.d intersection)))))
-     (with-arrays (n d)
+         (f (if (minusp dot) (* -2.0 dot) (* 2.0 dot))))
+     (with-arrays (normal d)
        (macrolet ((dim (i)
-                    `(+ (d ,i) (* (n ,i) f))))
+                    `(+ (d ,i) (* (normal ,i) f))))
          (let* ((x (dim 0)) (y (dim 1)) (z (dim 2))
                 (l (sqrt (+ (* x x) (* y y) (* z z)))))
            (vector (/ x l) (/ y l) (/ z l))))))
@@ -95,14 +82,13 @@
    :depth (1+ (ray-depth ray))
    :environment (ray-environment ray)))
 
-(defun spawn-rays (intersection ray specular transmit ior)
-  (declare (type intersection intersection)
+(defun spawn-rays (point normal dot ray specular transmit ior)
+  (declare (type vector point normal)
            (type ray ray)
-           (type float specular transmit ior))
-  (let ((n.d (intersection-n.d intersection))
-	(current (ray-environment ray)))
+           (type float dot specular transmit ior))
+  (let ((current (ray-environment ray)))
     (multiple-value-bind (rel-ior new)
-	(if (plusp n.d)
+	(if (plusp dot)
 	    ;; ray exits: IOR is from the current environment
 	    (let ((previous (environment-link current)))
 	      (values (/ ior (environment-ior previous))
@@ -111,15 +97,15 @@
 	    (values (/ (environment-ior current) ior)
 		    (make-environment :ior ior :link current)))
       ;; FIXME: Add derivation of the refraction formula as a comment.
-      (let ((cs2 (- 1.0 (* (square rel-ior) (- 1.0 (square n.d))))))
+      (let ((cs2 (- 1.0 (* (square rel-ior) (- 1.0 (square dot))))))
 	(if (significantp cs2)
 	    ;; normal case
 	    (values
-	     (reflected-ray intersection ray specular)
+	     (reflected-ray point normal dot ray specular)
 	     (progn
 	       (note-refracted-ray)
 	       (make-ray
-		:origin (intersection-point intersection)
+		:origin point
 		:direction
                 ;; The code below is really this, but avoids
                 ;; intermediate vectors. FIXME: It would be nice if we
@@ -127,16 +113,15 @@
                 ;;
                 ;;  (normalize
                 ;;   (vector-add
-                ;;    (vector-mul (intersection-normal intersection)
-                ;;                (- (* rel-ior (abs n.d)) (sqrt cs2)))
+                ;;    (vector-mul normal
+                ;;                (- (* rel-ior (abs dot)) (sqrt cs2)))
                 ;;    (vector-mul (ray-direction ray) rel-ior)))
                 ;;
-                (let ((n (intersection-normal intersection))
-                      (d (ray-direction ray))
-                      (f (- (* rel-ior (abs n.d)) (sqrt cs2))))
-                  (with-arrays (n d)
+                (let ((d (ray-direction ray))
+                      (f (- (* rel-ior (abs dot)) (sqrt cs2))))
+                  (with-arrays (normal d)
                     (macrolet ((dim (i)
-                                 `(+ (* f (n ,i)) (* rel-ior (d ,i)))))
+                                 `(+ (* f (normal ,i)) (* rel-ior (d ,i)))))
                       (let* ((x (dim 0)) (y (dim 1)) (z (dim 2))
                              (l (sqrt (+ (* x x) (* y y) (* z z)) )))
                         (vector (/ x l) (/ y l) (/ z l))))))
@@ -147,7 +132,7 @@
 	    ;;
 	    ;; FIXME: the second dummy ray here seems like an ugly hack
 	    (values 
-	     (reflected-ray intersection ray 1.0)
+	     (reflected-ray point normal dot ray 1.0)
 	     (load-time-value 
 	      (make-ray :origin origin :direction x-axis :weight 0.0))))))) )
 

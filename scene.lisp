@@ -67,7 +67,7 @@
 (defclass shader () ())
 
 (deftype compiled-shader ()
-  `(function (intersection ray) vector))
+  `(function (vector vector float ray) vector))
 
 ;;;## Objects
 
