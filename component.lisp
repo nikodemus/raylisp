@@ -219,7 +219,7 @@ everywhere in the scene, simulating an effectively infinitely distant light
 source such as the sun or moon."))
 
 (defmethod light-functions ((light solar-light) scene)
-  (let ((nd (normalize (direction-of light)))
+  (let ((nd (vector-mul (normalize (direction-of light)) -1.0))
 	(color (color-of light))
 	(objects (compiled-scene-objects (scene-compiled-scene scene))))
     (values
@@ -456,6 +456,23 @@ source such as the sun or moon."))
                  (ratio (mod (* (aref point axis) scale) 1.0)))
             (vector-lerp start end ratio))))))
 
+;;; NOISE-SHADER
+
+(defclass noise-shader (shader)
+  ((start :initarg :start :reader start-of)
+   (end :initarg :end :reader end-of)
+   (scale :initarg :scale :reader scale-of)))
+
+(defmethod shader-function ((shader noise-shader) scene)
+  (let ((start (compile-shader (start-of shader) scene))
+        (end (compile-shader (end-of shader) scene))
+        (scale (/ 1.0 (scale-of shader))))
+    (lambda (point normal n.d ray)
+      (let ((noise (vector-noise (vector-mul point scale)))
+            (start-color (funcall start point normal n.d ray))
+            (end-color (funcall end point normal n.d ray)))
+        (vector-lerp start-color end-color (clamp noise 0.0 1.0))))))
+
 ;;;## Checker Shader
 ;;;
 ;;; A checker pattern of two different shaders, ODD and EVEN.
@@ -499,3 +516,4 @@ source such as the sun or moon."))
 			  functions
 			  :initial-value black)
 		  count))))
+

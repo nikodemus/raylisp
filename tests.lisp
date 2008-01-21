@@ -3,13 +3,11 @@
 (define-scene test-0
   (:objects 
    (make-instance 'sphere 
-                  :shader
-                  (make-instance 'flat :color red))
+                  :shader (make-instance 'flat :color red))
    (make-instance 'sphere 
                   :location (@ 0 -0.5 0)
                   :transform (scale (@ 3 0.5 0.5))
-                  :shader
-                  (make-instance 'flat :color blue)))
+                  :shader (make-instance 'flat :color blue)))
   (:lights 
    (make-instance 'point-light 
                   :location (@ 10 5 -20)))
@@ -22,8 +20,7 @@
 (define-scene test-1
   (:objects 
    (make-instance 'sphere 
-                  :shader
-                  (make-instance 'solid :color red))
+                  :shader (make-instance 'solid :color red))
    (make-instance 'sphere 
                   :location (@ 0 -0.5 0)
                   :transform (scale (@ 3 0.5 0.5))
@@ -37,6 +34,7 @@
   (:lights
    (make-instance 'point-light 
                   :location (@ 10 5 -20)))
+  (:ambient-light (@ 0.1 0.1 0.1))
   (:default-camera
       (make-instance 'pinhole
                      :location (@ 0 3 -20)
@@ -122,8 +120,7 @@
                   (list
                    (make-instance 'sphere
                                   :shader
-                                  (make-instance 'solid
-                                                 :color red))
+                                  (make-instance 'solid :color red))
                    (make-instance 'sphere
                                   :location (@ 0 1 0)
                                   :shader
@@ -223,6 +220,22 @@
                      :location (@ 0 0.5 -4)
                      :look-at origin
                      :focal-length 3.0)))
+
+(define-scene test-noise
+  (:objects
+   (make-instance 'sphere 
+                  :radius 3.0
+                  :shader (make-instance 'noise-shader
+                                         :start (make-instance 'solid :color (@ 0.2 0.2 1.0))
+                                         :end (make-instance 'solid :color white)
+                                         :scale 0.8)))
+  (:lights
+   (make-instance 'solar-light :direction (@ 1 -1 1)))
+  (:ambient-light (@ 0.1 0.1 0.1))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 5 -5)
+                     :look-at origin)))
 
 ;;;# Tests
 ;;;

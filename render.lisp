@@ -75,14 +75,19 @@
 	 (maybe-report scene)
 	 raster2)))))
 
-(defun render (scene camera width height callback)
+(defun render (scene camera width height callback &key (normalize-camera t))
   (declare (fixnum width height))
+  (when normalize-camera
+    (setf camera (normalize-camera camera width height)))
   (let* ((scene (compile-scene scene))
 	 (camera (compile-camera camera))
 	 (note-interval (ceiling height 80))
-         (callback (if (functionp callback)
-                       callback
-                       (fdefinition callback))))
+         (callback (cond ((functionp callback)
+                          callback)
+                         ((and (symbolp callback) (fboundp callback))
+                          (fdefinition callback))
+                         (t
+                          (error "Not a valid callback: ~S" callback)))))
     (declare (function callback))
     (fresh-line)
     (start-counters)

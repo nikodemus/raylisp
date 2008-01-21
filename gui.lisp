@@ -12,24 +12,22 @@
 
 (defun render-scene (scene medium)
   (let* ((pixmap nil)
-         (width 400)
-         (height 300)
+         (region (sheet-region medium))
+         (width (bounding-rectangle-width region))
+         (height (bounding-rectangle-height region))
          (end (- width 1)))
     (unwind-protect
          (progn
            (setf pixmap (allocate-pixmap medium width height))
-           (raylisp::render scene (or (raylisp::scene-default-camera scene)
-                                      (make-instance 'raylisp::pinhole 
-                                                     :location (@ 0 0.5 -4)
-                                                     :look-at origin
-                                                     :focal-length 3.0))
+           (raylisp::render scene (raylisp::scene-default-camera scene)
                             width height
                             (lambda (color x y)
                               (declare (type (simple-array single-float (3)) color)
                                        (type fixnum x y))
                               (draw-point* pixmap x y :ink (make-rgb-color (aref color 0) (aref color 1) (aref color 2)))
                               (when (= x end)
-                                (copy-from-pixmap pixmap 0 y width 1 medium 0 y)))))
+                                (copy-from-pixmap pixmap 0 y width 1 medium 0 y)))
+                            :normalize-camera t))
       (deallocate-pixmap pixmap))))
 
 (define-application-frame raylisp-frame ()
@@ -68,6 +66,14 @@
              (format t "Rendering ~A" name)
              (render-scene scene (find-pane-named *application-frame* 'canvas)))
            raylisp::*scenes*))
+
+(define-raylisp-frame-command (com-stress :name t)
+    ()
+  (loop
+    (maphash (lambda (name scene)
+               (format t "Rendering ~A" name)
+               (render-scene scene (find-pane-named *application-frame* 'canvas)))
+             raylisp::*scenes*)))
 
 #+nil
 (run-frame-top-level (make-application-frame 'raylisp-frame))

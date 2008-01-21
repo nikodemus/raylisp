@@ -11,28 +11,62 @@
    (up :accessor up-of)
    (right :accessor right-of)))
 
+(defmethod print-object ((camera camera) stream)
+  (print-unreadable-object (camera stream)
+    (format stream "loc: ~S dir: ~S" (location-of camera) (direction-of camera)))
+  camera)
+
 (defgeneric compile-camera (camera))
 
 (defmethod initialize-instance :after ((camera camera) &key 
-				       (look-at z-axis look-at-p)
-				       (direction z-axis direction-p)
-				       (location origin)
-				       (focal-length 1.0)
-				       (sky y-axis)
-				       (right (/ 4.0 3.0))
-				       (up 1.0))
-  (when (and look-at-p direction-p)
+				       look-at direction location
+				       focal-length sky
+                                       right up aspect-ratio)
+  (when (and look-at direction)
     (error "Both :LOOK-AT and :DIRECTION given."))
-  (let* ((dir-v (normalize (if look-at-p
-			       (vector-sub look-at location)
-			       direction)))
-	 (sky-v (normalize sky))
-	 (right-v (cross-product sky-v dir-v))
-	 (up-v (cross-product right-v dir-v)))
-    (setf (location-of camera) location
-	  (direction-of camera) (vector-mul dir-v focal-length)
-	  (right-of camera) (vector-mul right-v right)
-	  (up-of camera) (vector-mul up-v up))))
+  (when (and focal-length direction)
+    (error "Both :DIRECTION and :FOCAL-LENGTH given."))
+  (when (and (or up right) (not (and up right)))
+    (error "Only one of :UP and :RIGHT given."))
+  (when (and aspect-ratio up right)
+    (error ":ASPECT-RATIO given in addition to :UP and :RIGHT."))
+  (when (and sky up right)
+    (error ":SKY given in addition to :UP and :RIGHT."))
+  (unless location
+    (setf location (vector 0.0 2.0 -10.0)))
+  (let ((normalized-direction
+         (when direction
+           (normalize direction))))
+    (unless direction        
+      (unless look-at
+        (setf look-at origin))
+      (unless focal-length
+        (setf focal-length 1.0))
+      (setf normalized-direction (normalize (vector-sub look-at location))
+             direction (vector-mul normalized-direction focal-length)))
+    (unless (and up right)
+      (unless sky
+        (setf sky y-axis))
+      (unless aspect-ratio
+        (setf aspect-ratio (/ 4.0 3.0)))
+      (let* ((n-sky (if sky (normalize sky) y-axis))
+             (n-right (cross-product n-sky normalized-direction)))
+        (setf right (vector-mul n-right aspect-ratio)
+              up (cross-product n-right normalized-direction)))))
+  (setf (location-of camera) location
+        (direction-of camera) direction
+        (right-of camera) right
+        (up-of camera) up))
+
+(defun normalize-camera (camera width height)
+  (let ((up (normalize (up-of camera)))
+        (right (normalize (right-of camera)))
+        (image-ratio (float (/ width height))))
+    (make-instance (class-of camera)
+                   :up up 
+                   :right (vector-mul right image-ratio)
+                   :direction (direction-of camera)
+                   :location (location-of camera))))
 
 ;;;### Pinhole Camera
 ;;;
