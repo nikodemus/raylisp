@@ -24,11 +24,13 @@
                             (lambda (color x y)
                               (declare (type (simple-array single-float (3)) color)
                                        (type fixnum x y))
-                              (draw-point* pixmap x y :ink (make-rgb-color (aref color 0) (aref color 1) (aref color 2)))
-                              (when (= x end)
-                                (copy-from-pixmap pixmap 0 y width 1 medium 0 y)))
+                              (let ((rgb (make-rgb-color (aref color 0) (aref color 1) (aref color 2))))
+                                (draw-point* pixmap x y :ink rgb)
+                                (when (= x end)
+                                  (copy-from-pixmap pixmap 0 y width 1 medium 0 y))))
                             :normalize-camera t))
-      (deallocate-pixmap pixmap))))
+      (when pixmap
+        (deallocate-pixmap pixmap)))))
 
 (define-application-frame raylisp-frame ()
   ()

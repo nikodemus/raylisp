@@ -219,7 +219,7 @@ everywhere in the scene, simulating an effectively infinitely distant light
 source such as the sun or moon."))
 
 (defmethod light-functions ((light solar-light) scene)
-  (let ((nd (vector-mul (normalize (direction-of light)) -1.0))
+  (let ((nd (normalize (direction-of light)))
 	(color (color-of light))
 	(objects (compiled-scene-objects (scene-compiled-scene scene))))
     (values
@@ -472,6 +472,8 @@ source such as the sun or moon."))
             (start-color (funcall start point normal n.d ray))
             (end-color (funcall end point normal n.d ray)))
         (vector-lerp start-color end-color (clamp noise 0.0 1.0))))))
+
+
 
 ;;;## Checker Shader
 ;;;
