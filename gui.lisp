@@ -1,22 +1,20 @@
 (require :mcclim)
 
-(in-package :climi)
+(in-package :clim-clx)
 
 ;;;; Image drawing
-
-(defgeneric clim::medium-draw-pixels* (medium array x y &key &allow-other-keys))
-(defgeneric clim::medium-get-pixels* (medium array x y &key width height &allow-other-keys))
 
 (export 'clim::medium-draw-pixels* :clim)
 (export 'clim::medium-get-pixels*  :clim)
 
-(in-package :clim-clx)
+(defgeneric clim::medium-draw-pixels* (medium array x y &key &allow-other-keys))
+(defgeneric clim::medium-get-pixels* (medium array x y &key width height &allow-other-keys))
 
 ;;; TODO: Extract indexed pattern drawing and convert to one of these functions.
 
 (defmethod clim::medium-draw-pixels* ((sheet sheet) array x y &key)
   (with-sheet-medium (medium sheet)
-    (medium-draw-pixels* medium array x y)))
+    (clim::medium-draw-pixels* medium array x y)))
 
 (defmethod clim::medium-draw-pixels* 
     ((medium clx-medium) array x y &key &allow-other-keys)

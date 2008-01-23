@@ -137,8 +137,11 @@
       <dl>
 	<dt class="key">:incident-light-function</dt>
 	<dd>
-	  <p class="first">is a function called with a hit location
-	    vector. It must return an incident light vector, which
+	  <p class="first">is a function called with</p>
+	  <ul>
+	    <li>a hit location vector.</li>
+	  </ul> 
+	  <p>It must return an incident light vector, which
 	    points from the hit location to the location of the light,
 	    or <tt>NIL</tt> if the light is never visible from the
 	    given location.</p>
@@ -149,12 +152,16 @@
 	</dd>
 	<dt class="key">:illumination-function</dt>
 	<dd>
-	  <p class="first">is a function called with a hit location
-	    vector and an incident light vector from an earlier call
-	    to the corresponding incident light function. It must
-	    return the color of incident light at the location as
-	    primary value, and the length of the incident light vector
-	    as the secondary value.</p>
+	  <p class="first">is a function called with</p>
+	  <ul>
+	    <li>a hit location vector,</li>
+	    <li>an incident light vector from an earlier call
+	      to the corresponding incident light function,</li>
+	    <li>and a counter object.</li>
+	  </ul>
+	  <p>It must return the color of incident light at the
+	    location as primary value, and the length of the incident
+	    light vector as the secondary value.</p>
 	</dd>
       </dl>
     </dd>
@@ -170,11 +177,15 @@
       <dl>
 	<dt class="key">:intersection-function</dt>
 	<dd>
-	  <p class="first">is a function called with a <a class="sym"
-	    href="#class-ray">ray</a>, which <i>must</i> return true
-	    if the ray intersects the object and the distance
-	    from <a class="sym" href="#fun-ray-origin">ray-origin</a>
-	    to the intersection point is between <a class="sym"
+	  <p class="first">is a function called with:</p>
+	  <ul>
+	    <li>a <a class="sym"
+	    href="#class-ray">ray</a>.</li>
+	    </ul>
+	  <p><i>Must</i> return true if the ray intersects the object
+	    and the distance from <a class="sym"
+	    href="#fun-ray-origin">ray-origin</a> to the intersection
+	    point is between <a class="sym"
 	    href="#const-epsilon">epsilon</a> and <a class="sym"
 	    href="#fun-ray-extent">ray-extent</a>. If the function
 	    returns true it <i>must</i> also set the <a class="sym"
@@ -194,9 +205,11 @@
 	</dd>
 	<dt class="key">:normal-function</dt>
 	<dd>
-	  <p class="first">is a function called with a position vector
-	    indicating a position on the surface of the object,
-	    and <i>must</i> return the surface normal of the object at
+	  <p class="first">is a function called with</p>
+	  <ul>
+	    <li>a position vector indicating a position on the surface of the object.</li>
+	  </ul>
+	  <p><i>Must</i> return the surface normal of the object at
 	    that point. Surface normals returned by the normal
 	    function <i>must</i> point to the outside of the object.
 	  </p>
