@@ -110,19 +110,56 @@
 
 (defun raytrace (ray scene counters)
   "Traces the RAY in SCENE, returning the apparent color."
-  (let* ((object (find-intersection ray scene counters))
+  (let* ((object (find-scene-intersection ray scene counters))
          (color (if object
                     (shade object ray counters)
                     (scene-background-color scene))))
     (vector-mul color (ray-weight ray))))
 
-(defun find-intersection (ray scene counters)
+(defun %find-intersection (ray all-objects counters &optional shadow)
   (declare (optimize speed))
   (labels ((recurse (objects x)
-	     (if (not objects)
-		 x ; return
-		 (multiple-value-bind (t? x?)  (intersect (car objects) ray counters)
-		   (if t?
-		       (recurse (cdr objects) x?)
-		       (recurse (cdr objects) x))))))
-    (recurse (compiled-scene-objects (scene-compiled-scene scene)) nil)))
+             (if (not objects)
+                 x
+                 (let ((hit (intersect (car objects) ray counters shadow)))
+                   (if hit
+                       (if shadow
+                           hit
+                           (recurse (cdr objects) hit))
+                       (recurse (cdr objects) x))))))
+    (recurse all-objects nil)))
+
+(defun %find-intersection* (ray all-objects min max counters shadowp)
+  (declare (float min max))
+  (declare (optimize speed))
+  (let ((old (ray-extent ray))
+        (hit nil))
+    (labels ((recurse (objects x)
+               (if (not objects)
+                   x
+                   (let ((hit (intersect (car objects) ray counters shadowp)))
+                     (if hit
+                         (if shadowp
+                             hit
+                             (recurse (cdr objects) hit))
+                         (recurse (cdr objects) x))))))
+      (unwind-protect
+           (progn
+             (minf (ray-extent ray) max)
+             (setf hit (recurse all-objects nil)))
+        (if hit
+            (assert (<= min (ray-extent ray) max) (min max (ray-extent ray))
+                    "~S is not in range ~S - ~S" (ray-extent ray) min max)
+            (setf (ray-extent ray) old))))
+    hit))
+
+(defun find-scene-intersection (ray scene counters &optional shadow)
+  (let* ((compiled-scene (scene-compiled-scene scene))
+         (unbounded (compiled-scene-objects compiled-scene))
+         (tree (compiled-scene-tree compiled-scene))
+         (hit (when unbounded 
+                (%find-intersection ray unbounded counters shadow))))
+    (if tree
+        (or (kd-traverse tree ray counters shadow)
+            hit)
+        hit)))

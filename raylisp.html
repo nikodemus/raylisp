@@ -6,24 +6,18 @@
   <link rel="stylesheet" type="text/css" href="raylisp.css"/>
 </head>
 <body>
-  <hr color="orange"/>
-
   <h1>Raylisp manual</h1>
-  <hr color="orange"/>
   <p class="first"><i>Raylisp &#8211; a Common Lisp raytracing engine<br/>by Nikodemus Siivola
       &lt;nikodemus@random-state.net&gt;</i></p>
-  <hr color="orange"/>
 
-  <h2>Table of Contents</h2>
-  
+  <h2 id="toc">Table of Contents</h2>
+
   <ul>
     <li><a href="#section-introduction">Introduction</a></li>
-    <li><a href="#section-protocol-overview">Protocol Overview</a></li>
-    <li><a href="#section-protocol-dictionary">Protocol Dictionary</a></li>
+    <li><a href="#section-protocols">Protocols</a></li>
+    <li><a href="#section-dictionary">Dictionary</a></li>
     <li><a href="#section-glossary">Glossary</a></li>
   </ul>
-
-  <hr color="orange"/>
 
   <h2 id="section-introduction">Introduction</h2>
 
@@ -42,7 +36,8 @@
   <p>Note that what Raylisp calls shaders are fairly different from
     eg. Renderman shaders. In Raylisp, a shader simply determines the
     apparent color of an intersection point: there is no rendering
-    environment for shaders to mess with.</p>
+    environment for shaders to mess with. This doesn't preclude
+    combining different shaders, though.</p>
 
   <h3>Multiple Scene Representations</h3>
   
@@ -50,14 +45,14 @@
     for scenes.</p>
 
   <p>The <i>scene representation</i> is used to construct a scene
-    &#8211; either directly, programmatically, using a domain specific
-    language, or possibly with a graphical tool. The high level
-    representation is designed for flexibility, and is
-    user-extensible.</o>
+    prior to rendering &#8211; it is CLOS based, designed for
+    flexibility, and user-extensible.</o>
 
   <p>The <i>rendering representation</i> is used during rendering, and
     is designed mainly for efficiency. It is neither extensible nor
-    fully documented.</p>
+    fully documented: redendering objects are opaque types provided
+    and used by certain documented functions, but users are ment to
+    neither construct nor inspect them directly.</p>
 
   <p>The first stage of rendering is <i>scene compilation</i>: a
     transformation from the scene representation to the rendering
@@ -70,9 +65,7 @@
     creating new classes and implementing the approriate methods on
     various protocol functions for these.</p>
 
-  <hr color="orange"/>
-
-  <h2 id="section-protocol-overview">Protocol Overview</h3>
+  <h2 id="section-protocols">Protocols</h3>
 
   <p class="first">Raylisp protocols can be devided into two categories:
     primary protocols which new subclasses of various protocol classes
@@ -106,11 +99,34 @@
   <p>Protocol function:<tt>
       <a class="sym" href="#gf-compute-shader-function">compute-shader-function</a></tt>.</p>
 
-  <hr color="orange"/>
+  <h3>Secondary Protocols</h3>
+
+  <h4 id="protocol-bounding">Bounding Protocol</h4>
+
+  <p class="first">Bounding protocol controls the generation of
+    secondary data structures used to optimize ray- and
+    shadowcasting.</p>
+
+  <p>Protocol function:<tt>
+      <a class="sym" href="#gf-compute-object-extents">compute-object-extents</a></tt>.</p>
+
+  <h4 id="protocol-csg">CSG Protocol</h4>
+
+  <p class="first">CSG (Constructive Solid Geometry) protocol controls
+    the compilation of composite objects constructed with boolean
+    operations for the geometry and bounding protocols.</p>
+  
+  <blockquote>The CSG protocol is implemented entirely using public
+    features of the geometry protocol, and could equally well have
+    been a third-party extension to Raylisp; it can be considered an
+    example extension.</blockquote>
+
+  <p>Protocl function:<tt>
+      <a class="sym" href="#gf-compute-csg-properties">compute-csg-properties</a></tt>.</p>
 
   <h2 id="section-dictionary">Dictionary</h2>
 
-  <h3>Protocol Classes</h3>
+  <h3>Scene Representation</h3>
 
   <dl>
 
@@ -122,12 +138,9 @@
 	implemented for all subclasses of <tt>scene-light</tt> by an
 	approprioate method on <a class="sym"
 	href="#gf-compute-light-properties">compute-light-properties</a>.</p>
-
       <p>Subclasses conventionally have a <tt>-light</tt> postfix.</p>
     </dd>
 
-
-    
     <dt class="def" id="class-scene-object">standard-class <b>SCENE-OBJECT</b></dt>
     <dd>
       <p class="first">Superclass of all visible and/or shadowcasting
@@ -142,53 +155,82 @@
 	href="#gf-compute-object-extents">compute-object-extents</a> gain benefit
 	optimizations based on spatial hiearchies in ray- and
 	shadowcasting.</p>
+      <p>Subclasses for which the <a href="#protocol-csg">CSG
+	protocol</a> is implemented by an appropriate method
+	on <a class="sym"
+	href="#gf-compute-csg-properties">compute-csg-properties</a>
+	can participate in CSG operations.</p>
       <p>Subclasses have no special naming conventions.</p>
+    </dd>
+    
+    <dt class="def" id="class-shader">standard-class <b>SHADER</b></dt>
+    <dd>
+      <p class="first">Superclass of all shaders.</p>
+      <p>The <a href="#protocol-shader">shader protocol</a> must be
+	implemented for all subclasses of <tt>shader</tt> by an
+	approriate method on <a class="sym"
+	href="#gf-compute-shader-function">compute-shader-function</a>.</p>
+      <p>Subclasses 
+	conventionally have a <tt>-shader</tt> postfix.</p>
     </dd>
   </dl>
 
   <h3>Protocol Functions</h3>
 
   <dl>
-    <dt class="def" id="gf-compute-light-properties">generic-function <b>COMPUTE-LIGHT-PROPERTIES</b> <i>light scene</i></dt>
+
+    <dt class="def" id="compute-csg-properties">generic-function <b>COMPUTE-CSG-PROPERTIES</b> <i>object scene</i>
+    &rArr; plist</dt>
+    <dd>
+      <p class="first">Called for each <a class="sym"
+	href="#class-scene-object">scene-object</a> participating in a
+	CSG operation. Methods <i>must</i> return a property list
+	describing the object as a solid:</p>
+      <p><b>:all-intersections</b> is a function called with two
+	vectors: an origin and a direction, and returns
+	a <tt>simple-vector</tt> of <tt>csg-intersection</tt>
+	structures, with one instance for each intersection distance
+	greater then <a class="sym" href="#epsilon">epsilon</a>,
+	sorted in order from closest to most distant from the given
+	origin. The <tt>object</tt> slot of each structure must be
+	filled either with the result of calling <a class="sym"
+	href="#fun-compile-scene-object">compile-scene-object</a> with
+	the object argument of the call
+	to <tt>compute-csg-properties</tt> or a surrogate object to be
+	used in further calculations for that intersection.</p>
+      <p><b>:inside</b> is a function is called with a position vector, and
+	returns true if the designated location is inside the object.</p>
+    </dd>
+
+    <dt class="def" id="gf-compute-light-properties">generic-function <b>COMPUTE-LIGHT-PROPERTIES</b> <i>light scene</i>
+    &rArr; plist</dt>
     <dd>
       <p class="first">Called for each <a class="sym"
 	href="#class-scene-light">scene-light</a> during scene
-	compilation. Methods <i>must</i> return either <tt>NIL</tt>,
-	indicating the that the light is inactive and should be
-	elided, or a property list describing the light, in which:</p>
-      <dl>
-	<dt class="key">:incident-light-function</dt>
-	<dd>
-	  <p class="first">is a function called with</p>
-	  <ul>
-	    <li>a hit location vector.</li>
-	  </ul> 
-	  <p>It must return an incident light vector, which
-	    points from the hit location to the location of the light,
-	    or <tt>NIL</tt> if the light is never visible from the
-	    given location.</p>
-	  <p>The light vector may be unnormalized, and its length can
-	    be used to communicate eg. the distance of the light from
-	    the location to the corresponding illumination
-	    function.</p>
-	</dd>
-	<dt class="key">:illumination-function</dt>
-	<dd>
-	  <p class="first">is a function called with</p>
-	  <ul>
-	    <li>a hit location vector,</li>
-	    <li>an incident light vector from an earlier call
-	      to the corresponding incident light function,</li>
-	    <li>and a counter object.</li>
-	  </ul>
-	  <p>It must return the color of incident light at the
-	    location as primary value, and the length of the incident
-	    light vector as the secondary value.</p>
-	</dd>
-      </dl>
+	compilation. Methods <i>must</i> return  a property list describing the light, in which:</p>
+
+      <p><b>:incident-light</b> is a function called with
+	a <i>hit location vector</i>. It must return an incident light vector,
+	which points from the hit location to the location of the
+	light, or <tt>NIL</tt> if the light is never visible from the
+	given location. The light vector may be unnormalized, and its
+	length can be used to communicate eg. the distance of the
+	light from the location to the corresponding illumination
+	function.
+      </p>
+
+      <p><b>:illumination</b> is a function called with the
+	same <i>hit location vector</i> that the indicedent light
+	function was called with earlier, the <i>incident light
+	vector</i> returned by that call, and a <i>counter object.</i>
+	It must return the color of incident light at the location as
+	primary value, and the length of the incident light vector as
+	the secondary value.
+      </p>
     </dd>
     
-    <dt class="def" id="gf-compute-object-extents">generic-function <b>COMPUTE-OBJECT-EXTENTS</b> <i>object</i></dt>
+    <dt class="def" id="gf-compute-object-extents">generic-function <b>COMPUTE-OBJECT-EXTENTS</b> <i>object</i>
+    &rArr; min, max</dt>
     <dd>
       <p class="first">Called for each active <a class="sym"
 	href="#class-scene-object">scene-object</a> during scene
@@ -197,58 +239,41 @@
 	to indicate unbounded object geometry. The default method returns <tt>NIL</tt>.</p>
     </dd>
 
-    <dt class="def" id="gf-compute-object-properties">generic-function <b>COMPUTE-OBJECT-PROPERTIES</b> <i>object scene</i></dt>
+    <dt class="def" id="gf-compute-object-properties">generic-function <b>COMPUTE-OBJECT-PROPERTIES</b> <i>object scene</i>
+    &rArr; plist</dt>
     <dd>
       <p class="first">Called for each a <a class="sym"
 	href="#class-scene-object">scene-object</a> during scene
-	compilation. Methods <i>must</i> return either <tt>NIL</tt>,
-	indicating that the object is inactive and should be elided,
-	or a property list describing the geometry of the object, in
-	which:</p>
-      <dl>
-	<dt class="key">:intersection-function</dt>
-	<dd>
-	  <p class="first">is a function called with:</p>
-	  <ul>
-	    <li>a <a class="sym"
-	    href="#class-ray">ray</a>.</li>
-	    </ul>
-	  <p><i>Must</i> return true if the ray intersects the object
-	    and the distance from <a class="sym"
-	    href="#fun-ray-origin">ray-origin</a> to the intersection
-	    point is between <a class="sym"
-	    href="#const-epsilon">epsilon</a> and <a class="sym"
-	    href="#fun-ray-extent">ray-extent</a>. If the function
-	    returns true it <i>must</i> also set the <a class="sym"
-	    href="#fun-ray-extent">ray-extent</a> to the intersection
-	    distance.
-	  </p>
-
-	  <p>The intersection function may also return as secondary
-	    value a surrogate object to be used instead of the
-	    original one in shading and normal calculations. If a
-	    surrogate is returned, it <i>must</i> be a value returned
-	    by a call to <a class="sym"
-	    href="#fun-compile-scene-object">compile-scene-object</a>;
-	    different calls to the same intersection function may
-	    return different surrogate objects or reuse the same one.
-	  </p>
-	</dd>
-	<dt class="key">:normal-function</dt>
-	<dd>
-	  <p class="first">is a function called with</p>
-	  <ul>
-	    <li>a position vector indicating a position on the surface of the object.</li>
-	  </ul>
-	  <p><i>Must</i> return the surface normal of the object at
-	    that point. Surface normals returned by the normal
-	    function <i>must</i> point to the outside of the object.
-	  </p>
-	</dd>
-      </dl>
+	compilation. Methods <i>must</i> return a property list
+	describing the geometry of the object, in which:</p>
+      <p><b>:intersection</b> is a function called with
+	a <a class="sym" href="#class-ray">ray</a>. It <i>must</i>
+	return true if the ray intersects the object and the distance
+	from <a class="sym" href="#fun-ray-origin">ray-origin</a> to
+	the intersection point is between <a class="sym"
+	href="#const-epsilon">epsilon</a> and <a class="sym"
+	href="#fun-ray-extent">ray-extent</a>. If the function returns
+	true it <i>must</i> also set the <a class="sym"
+	href="#fun-ray-extent">ray-extent</a> to the intersection
+	distance. The intersection function may also return as
+	secondary value a surrogate object to be used instead of the
+	original one in shading and normal calculations. If a
+	surrogate is returned, it <i>must</i> be a value returned by a
+	call to <a class="sym"
+	href="#fun-compile-scene-object">compile-scene-object</a>;
+	different calls to the same intersection function may return
+	different surrogate objects or reuse the same one.
+      </p>
+      <p><b>:normal</b> is a function called with a position vector
+	indicating a position on the surface of the object.
+	<i>Must</i> return the surface normal of the object at that
+	point. Surface normals returned by the normal
+	function <i>must</i> point to the outside of the object.
+      </p>
     </dd>
 
-    <dt class="def" id="gf-compute-shader-function">generic-function <b>COMPUTE-SHADER-FUNCTION</b> <i>shader scene</i></dt>
+    <dt class="def" id="gf-compute-shader-function">generic-function <b>COMPUTE-SHADER-FUNCTION</b> <i>shader scene</i>
+    &rArr; function</dt>
     <dd>
       <p class="first">Called with a <a class="sym" href="#class-shader">shader</a> and the scene. <i>Must</i>
 	return the corresponding shader function.</p>
@@ -292,125 +317,6 @@
 
   <hr color="red"/>
 
-  <p>Secondary Protocols:</p>
-  <ul>
-    <li><a href="#proto-bounding">Bounding protocol</a></li>
-    <li><a href="#proto-gsg">GSG protocol</a></li>
-  </ul>
-    
-  <h3>Primary Protocols</h3>
-  
-  <h3>Secondary Protocols</h3>
-
-  <h4>Bounding Protocol</h4>
-
-  <p class="first">Bounding protocol controls the generation of
-    secondary data structures used by the low-level representation to
-    optimize ray- and shadowcasting.</p>
-
-  <p>All subclasses of the protocol class <a class="sym"
-    href="#class-object">object</a> gain advantage of these
-    optimizations if they implement the bounding protocol.</p>
-
-  <p>To implement the bounding protocol, define an appropriate method
-    on <a class="sym" href="#gf-compute-object-extents">compute-object-extents</a>.</p>
-
-  <h4>CSG Protocol</h4>
-
-  <p class="first">CSG (Constructive Solid Geometry) protocol controls
-    the compilation of composite objects constructed with boolean
-    operations into functions which are composed by the system into
-    intersection and normal functions for the geometry protocol.</p>
-  
-  <blockquote>The CSG protocol is implemented entirely using public
-    features of the geometry protocol, and could equally well have
-    been a third-party extension to Raylisp; it can be considered an
-    example extension.</blockquote>
-
-  <p>All subclasses of the protocol class <a class="sym" href="#class-object">object</a>
-    that implement the CGS protocol may participate in CGS operations.</p>
-
-  <p>To implement the CSG protocol, define an approriate method on
-    on <a class="sym"
-    href="#fun-csg-functions">csg-functions</a>.</p>
-
-  <hr/>
-
-  <h2 id="section-protocol-dictionary">Protocol Dictionary</h2>
-  
-  <h3>Protocol Classes</h3>
-  
-  <p class="first">Protocol classes are all <tt>standard-classes</tt>,
-    and are never ment to be instantiated directly. Only documented
-    and user-implemented subclasses of protocol classes may be
-    instantiated.</p>
-
-  <dl>
-    <dt class="def" id="class-shader">protocol-class <tt>SHADER</tt></dt>
-    <dd><p class="first">Superclass of all shaders. Subclasses 
-	conventionally have a <tt>-shader</tt> postfix.</p></dd>
-  </dl>
-
-  <h3>Protocol Functions</h3>
-
-  <p class="first">Protocol functions are
-    all <tt>standard-generic-functions</tt>, and are never ment to be
-    called by directly. Implementors of protocol classes should
-    implement the appropriate methods specialized on their classes for
-    the correct protocol functions.</p>
-
-  <dl>
-    <dt class="def" id="fun-object-functions">protocol-function <tt>OBJECT-FUNCTIONS</tt> object scene</dt>
-    <dd>Called with an <a class="sym" href="#object">object</a> and
-	the current scene. Returns, as multiple values,
-	the <a href="#glos-intersection-function">intersection
-	function</a> and the <a href="#glos-normal-function">normal
-	function</a> that implement the geometry of the object.
-    </dd>
-    
-    <dt id="object-csg-functions">
-      protocol-function <tt>OBJECT-CSG-FUNCTIONS</tt> object scene</dt>
-    <dd>
-      <p class="first">Called with a scene object and the current
-	scene, returns the CSG intersection function and an inside function
-	for the object as multiple values.</p>
-      <p>The <i>all intersections function</i> is called with two
-	vectors, and origin and a direction, and returns
-	a <tt>simple-vector</tt> of <tt>csg-intersection</tt>
-	structures, with one instance for each intersection distance
-	greater then <a class="sym" href="#epsilon">epsilon</a>,
-	sorted in order from closest to most distant from the given
-	origin. The <tt>object</tt> slot of each structure must be
-	filled either with the result of calling <a class="sym"
-	href="#compile-object">compile-object</a> with the object
-	argument of the call to <tt>csg-functions</tt> or a surrogate
-	object to be used in further calculations for that
-	intersection.</p>
-
-      <p>The <i>inside function</i> is called with a position vector, and
-	returns true if the designated location is inside the object.</p>
-    </dd>
-
-  </dl>
-
-  <hr/>
-
-  <h2 id="section-rendering-representation">Rendering Dictionary</h2>
-
-  <p class="first">This section documents the rendering representation
-    used by Raylisp.</p>
-
-  <dl>
-    <dt class="def" id="type-renderer-light">type <tt>RENDERER-LIGHT</tt></dt>
-    <dd>
-      <p class="first">Opaque type that encapsulates
-	  an <a href="#glos-incident-light-function"> incident light
-	  function</a> and an <a href="#glos-illumination-function">
-	  illumination function</a> representing a <a class="sym"
-	  href="#class-scene-light">scene-light</a>.</p>
-    </dd>
-
-  <hr/>
 
   <h2 id="section-glossary">Glossary</h2>
 
@@ -793,19 +699,24 @@ constructed by <a class="sym"
 
   <h2>Future Work</h2>
   <ul>
-    <li>Translucent shadows.</li>
-    <li>Fake IOR.</li>
-    <li>Explain SHADER-WEIGHT.</li>
-    <li>Surface syntax for terser scene specifications.</li>
-    <li>Graphical scene editor.</li>
-    <li>Support for exploiting spatial hierarchies exists in the
-      design, but is not utilized yet: adding a KD-tree for
-      intersection testing and using hierarchical bounding for CSG
-      remains to be done.</li>
-    <li>Vista buffer.</li>
+    <li>CSG hierarchical bounding.</li>
     <li>SHADOW-FUNCTION basically has the necessary infrastructure to
       support light buffers (or multi-object caches), but they are not
       yet implemented.</li>
+    <li>Better antialiazing.</li>
+    <li>Ray attenuation. Heterogenous media.</li>
+    <li>Vista buffer.</li>
+    <li>Backwards raytracing: Light maps for real refraction effects.</li>
+    <li>OpenGL based scene preview.</li>
+    <li>Translucent shadows.</li>
+    <li>Fake IOR.</li>
+    <li>Explain SHADER-WEIGHT.</li>
+    <li>Surface syntax for terser scene specifications:
+      (with-shader (...) 
+         ...
+         (sphere :at (0 1 2) :radius 3))
+    </li>
+    <li>Graphical scene editor.</li>
     <li>Have RAYTRACE return a function for computing the color
       instead of the color. This function's return value would depend
       on shaders: by changing shaders the color would directly change
@@ -825,9 +736,6 @@ constructed by <a class="sym"
     <li>Objects: Box, cylinder, torus, faster & general sphere & plane,
       meshes, heightfields.</li>
     <li>Cameras: Orthogonal, fisheye, panorama, focal blur.</li>
-    <li>Better antialiazing.</li>
-    <li>Ray attenuation. Heterogenous media.</li>
-    <li>Backwards raytracing: Light maps for real refraction effects.</li>
     <li>Radiosity.</li>
     <li>Shader for angle-dependent reflection.</li>
     <li>Environment sensitive shaders: dirt in hard to reach places. etc.</li>

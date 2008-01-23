@@ -23,7 +23,7 @@
   (multiple-value-bind (inverse adjunct/inverse)
       (inverse-and-adjunct/inverse-matrix (sphere-matrix sphere))
     (list
-     :intersection-function
+     :intersection
      (lambda (ray)
        (let-values (((ox oy oz)
                      (transform-vector-values (ray-origin ray) inverse))
@@ -38,20 +38,20 @@
            (when (< epsilon s (ray-extent ray))
              (setf (ray-extent ray) s)
              t))))
-     :normal-function
+     :normal
      (lambda (point)
        (transform/normalize-vector point adjunct/inverse)))))
 
 (defmethod compute-object-extents ((sphere sphere))
   (let ((matrix (sphere-matrix sphere)))
-    (values (transform-vector (vector -0.5 -0.5 -0.5) matrix)
-	    (transform-vector (vector 0.5 0.5 0.5) matrix))))
+    (values (transform-vector (vector -1.0 -1.0 -1.0) matrix)
+	    (transform-vector (vector 1.0 1.0 1.0) matrix))))
 
-(defmethod csg-functions ((sphere sphere) scene)
+(defmethod compute-csg-properties ((sphere sphere) scene)
   (let* ((inverse (inverse-matrix (sphere-matrix sphere)))
 	 (compiled (compile-scene-object sphere scene)))
-    (values 
-     ;; intersect all
+    (list
+     :all-intersections
      (lambda (origin direction)
        ;; FIXME: for some reason SBCL gives a lot for float to pointer
        ;; notes for these -values calls, and I don't understand why.
@@ -70,7 +70,7 @@
                               (- (dot-product* ox oy oz
                                                ox oy oz)
                                  1.0)))))
-     ;; inside
+     :inside
      (lambda (point)
        (> (+ 1.0 epsilon)
 	  (vector-length (transform-vector point inverse)))))))
@@ -90,7 +90,7 @@
   (multiple-value-bind (inverse adjunct)
       (inverse-and-adjunct-matrix (plane-matrix plane))
     (list
-     :intersection-function
+     :intersection
      (lambda (ray)
        (let* ((dy (aref (transform-direction (ray-direction ray) inverse) 1))
 	      (s (if (zerop dy)
@@ -100,14 +100,14 @@
 	 (when (< epsilon s (ray-extent ray))
 	   (setf (ray-extent ray) s)
 	   t)))
-     :normal-function
+     :normal
      (constantly (transform/normalize-vector y-axis adjunct)))))
 
-(defmethod csg-functions ((plane plane) scene)
+(defmethod compute-csg-properties ((plane plane) scene)
   (let ((inverse (inverse-matrix (plane-matrix plane)))
 	(c-object (compile-scene-object plane scene)))
-    (values 
-     ;; intersect all
+    (list
+     :all-intersections
      (lambda (origin direction)
        (let ((d (let ((dy (aref (transform-direction direction inverse) 1)))
 		  (if (zerop dy)
@@ -119,7 +119,7 @@
 	       :distance d
 	       :object c-object))
 	     #())))
-     ;; inside
+     :inside
      (lambda (point)
        (> epsilon
 	  (aref (transform-vector point inverse) 1))))))
@@ -157,10 +157,10 @@
 	 (color (color-of light))
 	 (shadow-fun (shadow-function location scene)))
     (list
-     :incident-light-function
+     :incident-light
      (lambda (point)
        (vector-sub location point))
-     :illumination-function
+     :illumination
      (lambda (point light-vector counters)
        (let* ((len (vector-length light-vector))
 	      (nlv (vector-div light-vector len)))
@@ -197,10 +197,10 @@ begin the maximum value. Spotlight fades towards its edges."))
              (type function fader shadow-fun)
              (type vector direction location color))
     (list
-     :incident-light-function
+     :incident-light
      (lambda (point)
        (vector-sub location point))
-     :illumination-function
+     :illumination
      (lambda (point light-vector counters)
        (let* ((len (vector-length light-vector))
               (nlv (vector-div light-vector len))
@@ -220,18 +220,15 @@ source such as the sun or moon."))
 
 (defmethod compute-light-properties ((light solar-light) scene)
   (let ((nd (normalize (direction-of light)))
-	(color (color-of light))
-	(objects (compiled-scene-objects (scene-compiled-scene scene))))
+	(color (color-of light)))
     ;; I'm sure there was a reason not to use SHADOW-FUNCTION here...
     (list
-     :incident-light-function
+     :incident-light
      (constantly nd)
-     :illumination-function
+     :illumination
      (lambda (point lv counters)
        (let ((ray (make-ray :origin point :direction lv)))
-	 (if (find-if (lambda (object)
-			(intersect object ray counters t))
-		      objects)
+	 (if (find-scene-intersection ray scene counters t)
 	     (values black -1.0)
 	     (values color 1.0)))))))
 
@@ -305,18 +302,18 @@ source such as the sun or moon."))
              (or (= (ray-depth ray) (scene-depth-limit scene))
                  (<= (ray-weight ray) (scene-adaptive-limit scene)))))
       (cond ((plusp transmit)
-             (lambda (point normal dot ray counters)
+             (lambda (point normal n.d ray counters)
                (if (weakp ray)
                    black
                    (multiple-value-bind (reflected refracted)
-                       (spawn-rays point normal dot ray specular transmit ior counters)
+                       (spawn-rays point normal n.d ray specular transmit ior counters)
                      (vector-add (raytrace reflected scene counters)
                                  (raytrace refracted scene counters))))))
             ((plusp specular)
-             (lambda (point normal dot ray counters)
+             (lambda (point normal n.d ray counters)
                (if (weakp ray)
                    black
-                   (raytrace (reflected-ray point normal dot ray specular counters) scene counters))))
+                   (raytrace (reflected-ray point normal n.d ray specular counters) scene counters))))
             (t
              (warn "Bogus specular and transmit components, ~
                     ignoring RAYTRACE shader.")

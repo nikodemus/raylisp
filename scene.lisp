@@ -44,15 +44,22 @@
 
 (defstruct compiled-scene
   (objects nil :type list)
-  (lights nil :type list))
+  (lights nil :type list)
+  (tree nil :type (or null kd-node)))
+
+(defparameter *use-kd-tree* nil)
 
 (defun compile-scene (scene)
   (let ((c-scene (make-compiled-scene)))
     (setf (scene-compiled-scene scene) c-scene)
-    (setf (compiled-scene-objects c-scene) 
-	  (mapcar (lambda (obj) 
-		    (compile-scene-object obj scene))
-		  (scene-objects scene)))
+    (let ((c-objs (mapcar (lambda (obj) 
+                                  (compile-scene-object obj scene))
+                                (scene-objects scene))))
+            (if *use-kd-tree*
+                (multiple-value-bind (kd unbounded) (make-kd-tree c-objs)
+                  (setf (compiled-scene-objects c-scene) unbounded
+                        (compiled-scene-tree c-scene) kd))
+                (setf (compiled-scene-objects c-scene) c-objs)))    
     (setf (compiled-scene-lights c-scene) 
 	  (mapcar (lambda (light)
 		    (compile-scene-light light scene))
@@ -67,7 +74,7 @@
 (defclass shader () ())
 
 (deftype compiled-shader ()
-  `(function (vector vector float ray) vector))
+  `(function (vector vector float ray counter-vector) vector))
 
 ;;;## Objects
 

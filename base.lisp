@@ -125,6 +125,26 @@ they are EQUAL."
 		 forms)))
     (first (rec bindings))))
 
+(defmacro let-plists (bindings &body forms)
+  "DESTRUCTURING-BIND &KEY utility."
+  (let (all-vars) 
+    (labels ((rec (binds)
+               (if binds
+                   (destructuring-bind ((vars plist-form) &rest tail) binds
+                     (let ((wrapped (mapcar (lambda (var)
+                                              (cond ((consp var)
+                                                     (push (second var) all-vars)
+                                                     (list var))
+                                                    (t
+                                                     (push var all-vars)
+                                                     var)))
+                                            vars)))
+                       `((destructuring-bind (&key ,@wrapped) ,plist-form
+                           ,@(rec tail)))))
+                   `((let ,(mapcar (lambda (var) `(,var ,var)) all-vars)
+                       ,@forms)))))
+      (first (rec bindings)))))
+
 (defmacro definterface (name keywords target)
   "Interace macro generator for BOA functions: specify a list of keywords and
 defaults in order. Macro expands to a call to target with the arguments in

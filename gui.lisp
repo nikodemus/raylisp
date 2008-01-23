@@ -1,46 +1,11 @@
-(require :mcclim)
 
-(in-package :clim-clx)
-
-;;;; Image drawing
-
-(export 'clim::medium-draw-pixels* :clim)
-(export 'clim::medium-get-pixels*  :clim)
-
-(defgeneric clim::medium-draw-pixels* (medium array x y &key &allow-other-keys))
-(defgeneric clim::medium-get-pixels* (medium array x y &key width height &allow-other-keys))
-
-;;; TODO: Extract indexed pattern drawing and convert to one of these functions.
-
-(defmethod clim::medium-draw-pixels* ((sheet sheet) array x y &key)
-  (with-sheet-medium (medium sheet)
-    (clim::medium-draw-pixels* medium array x y)))
-
-(defmethod clim::medium-draw-pixels* 
-    ((medium clx-medium) array x y &key &allow-other-keys)
-  (let* ((width  (array-dimension array 1))
-         (height (array-dimension array 0))
-         (image (xlib:create-image :width width :height height :data array
-                                                               :bits-per-pixel 32
-                                                               :depth 24
-                                                               :format :z-pixmap)))
-    (with-clx-graphics (medium)
-      (xlib:put-image mirror gc image :x x :y y :width width :height height))))
- 
-(defmethod clim::medium-get-pixels* 
-    ((medium clx-medium) array x y &key width height &allow-other-keys)
-  (let* ((width  (or width (array-dimension array 1)))
-         (height (or height (array-dimension array 0))))
-    (with-clx-graphics (medium)
-      (xlib:image-z-pixarray (xlib:get-image mirror :x x :y y :format :z-pixmap :width width :height height)))))
-
-(in-package :cl-user)
-
-(defpackage "RAYLISP-GUI"
-  (:use "CLIM-LISP" "CLIM" "CLIM-EXTENSIONS")
-  (:import-from "RAYLISP" 
-                "@"
-                "ORIGIN"))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defpackage "RAYLISP-GUI"
+    (:use "CLIM-LISP" "CLIM")
+    (:import-from "RAYLISP" 
+                  "@"
+                  "ORIGIN")
+    (:export "RUN")))
 
 (in-package "RAYLISP-GUI")
 
@@ -110,5 +75,12 @@
                (render-scene scene (find-pane-named *application-frame* 'canvas)))
              raylisp::*scenes*)))
 
-#+nil
-(run-frame-top-level (make-application-frame 'raylisp-frame))
+(define-raylisp-frame-command (com-toggle-kd :name t)
+    ()
+  (if (setf raylisp::*use-kd-tree* (not raylisp::*use-kd-tree*))
+      (format t "~&KD tree in use.~%")
+      (format t "~&KD tree not in used.~%")))
+
+
+(defun run ()
+  (run-frame-top-level (make-application-frame 'raylisp-frame)))

@@ -16,6 +16,7 @@
 
 (defvar *global-environment* (make-environment))
 
+
 ;;; RAY represents an individual ray. Immutable except for the EXTENT
 ;;; slot, which is used by object intersection functions to store the
 ;;; intersection point.

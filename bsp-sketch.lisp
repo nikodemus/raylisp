@@ -17,6 +17,10 @@
          (3/4 canvas)
          (:fill interactor)))))
 
+(define-bsd-frame-command (com-clear :name t)
+    ()
+  (window-clear (find-name-named *application-frame* 'canvas)))
+
 (define-bsp-frame-command (com-quit :name t)
     ()
   (frame-exit *application-frame*))
@@ -171,7 +175,7 @@
          (list (car min) division (car max) division)))
     (draw-line* *canvas* x1 y1 x2 y2)
     (medium-finish-output (sheet-medium *canvas*))
-    (break)))
+    (sleep 1)))
 
 (defun new-corner (point axis old)
   (ecase axis
@@ -197,7 +201,7 @@
               (new-min (new-corner point axis min)))
           (cons (make-plane axis point min max)
                 (nconc (subdivide left min new-max)
-                       (subdivide right new-min max)))))))))
+                       (subdivide right new-min max))))))))
 
 (defun divide (boxes min max)
   (assert boxes)

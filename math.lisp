@@ -106,6 +106,10 @@ if there are no positive real roots greater then epsilon."
 (defun vector (x y z)
   (float-vector x y z))
 
+(declaim (inline alloc-vector))
+(defun alloc-vector ()
+  (make-array 3 :element-type 'float))
+
 (defun @ (x y z)
   "Convenience vector constructor for interactive use."
   (vector (float x) (float y) (float z)))
@@ -139,6 +143,18 @@ if there are no positive real roots greater then epsilon."
   (with-arrays (v)
     (macrolet ((dim (n) `(square (v ,n))))
       (sqrt (+ (dim 0) (dim 1) (dim 2))))))
+
+(defun vector-min (&rest vectors)
+  (macrolet ((dim (n) `(min (aref a ,n) (aref b ,n))))
+    (reduce (lambda (a b)
+              (vector (dim 0) (dim 1) (dim 2)))
+            vectors)))
+
+(defun vector-max (&rest vectors)
+  (macrolet ((dim (n) `(max (aref a ,n) (aref b ,n))))
+    (reduce (lambda (a b)
+              (vector (dim 0) (dim 1) (dim 2)))
+            vectors)))
 
 (defun reverse-vector (v)
   (declare (type vector v))

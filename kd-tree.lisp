@@ -320,7 +320,7 @@
 
 (defun intersection-cost (objects)
   ;; FIXME: Some objects are cheap, some expensive.
-  (* 0.1 (length objects)))
+  (* 0.01 (length objects)))
 
 (defun intersection-probability (objects parent-area)
   (let ((sum 0))

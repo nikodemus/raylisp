@@ -7,7 +7,23 @@
    (make-instance 'sphere 
                   :location (@ 0 -0.5 0)
                   :transform (scale (@ 3 0.5 0.5))
-                  :shader (make-instance 'flat :color blue)))
+                  :shader (make-instance 'flat :color blue))
+   (make-instance 'sphere
+                  :location (@ 1.0 0.0 0.0)
+                  :radius 0.1
+                  :shader (make-instance 'flat :color white))
+   (make-instance 'sphere
+                  :location (@ 1.5 0.0 0.0)
+                  :radius 0.1
+                  :shader (make-instance 'flat :color white))
+   (make-instance 'sphere
+                  :location (@ -1.0 0.0 0.0)
+                  :radius 0.1
+                  :shader (make-instance 'flat :color white))
+   (make-instance 'sphere
+                  :location (@ -1.5 0.0 0.0)
+                  :radius 0.1
+                  :shader (make-instance 'flat :color white)))
   (:lights 
    (make-instance 'point-light 
                   :location (@ 10 5 -20)))
@@ -178,24 +194,170 @@
                      :look-at origin
                      :focal-length 3.0)))
 
+(defvar *test-6-shader* 
+  (make-instance
+   'composite
+   :shaders
+   (list
+    (make-instance 'raytrace
+                   :specular 0.1
+                   :transmit 0.9
+                   :ior 1.6)
+    (make-instance 'phong
+                   :specular 0.5
+                   :size 40.0
+                   :diffuse 0.3
+                   :ambient 0.1
+                   :color yellow))))
+
 (define-scene test-6
   (:objects 
    (make-instance 'sphere
-                  :shader
-                  (make-instance
-                   'composite
-                   :shaders
-                   (list
-                    (make-instance 'raytrace
-                                   :specular 0.1
-                                   :transmit 0.9
-                                   :ior 1.6)
-                    (make-instance 'phong
-                                   :specular 0.5
-                                   :size 40.0
-                                   :diffuse 0.3
-                                   :ambient 0.1
-                                   :color yellow))))
+                  :radius 0.4
+                  :location (@ -4 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -3 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -2 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -1 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -0 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 1 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 2 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 3 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 4 0 16)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -4 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -3 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -2 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -1 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -0 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 1 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 2 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 3 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 4 0 12)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -4 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -3 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -2 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -1 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -0 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 1 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 2 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 3 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 4 0 8)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -4 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -3 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -2 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -1 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ -0 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 1 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 2 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 3 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :radius 0.4
+                  :location (@ 4 0 4)
+                  :shader *test-6-shader*)
+   (make-instance 'sphere
+                  :shader *test-6-shader*)
    (make-instance 
     'plane
     :location (@ 0 -1 0)
@@ -209,12 +371,12 @@
   (:lights 
    (make-instance 'spotlight
                   :location (@ -30 30 -30)
-                  :direction (@ 30 -30 30)
-                  :aperture 0.999))
+                  :direction (@ 30 -30 35)
+                  :aperture 0.98))
   (:background-color blue)
   (:ambient-light white)
   (:adaptive-limit 0.01)
-  (:depth-limit 12)
+  (:depth-limit 16)
   (:default-camera
       (make-instance 'pinhole
                      :location (@ 0 0.5 -4)

@@ -76,9 +76,12 @@
   (let ((intersections (getf counters :intersections))
 	(hits (getf counters :hits))
 	(shadow-tests (getf counters :shadow-tests))
-	(shadows (getf counters :shadows)))
+	(shadows (getf counters :shadows))
+        (c-scene (scene-compiled-scene scene)))
     (format stream "~&Objects: ~A~%~
+                    Unbounded: ~A~%~
                     Lights:  ~A~%~
+                    KD-tree depth: ~A~%~
                     Initial rays: ~A~%~
                     Reflections:  ~A~%~
                     Refractions:  ~A~%~
@@ -86,7 +89,12 @@
                     Shadow tests/hits:       ~A / ~A~50T~@[~D%~]~%~
                     Internal runtime: ~A seconds~%"
 	    (length (scene-objects scene))
+            (length (compiled-scene-objects c-scene))
 	    (length (scene-lights scene))
+            (let ((kd (compiled-scene-tree c-scene)))
+              (if (kd-interior-node-p kd)
+                  (kd-depth kd)
+                  0))
 	    (getf counters :camera)
 	    (getf counters :reflected)
 	    (getf counters :refracted)
