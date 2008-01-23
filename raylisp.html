@@ -6,10 +6,13 @@
   <link rel="stylesheet" type="text/css" href="raylisp.css"/>
 </head>
 <body>
+  <hr color="orange"/>
+
   <h1>Raylisp manual</h1>
-  <hr/>
+  <hr color="orange"/>
   <p class="first"><i>Raylisp &#8211; a Common Lisp raytracing engine<br/>by Nikodemus Siivola
       &lt;nikodemus@random-state.net&gt;</i></p>
+  <hr color="orange"/>
 
   <h2>Table of Contents</h2>
   
@@ -19,6 +22,8 @@
     <li><a href="#section-protocol-dictionary">Protocol Dictionary</a></li>
     <li><a href="#section-glossary">Glossary</a></li>
   </ul>
+
+  <hr color="orange"/>
 
   <h2 id="section-introduction">Introduction</h2>
 
@@ -33,6 +38,11 @@
     shader that determines how that object is rendered. Shaders have
     full access to the rest of the scene being rendered, and can be
     optimized based on the features of the scene.</p>
+
+  <p>Note that what Raylisp calls shaders are fairly different from
+    eg. Renderman shaders. In Raylisp, a shader simply determines the
+    apparent color of an intersection point: there is no rendering
+    environment for shaders to mess with.</p>
 
   <h3>Multiple Scene Representations</h3>
   
@@ -60,6 +70,8 @@
     creating new classes and implementing the approriate methods on
     various protocol functions for these.</p>
 
+  <hr color="orange"/>
+
   <h2 id="section-protocol-overview">Protocol Overview</h3>
 
   <p class="first">Raylisp protocols can be devided into two categories:
@@ -85,6 +97,16 @@
 
   <p>Protocol function:<tt>
       <a class="sym" href="#gf-compute-light-properties">compute-light-properties</a></tt>.</p>
+
+  <h4 id="protocol-shader">Shader Protocol</h4>
+
+  <p class="first">Shader protocol controls the transformation shading information
+    from the scene representation to rendering representation.</p>
+
+  <p>Protocol function:<tt>
+      <a class="sym" href="#gf-compute-shader-function">compute-shader-function</a></tt>.</p>
+
+  <hr color="orange"/>
 
   <h2 id="section-dictionary">Dictionary</h2>
 
@@ -166,6 +188,15 @@
       </dl>
     </dd>
     
+    <dt class="def" id="gf-compute-object-extents">generic-function <b>COMPUTE-OBJECT-EXTENTS</b> <i>object</i></dt>
+    <dd>
+      <p class="first">Called for each active <a class="sym"
+	href="#class-scene-object">scene-object</a> during scene
+	compilation. Methods <i>must</i> return either position vectors for the extreme
+	corners of an axis-aligned bounding box that contains the object, or <tt>NIL</tt>
+	to indicate unbounded object geometry. The default method returns <tt>NIL</tt>.</p>
+    </dd>
+
     <dt class="def" id="gf-compute-object-properties">generic-function <b>COMPUTE-OBJECT-PROPERTIES</b> <i>object scene</i></dt>
     <dd>
       <p class="first">Called for each a <a class="sym"
@@ -217,13 +248,13 @@
       </dl>
     </dd>
 
-    <dt class="def" id="gf-compute-object-extents">generic-function <b>COMPUTE-OBJECT-EXTENTS</b> <i>object</i></dt>
+    <dt class="def" id="gf-compute-shader-function">generic-function <b>COMPUTE-SHADER-FUNCTION</b> <i>shader scene</i></dt>
     <dd>
-      <p class="first">Called for each active <a class="sym"
-	href="#class-scene-object">scene-object</a> during scene
-	compilation. Methods <i>must</i> return either position vectors for the extreme
-	corners of an axis-aligned bounding box that contains the object, or <tt>NIL</tt>
-	to indicate unbounded object geometry. The default method returns <tt>NIL</tt>.</p>
+      <p class="first">Called with a <a class="sym" href="#class-shader">shader</a> and the scene. <i>Must</i>
+	return the corresponding shader function.</p>
+      <p>The shader function is called with an hit location vector, surface normal,
+	the dot-product between the surface normal and ray direction, ray, and a counter object.
+	It <i>must</i> return the apparent color of the hit location for the ray.</p>
     </dd>
 
   </dl>
@@ -261,8 +292,6 @@
 
   <hr color="red"/>
 
-  <h4 id="protocol-shader">Shader Protocol</h4>
-
   <p>Secondary Protocols:</p>
   <ul>
     <li><a href="#proto-bounding">Bounding protocol</a></li>
@@ -271,19 +300,6 @@
     
   <h3>Primary Protocols</h3>
   
-  <h4 id="proto-geometry">Geometry Protocol</h4>
-
-  <h4>Shader Protocol</h4>
-
-  <p class="first">The shader protocol controls the transformation of
-    shaders.</p>
-
-  <p>All subclasses of the protocol class <a class="sym" href="#class-shader">shader</a>
-    <i>must</i> implement the shader protocol.</p>
-
-  <p>To implement the shader protocol, define an appropriate method on
-    on <a class="sym" href="#fun-shader-function">shader-function</a>.</p>
-
   <h3>Secondary Protocols</h3>
 
   <h4>Bounding Protocol</h4>
@@ -373,17 +389,6 @@
 
       <p>The <i>inside function</i> is called with a position vector, and
 	returns true if the designated location is inside the object.</p>
-    </dd>
-
-    <dt id="shader-function">
-      protocol-function <tt>SHADER-FUNCTION</tt> shader scene</dt>
-    <dd>
-      <p class="first">Called with a shader and the current scene, returns
-	the corresponding shader function.
-      </p>
-      <p>The <i>shader function</i> is called with an <tt>intersection</tt>
-	and a <tt>ray</tt>, and returns the apparent color of the
-	intersection point for the ray.</p>
     </dd>
 
   </dl>

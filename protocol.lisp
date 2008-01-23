@@ -234,19 +234,19 @@ intersections."
 ;;;
 ;;; Shader protocol controls the compilation of SHADER instances into
 ;;; a more efficient representation used for rendering. There must be
-;;; an applicable method on SHADER-FUNCTION for each subclass of
+;;; an applicable method on COMPUTE-SHADER-FUNCTION for each subclass of
 ;;; SHADER that returns the corresponding shader function:
 ;;;
 ;;;#### The shader function
 ;;;
 ;;; must accept an INTERSECTION and a RAY, and return the apparent color.
 
-(defgeneric shader-function (shader scene))
+(defgeneric compute-shader-function (shader scene))
 
 (defun compile-shader (shader scene)
-  (shader-function shader scene))
+  (compute-shader-function shader scene))
 
-(defmethod shader-function ((null null) scene)
+(defmethod compute-shader-function ((null null) scene)
   (constantly black))
 
 (defgeneric shader-weight (shader)
