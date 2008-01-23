@@ -8,6 +8,7 @@ li { list-style: bullet; }
 dl { margin: 1em; }
 dt.def { }
 dt.glos { font-weight: bold; }
+dt.key { font-weight: bold; }
 dd { margin-left: 1em; text-indent: 0em; }
 table { width: 30em; margin: 1em; }
 hr { margin: 2em 0em 2em; }

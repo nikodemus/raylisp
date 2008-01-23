@@ -51,11 +51,11 @@
     (setf (scene-compiled-scene scene) c-scene)
     (setf (compiled-scene-objects c-scene) 
 	  (mapcar (lambda (obj) 
-		    (compile-object obj scene))
+		    (compile-scene-object obj scene))
 		  (scene-objects scene)))
     (setf (compiled-scene-lights c-scene) 
 	  (mapcar (lambda (light)
-		    (compile-light light scene))
+		    (compile-scene-light light scene))
 		  (scene-lights scene))))
   scene)
 
@@ -71,7 +71,7 @@
 
 ;;;## Objects
 
-(defclass object ()
+(defclass scene-object ()
   ((transform 
     :initform (find-default :transform '(or null matrix)) :initarg :transform 
     :accessor transform-of)
@@ -89,7 +89,7 @@
 
 ;;;## Lights
 
-(defclass light () ())
+(defclass scene-light () ())
 
 (defstruct (compiled-light (:conc-name light-))
   (direction (required-argument :illumination) :type (function (vector) vector))

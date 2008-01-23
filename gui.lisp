@@ -1,13 +1,5 @@
 (require :mcclim)
 
-(defpackage "RAYLISP-GUI"
-  (:use "CLIM-LISP" "CLIM" "CLIM-EXTENSIONS")
-  (:import-from "RAYLISP" 
-                "@"
-                "ORIGIN"))
-
-(in-package "CLIMI")
-
 (in-package :climi)
 
 ;;;; Image drawing
@@ -43,6 +35,14 @@
          (height (or height (array-dimension array 0))))
     (with-clx-graphics (medium)
       (xlib:image-z-pixarray (xlib:get-image mirror :x x :y y :format :z-pixmap :width width :height height)))))
+
+(in-package :cl-user)
+
+(defpackage "RAYLISP-GUI"
+  (:use "CLIM-LISP" "CLIM" "CLIM-EXTENSIONS")
+  (:import-from "RAYLISP" 
+                "@"
+                "ORIGIN"))
 
 (in-package "RAYLISP-GUI")
 

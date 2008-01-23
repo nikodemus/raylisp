@@ -87,39 +87,41 @@
                          ((and (symbolp callback) (fboundp callback))
                           (fdefinition callback))
                          (t
-                          (error "Not a valid callback: ~S" callback)))))
+                          (error "Not a valid callback: ~S" callback))))
+         (counters (make-counters))
+         (start (get-internal-run-time)))
     (declare (function callback))
     (fresh-line)
-    (start-counters)
     (dotimes (y height)
       (dotimes (x width)
         (funcall callback
                  (raytrace (funcall camera 
                                     (- (/ (* 2 x) width) 1.0)
-                                    (- (/ (* 2 y) height) 1.0))
-                           scene)
+                                    (- (/ (* 2 y) height) 1.0)
+                                    counters)
+                           scene
+                           counters)
                  x
                  y))
       (when (zerop (mod y note-interval))
 	(princ ".")
 	(force-output)))
-    (stop-counters)
-    (maybe-report scene)))
+    (maybe-report scene counters (- (get-internal-run-time) start))))
 
-(defun raytrace (ray scene)
+(defun raytrace (ray scene counters)
   "Traces the RAY in SCENE, returning the apparent color."
-  (let* ((object (find-intersection ray scene))
+  (let* ((object (find-intersection ray scene counters))
          (color (if object
-                    (shade object ray)
+                    (shade object ray counters)
                     (scene-background-color scene))))
     (vector-mul color (ray-weight ray))))
 
-(defun find-intersection (ray scene)
+(defun find-intersection (ray scene counters)
   (declare (optimize speed))
   (labels ((recurse (objects x)
 	     (if (not objects)
 		 x ; return
-		 (multiple-value-bind (t? x?)  (intersect (car objects) ray)
+		 (multiple-value-bind (t? x?)  (intersect (car objects) ray counters)
 		   (if t?
 		       (recurse (cdr objects) x?)
 		       (recurse (cdr objects) x))))))

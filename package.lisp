@@ -18,6 +18,18 @@
    "VECTOR"
    "TYPE-OF")
   (:export
+   ;; protocol classes
+   "SCENE-OBJECT"
+   "SCENE-LIGHT"
+   ;; protocol functions
+   "COMPUTE-OBJECT-PROPERTIES"
+   "COMPUTE-OBJECT-EXTENTS"
+   "COMPUTE-LIGHT-PROPERTIES"
+   ;; scene compilation
+   "COMPILE-SCENE-OBJECT"
+   "COMPILE-SCENE-LIGHT"
+   
+
    "FLOAT"
    "FLOATP"
    "INTERSECTION"

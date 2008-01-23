@@ -2,51 +2,65 @@
 
 ;;;# Statistics
 
-;;; FIXME: This is fairly horrible.
+(defconstant +camera-ray-slot+        0)
+(defconstant +reflected-ray-slot+     1)
+(defconstant +refracted-ray-slot+     2)
+(defconstant +intersection-miss-slot+ 3)
+(defconstant +shadow-miss-slot+       4)
+(defconstant +intersection-hit-slot+  5)
+(defconstant +shadow-hit-slot+        6)
 
-(let ((camera-rays 0)
-      (reflected 0)
-      (refracted 0)
-      (intersections 0)
-      (hits 0)
-      (shadow-tests 0)
-      (shadows 0)
-      (start 0)
-      (stop 0))
-  (declare (type unsigned-byte camera-rays reflected refracted intersections
-                 hits shadow-tests shadows start stop))
-  (defun start-counters ()
-    (setf camera-rays 0
-	  reflected 0
-	  refracted 0
-	  intersections 0
-	  hits 0
-	  shadow-tests 0
-	  shadows 0
-	  start (get-internal-run-time)))
-  (defun stop-counters ()
-    (setf stop (get-internal-run-time)))
-  (defun get-counters ()
-    (list :camera camera-rays
-	  :reflected reflected
-	  :refracted refracted
-	  :intersections intersections
-	  :hits hits
-	  :shadow-tests shadow-tests
-	  :shadows shadows
-	  :time (float (/ (- stop start) internal-time-units-per-second))))
-  (macrolet ((incf* (place)
-               `(incf ,place)
-               #+nil
-	       `(setf ,place (ldb (byte 32 0) (1+ ,place)))))
-    (declare (optimize speed))
-    (defun note-camera-ray () (incf* camera-rays))
-    (defun note-reflected-ray () (incf* reflected))
-    (defun note-refracted-ray () (incf* refracted))
-    (defun note-intersection () (incf* intersections))
-    (defun note-hit () (incf* hits))
-    (defun note-shadow () (incf* shadows))
-    (defun note-shadow-test () (incf* shadow-tests))))
+(eval-when (:load-toplevel :compile-toplevel :execute)
+  (defconstant +counter-vector-length+  8))
+
+(deftype counter-vector ()
+  `(simple-array (unsigned-byte 32) (,+counter-vector-length+)))
+
+(defun make-counters ()
+  (make-array +counter-vector-length+ :element-type '(unsigned-byte 32)))
+
+(defmacro incf* (place)
+  `(setf ,place (logand #xffffffff (+ ,place 1))))
+
+(defun note-intersection (counters shadowp hitp)
+  (declare (counter-vector counters))
+  (let ((slot (if hitp
+                  (if shadowp
+                      +shadow-miss-slot+
+                      +intersection-miss-slot+)
+                  (if shadowp
+                      +shadow-hit-slot+
+                      +intersection-hit-slot+)))) 
+    (incf* (aref counters slot)))
+  counters)
+
+(defun note-camera-ray (counters)
+  (declare (counter-vector counters))
+  (incf* (aref counters +camera-ray-slot+))
+  counters)
+
+(defun note-reflected-ray (counters)
+  (declare (counter-vector counters))
+  (incf* (aref counters +reflected-ray-slot+))
+  counters)
+
+(defun note-refracted-ray (counters)
+  (declare (counter-vector counters))
+  (incf* (aref counters +refracted-ray-slot+))
+  counters)
+
+(defun counter-plist (counters)
+  (let ((hits (aref counters +intersection-hit-slot+))
+        (misses (aref counters +intersection-miss-slot+))
+        (shadows (aref counters +shadow-hit-slot+))
+        (shadow-misses (aref counters +shadow-miss-slot+)))
+    (list :camera (aref counters +camera-ray-slot+)
+          :reflected (aref counters +reflected-ray-slot+)
+          :refracted (aref counters +refracted-ray-slot+)
+          :intersections (+ hits misses)
+          :hits hits
+          :shadow-tests (+ shadows shadow-misses)
+          :shadows shadows)))
 
 ;;;## Reporting
 ;;;
@@ -58,7 +72,7 @@
 
 (defvar *render-verbose* t)
 
-(defun print-report (scene counters &optional (stream *render-verbose*))
+(defun print-report (scene counters time &optional (stream *render-verbose*))
   (let ((intersections (getf counters :intersections))
 	(hits (getf counters :hits))
 	(shadow-tests (getf counters :shadow-tests))
@@ -82,9 +96,9 @@
 	    shadow-tests shadows 
 	    (unless (zerop shadows)
 	      (round (* 100 (/ shadows shadow-tests))))
-	    (getf counters :time))))
+            (float (/ time internal-time-units-per-second)))))
 
-(defun maybe-report (scene)
+(defun maybe-report (scene counters time)
   (when *render-verbose*
-    (print-report scene (get-counters) *render-verbose*)))
+    (print-report scene (counter-plist counters) time *render-verbose*)))
 

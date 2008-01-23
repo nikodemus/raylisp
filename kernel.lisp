@@ -45,11 +45,11 @@
 
 ;;; Spawning new rays. The SPAWN-RAYS is quite ugly and should be fixed.
 
-(defun reflected-ray (point normal dot ray specular)
+(defun reflected-ray (point normal dot ray specular counters)
   (declare (type vector point normal)
            (type ray ray)
            (type float dot specular))
-  (note-reflected-ray)
+  (note-reflected-ray counters)
   ;; Intersection normal is always on the side of ray origin, but
   ;; precalculated N.D may be negative:
   ;;
@@ -82,7 +82,7 @@
    :depth (1+ (ray-depth ray))
    :environment (ray-environment ray)))
 
-(defun spawn-rays (point normal dot ray specular transmit ior)
+(defun spawn-rays (point normal dot ray specular transmit ior counters)
   (declare (type vector point normal)
            (type ray ray)
            (type float dot specular transmit ior))
@@ -101,9 +101,9 @@
 	(if (significantp cs2)
 	    ;; normal case
 	    (values
-	     (reflected-ray point normal dot ray specular)
+	     (reflected-ray point normal dot ray specular counters)
 	     (progn
-	       (note-refracted-ray)
+	       (note-refracted-ray counters)
 	       (make-ray
 		:origin point
 		:direction
@@ -132,7 +132,7 @@
 	    ;;
 	    ;; FIXME: the second dummy ray here seems like an ugly hack
 	    (values 
-	     (reflected-ray point normal dot ray 1.0)
+	     (reflected-ray point normal dot ray 1.0 counters)
 	     (load-time-value 
 	      (make-ray :origin origin :direction x-axis :weight 0.0))))))) )
 

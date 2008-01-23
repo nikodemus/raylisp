@@ -6,10 +6,9 @@
   <link rel="stylesheet" type="text/css" href="raylisp.css"/>
 </head>
 <body>
-  <h1>Raylisp</h1>
-  <p>Last updated 2007-03-09.</p>
+  <h1>Raylisp manual</h1>
   <hr/>
-  <p class="first"><i>A Common Lisp Raytracing Engine<br/>by Nikodemus Siivola
+  <p class="first"><i>Raylisp &#8211; a Common Lisp raytracing engine<br/>by Nikodemus Siivola
       &lt;nikodemus@random-state.net&gt;</i></p>
 
   <h2>Table of Contents</h2>
@@ -76,14 +75,37 @@
     geometry from scene representation to rendering representation.</p>
   
   <p>Protocol function:<tt>
-      <a class="sym" href="#gf-scene-object-geometry">scene-object-geometry</a>.
+      <a class="sym" href="#gf-compute-object-properties">compute-object-properties</a>.
   </tt></p>
+  
+  <h4 id="protocol-illumination">Illumination Protocol</h4>
+
+  <p class="first">Illumination protocol controls the transformation illumination
+    information from the scene representation to rendering representation.</p>
+
+  <p>Protocol function:<tt>
+      <a class="sym" href="#gf-compute-light-properties">compute-light-properties</a></tt>.</p>
 
   <h2 id="section-dictionary">Dictionary</h2>
 
   <h3>Protocol Classes</h3>
 
   <dl>
+
+    <dt class="def" id="class-scene-light">standard-class <b>SCENE-LIGHT</b></dt>
+    <dd>
+      <p class="first">Superclass of all lightsources in the scene representation.</p>
+
+      <p>The <a href="#protocol-illumination">illumination protocol</a> must be
+	implemented for all subclasses of <tt>scene-light</tt> by an
+	approprioate method on <a class="sym"
+	href="#gf-compute-light-properties">compute-light-properties</a>.</p>
+
+      <p>Subclasses conventionally have a <tt>-light</tt> postfix.</p>
+    </dd>
+
+
+    
     <dt class="def" id="class-scene-object">standard-class <b>SCENE-OBJECT</b></dt>
     <dd>
       <p class="first">Superclass of all visible and/or shadowcasting
@@ -91,11 +113,11 @@
       <p>The <a href="#protocol-geometry">geometry protocol</a> must
 	be implemented for all subclasses of <tt>scene-object</tt> by
 	an appropriate method on <a class="sym"
-	href="#gf-scene-object-geometry">scene-object-geometry</a>.</p>
+	href="#gf-compute-object-properties">compute-object-properties</a>.</p>
       <p>Subclasses for which
 	the <a href="#protocol-bounding">bounding protocol</a> is
 	implemented by an appropriate method on <a class="sym"
-	href="#gf-scene-object-extents">scene-object-extents</a> gain benefit
+	href="#gf-compute-object-extents">compute-object-extents</a> gain benefit
 	optimizations based on spatial hiearchies in ray- and
 	shadowcasting.</p>
       <p>Subclasses have no special naming conventions.</p>
@@ -105,19 +127,50 @@
   <h3>Protocol Functions</h3>
 
   <dl>
-    <dt class="def" id="gf-scene-object-geometry">generic-function <b>SCENE-OBJECT-GEOMETRY</b> <i>scene-object scene</i></dt>
+    <dt class="def" id="gf-compute-light-properties">generic-function <b>COMPUTE-LIGHT-PROPERTIES</b> <i>light scene</i></dt>
+    <dd>
+      <p class="first">Called for each <a class="sym"
+	href="#class-scene-light">scene-light</a> during scene
+	compilation. Methods <i>must</i> return either <tt>NIL</tt>,
+	indicating the that the light is inactive and should be
+	elided, or a property list describing the light, in which:</p>
+      <dl>
+	<dt class="key">:incident-light-function</dt>
+	<dd>
+	  <p class="first">is a function called with a hit location
+	    vector. It must return an incident light vector, which
+	    points from the hit location to the location of the light,
+	    or <tt>NIL</tt> if the light is never visible from the
+	    given location.</p>
+	  <p>The light vector may be unnormalized, and its length can
+	    be used to communicate eg. the distance of the light from
+	    the location to the corresponding illumination
+	    function.</p>
+	</dd>
+	<dt class="key">:illumination-function</dt>
+	<dd>
+	  <p class="first">is a function called with a hit location
+	    vector and an incident light vector from an earlier call
+	    to the corresponding incident light function. It must
+	    return the color of incident light at the location as
+	    primary value, and the length of the incident light vector
+	    as the secondary value.</p>
+	</dd>
+      </dl>
+    </dd>
+    
+    <dt class="def" id="gf-compute-object-properties">generic-function <b>COMPUTE-OBJECT-PROPERTIES</b> <i>object scene</i></dt>
     <dd>
       <p class="first">Called for each a <a class="sym"
 	href="#class-scene-object">scene-object</a> during scene
-	compilation. Methods
-	on <tt>scene-object-geometry</tt> <i>must</i> return
-	either <tt>NIL</tt>, indicating that the object is inactive
-	and should be elided, or a property list describing the geometry
-	of the object, in which:</p>
-      <ul>
-	<li>
-	  <p class="first"><b><tt>:intersection-function</tt></b> is
-	    function called with a <a class="sym"
+	compilation. Methods <i>must</i> return either <tt>NIL</tt>,
+	indicating that the object is inactive and should be elided,
+	or a property list describing the geometry of the object, in
+	which:</p>
+      <dl>
+	<dt class="key">:intersection-function</dt>
+	<dd>
+	  <p class="first">is a function called with a <a class="sym"
 	    href="#class-ray">ray</a>, which <i>must</i> return true
 	    if the ray intersects the object and the distance
 	    from <a class="sym" href="#fun-ray-origin">ray-origin</a>
@@ -138,30 +191,26 @@
 	    different calls to the same intersection function may
 	    return different surrogate objects or reuse the same one.
 	  </p>
-	</li>
-	<li>
-	  <p class="first"><b><tt>:normal-function</tt></b> is a
-	    function called with a position vector indicating a
-	    position on the surface of the object, and <i>must</i>
-	    return the surface normal of the object at that point.
-	    Surface normals returned by the normal
-	    function <i>must</i> point to the outside of the
-	    object.
+	</dd>
+	<dt class="key">:normal-function</dt>
+	<dd>
+	  <p class="first">is a function called with a position vector
+	    indicating a position on the surface of the object,
+	    and <i>must</i> return the surface normal of the object at
+	    that point. Surface normals returned by the normal
+	    function <i>must</i> point to the outside of the object.
 	  </p>
-	</li>
-      </ul>
+	</dd>
+      </dl>
     </dd>
 
-    <dt class="def" id="gf-scene-object-extents">generic-function <b>SCENE-OBJECT-EXTENTS</b> <i>scene-object scene</i></dt>
+    <dt class="def" id="gf-compute-object-extents">generic-function <b>COMPUTE-OBJECT-EXTENTS</b> <i>object</i></dt>
     <dd>
-      <p class="first">Called for each active scene object during scene
-	compilation. The default method returns <tt>NIL</tt>,
-	indicating unbounded object geometry.
-      </p>
-      <p>In addition to NIL, methods on <tt>scene-object-extents</tt>
-	may return as primary and secondary value the position vectors
-	for extreme corners of an axis-aligned bounding box containing
-	the object.</p>
+      <p class="first">Called for each active <a class="sym"
+	href="#class-scene-object">scene-object</a> during scene
+	compilation. Methods <i>must</i> return either position vectors for the extreme
+	corners of an axis-aligned bounding box that contains the object, or <tt>NIL</tt>
+	to indicate unbounded object geometry. The default method returns <tt>NIL</tt>.</p>
     </dd>
 
   </dl>
@@ -169,16 +218,28 @@
   <h3>Scene Compilation</h3>
 
   <dl>
-    <dt class="def" id="fun-compile-scene-object">function <b>COMPILE-SCENE-OBJECT</b> <i>scene-object scene</i></dt>
+    
+    <dt class="def" id="fun-compile-scene-light">function <b>COMPILE-SCENE-LIGHT</b> <i>light scene</i></dt>
+    <dd>
+      <p class="first">Returns on an opaque rendering object
+	representing the <a class="sym"
+	href="#class-scene-light">scene-light</a> in the scene, or
+	NIL if the light is inactive and should be elided. Implemented by
+	<a class="sym"
+	href="#gf-compute-light-properties">compute-light-properties</a>.
+      </p>
+    </dd>
+
+    <dt class="def" id="fun-compile-scene-object">function <b>COMPILE-SCENE-OBJECT</b> <i>object scene</i></dt>
     <dd>
       <p class="first">Returns on an opaque rendering object
 	representing the <a class="sym"
 	href="#class-scene-object">scene-object</a> in the scene, or
 	NIL if the object is inactive and should be elided. Implemented by
 	<a class="sym"
-	href="#gf-scene-object-geometry">scene-object-geometry</a>
+	href="#gf-compute-object-properties">compute-object-properties</a>
 	and <a class="sym"
-	href="#gf-scene-object-extents">scene-object-extents</a>.
+	href="#gf-compute-object-extents">compute-object-extents</a>.
       </p>
     </dd>
 
@@ -187,7 +248,6 @@
 
   <hr color="red"/>
 
-  <h4 id="protocol-light">Light Protocol</h4>
   <h4 id="protocol-shader">Shader Protocol</h4>
 
   <p>Secondary Protocols:</p>
@@ -199,27 +259,6 @@
   <h3>Primary Protocols</h3>
   
   <h4 id="proto-geometry">Geometry Protocol</h4>
-
-  <p class="first">Geometry protocol </p>
-
-  <p>All subclasses of <a class="sym"
-      href="#class-scene-object">scene-object</a> <i>must</i>
-      implement the geometry protocol.</p>
-  
-  <p>To implement the geometry protocol, define an appropriate method
-    on <a class="sym"
-    href="#fun-compile-scene-object">compile-scene-object</a>.</p>
-
-  <h4>Light Protocol</h4>
-
-  <p class="first">The light protocol controls the transformation of
-    lightsources.</p>
-
-  <p>All subclasses of the protocol class <a class="sym" href="#class-light">light</a>
-    <i>must</i> implement the light protocol.</p>
-
-  <p>To implement the light protocol, define an appropriate method on
-    <a class="sym" href="#fun-light-functions">light-functions</a>.</p>
 
   <h4>Shader Protocol</h4>
 
@@ -245,7 +284,7 @@
     optimizations if they implement the bounding protocol.</p>
 
   <p>To implement the bounding protocol, define an appropriate method
-    on <a class="sym" href="#gf-scene-object-extents">scene-object-extents</a>.</p>
+    on <a class="sym" href="#gf-compute-object-extents">compute-object-extents</a>.</p>
 
   <h4>CSG Protocol</h4>
 
@@ -278,16 +317,6 @@
     instantiated.</p>
 
   <dl>
-    <dt class="def" id="class-scene-light">protocol-class <tt>SCENE-LIGHT</tt></dt>
-    <dd>
-      <p class="first">Superclass of all high-level lightsources.
-	Subclasses conventionally have a <tt>-light</tt> postfix.</p>
-      <p>Instances are converted to <a class="sym"
-	href="#type-renderer-light">renderer-light</a> instances for
-	rendering.</p></dd>
-    
-
-
     <dt class="def" id="class-shader">protocol-class <tt>SHADER</tt></dt>
     <dd><p class="first">Superclass of all shaders. Subclasses 
 	conventionally have a <tt>-shader</tt> postfix.</p></dd>
@@ -302,16 +331,6 @@
     the correct protocol functions.</p>
 
   <dl>
-    <dt class="def" id="fun-light-functions">procotol-function <tt>LIGHT-FUNCTIONS</tt> light scene</dt>
-    <dd>
-      <p class="first">Called with a <a class="sym" href="#class-light">light</a>
-	and the current scene. Returns, as multiple values,
-	the <a href="#glos-incident-light-function">incident light
-	function</a> and
-	the <a href="#glos-illumination-function">illumination
-	function</a> that implement the lightsource.</p>
-    </dd>
-    
     <dt class="def" id="fun-object-functions">protocol-function <tt>OBJECT-FUNCTIONS</tt> object scene</dt>
     <dd>Called with an <a class="sym" href="#object">object</a> and
 	the current scene. Returns, as multiple values,
@@ -381,15 +400,6 @@
     <dt class="glos" id="glos-hit-location">hit location</dt>
     <dd>Vector specifying a point in space where a ray and an object intersect.</dd>
     
-    <dt class="glos" id="glos-incident-light-function">incident light function</dt>
-    <dd>Function representing light from a specific lightsource
-      directed at a specific point. Called with
-      a <a href="#glos-hit-location">hit location</a> vector. Returns
-      a <a href="#glos-light-vector">light vector</a> for that
-      position. See: <a class="sym" href="#fun-light-functions">
-      light-functions</a>, <a class="sym"
-      href="#class-scene-light">scene-light</a>, and <a class="sym"
-      href="#type-renderer-light">renderer-light</a>.</dd>
 
     <dt class="glos" id="glos-illumination-function">illumination function</dt>
     <dd>A function called with

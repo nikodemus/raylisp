@@ -230,7 +230,7 @@
                                          :end (make-instance 'solid :color white)
                                          :scale 0.8)))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 -1 1)))
+   (make-instance 'solar-light :direction (@ -1 1 -1)))
   (:ambient-light (@ 0.1 0.1 0.1))
   (:default-camera
       (make-instance 'pinhole
@@ -318,11 +318,11 @@
 
 (defun test-sphere ()
   (flet ((make-sphere (radius location &key transform)
-	   (compile-object (make-instance 'sphere 
-					  :radius radius
-					  :location location
-					  :transform transform)
-			   (make-scene)))
+	   (compile-scene-object (make-instance 'sphere 
+                                                :radius radius
+                                                :location location
+                                                :transform transform)
+                                 (make-scene)))
 	 (normal (object point)
 	   (funcall (object-normal object) point))
 	 (intersect (x from dir)
@@ -373,8 +373,8 @@
 
 (defun test-plane ()
   (flet ((make-plane (n v)
-	   (compile-object (make-instance 'plane :normal n :location v)
-			   (make-scene)))
+	   (compile-scene-object (make-instance 'plane :normal n :location v)
+                                 (make-scene)))
 	 (normal (x v)
 	   (funcall (object-normal x) v))
 	 (intersect (x from dir)

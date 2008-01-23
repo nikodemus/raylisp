@@ -10,36 +10,33 @@
 ;;; bounding protocol if possible.
 ;;;
 
-(defgeneric object-functions (object scene))
+(defgeneric compute-object-properties (scene-object scene))
 
-(defun compile-object (object scene)
-  (multiple-value-bind (intersection normal) (object-functions object scene)
-    (multiple-value-bind (min max) (object-extents object)
-      (make-compiled-object
-       :intersection intersection
-       :normal normal
-       :shader (compile-shader (shader-of object) scene)
-       :min min :max max))))
+(defgeneric compute-object-extents (scene-object))
+
+(defmethod compute-object-extents ((object scene-object))
+  nil)
+
+(defun compile-scene-object (object scene)
+  (destructuring-bind (&key intersection-function normal-function)
+      (compute-object-properties object scene)
+    (if intersection-function
+        (multiple-value-bind (min max) (compute-object-extents object)
+          (assert (and intersection-function normal-function))
+          (make-compiled-object
+           :intersection intersection-function
+           :normal normal-function
+           :shader (compile-shader (shader-of object) scene)
+           :min min :max max))
+        (assert (not normal-function)))))
 
 (declaim (inline intersect))
-(defun intersect (object ray &optional shadow)
-  (if shadow
-      (note-shadow-test)
-      (note-intersection))
+(defun intersect (object ray counters &optional shadow)
   (multiple-value-bind (hitp x)
       (funcall (object-intersection object) ray)
     (declare (type boolean hitp) (type (or null compiled-object) x))
-    (when hitp
-      (if shadow
-          (note-shadow)
-          (note-hit)))
+    (note-intersection counters shadow hitp)
     (values hitp (or x object))))
-
-(defgeneric object-extents (object))
-
-(defmethod object-extents ((object object))
-  nil)
-
 
 ;;;#### The inside function
 ;;;
@@ -53,7 +50,7 @@
     :initform (find-default :type '(member difference intersection))
     :initarg :type :accessor type-of)))
 
-(defclass csg (object csg-type)
+(defclass csg (scene-object csg-type)
   ((objects :initform nil :initarg :objects :accessor objects-of))
   (:documentation
    "An uncompiled CSG node, representing a boolean operation
@@ -67,13 +64,13 @@ tree of CSG-NODE instances."))
 	      (make-instance 'csg-node :left x :right y))
 	    (objects-of csg))))
 
-(defmethod object-functions ((csg csg) scene)
-  (object-functions (csg-nodes csg) scene))
+(defmethod compute-object-properties ((csg csg) scene)
+  (compute-object-properties (csg-nodes csg) scene))
 
 (defmethod csg-functions ((csg csg) scene)
   (csg-functions (csg-nodes csg) scene))
 
-(defclass csg-node (object csg-type)
+(defclass csg-node (scene-object csg-type)
   ((left :initarg :left :accessor left-of)
    (right :initarg :right :accessor right-of))
   (:documentation
@@ -103,9 +100,9 @@ intersections."
   (declare (ignore point))
   (error "CSG normal not delegated."))
 
-(defmethod object-functions ((node csg-node) scene)
-  (values 
-   ;; intersect
+(defmethod compute-object-properties ((node csg-node) scene)
+  (list
+   :intersection-function
    (let* ((matrix (transform-of node))
 	  (inverse (if matrix (inverse-matrix matrix) (identity-matrix))))
      (let-values (((intersect-x inside-x) (csg-functions (left-of node) scene))
@@ -138,7 +135,7 @@ intersections."
 	   (make-lambda find-if find-if))
 	  (difference 
 	   (make-lambda find-if-not find-if))))))
-   ;; normal
+   :normal-function
    #'undelegated-csg-normal))
 
 (defmethod csg-functions ((node csg-node) scene)
@@ -177,25 +174,24 @@ intersections."
 	    (make-lambda (lambda (x y) (and x (not y))))))))))
 
 
+(defgeneric compute-light-properties (light scene))
 
-
-
-(defgeneric light-functions (light scene))
-
-(defun compile-light (light scene)
-  (multiple-value-bind (direction illumination)
-      (light-functions light scene)
+(defun compile-scene-light (light scene)
+  (destructuring-bind (&key incident-light-function illumination-function)
+      (compute-light-properties light scene)
+    (when (or incident-light-function illumination-function)
+      (assert (and incident-light-function illumination-function)))
     (make-compiled-light
-     :direction direction
-     :illumination illumination)))
+     :direction incident-light-function
+     :illumination illumination-function)))
 
 (declaim (inline light-vector illuminate))
 	 
 (defun light-vector (light point)
   (funcall (light-direction light) point))
 
-(defun illuminate (light point light-vector)
-  (funcall (light-illumination light) point light-vector))
+(defun illuminate (light point light-vector counters)
+  (funcall (light-illumination light) point light-vector counters))
 
 ;;;### Light Buffers
 ;;;
@@ -216,23 +212,23 @@ intersections."
           ;; No real light buffers yet: just a single shadow object cache.
 	  (last nil))
       (declare (type (or null compiled-object) last))
-      (lambda (point nlv len)
+      (lambda (point nlv len counters)
 	(declare (type vector point nlv) (type float len)
 		 (optimize speed))
 	(let ((ray (make-ray :origin point :direction nlv :extent len)))
 	  (if last
-	      (or (intersect last ray t)
+	      (or (intersect last ray counters t)
 		  (find-if (lambda (object)
 			     (declare (type compiled-object object))
 			     (unless (eq last object)
-			       (when (intersect object ray t)
+			       (when (intersect object ray counters t)
 				 (setf last object))))
 			   (compiled-scene-objects c-scene)))
 	      (find-if (lambda (object)
-			 (declare (type compiled-object object))
-			 (when (intersect object ray t)
-			   (setf last object)))
-		       (compiled-scene-objects c-scene))))))))
+                         (declare (type compiled-object object))
+                         (when (intersect object ray counters t)
+                           (setf last object)))
+                       (compiled-scene-objects c-scene))))))))
 
 ;;;## Shader protocol
 ;;;
@@ -260,7 +256,7 @@ intersections."
   (/ value (shader-weight shader)))
 
 (declaim (inline shade))
-(defun shade (object ray)
+(defun shade (object ray counters)
   (let* ((point (adjust-vector (ray-origin ray) (ray-direction ray) 
 			       (ray-extent ray)))
 	 (normal (funcall (object-normal object) point))
@@ -269,4 +265,5 @@ intersections."
              point 
              (if (plusp n.d) (reverse-vector normal) normal)
              n.d
-	     ray)))
+	     ray
+             counters)))
