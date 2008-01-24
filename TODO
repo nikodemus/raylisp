@@ -1,0 +1,72 @@
+FIXME
+
+* Test splitting of object in KD-tree construction for scenes where
+  all objects overly other objects along the axes.
+
+ARCHITECTURE
+
+* Support for manual hierarchical bounding.
+
+* Automatics hierarchical bounding for CSG
+
+* Light buffers in SHADOW-FUNCTION.
+
+* Rending protocol.
+
+* Ray attenuation.
+
+* Heterogenous media.
+
+* Vista buffer. Saving a perfect vista buffer from previous rendering.
+
+* Backwards raytracing.
+
+* OpenGL preview.
+
+* Computing functions to shade a given pixel. (Symbolic raytracing.)
+
+* Real colors. (Wavelength based rendering.)
+
+* Representing transformations with functions. (COMPILE to inline constants.)
+
+COMPONENTS
+
+* Antialiasing.
+
+* Area lights.
+
+* Fake area lights.
+
+* Translucent shadows.
+
+* Fake IOR.
+
+* Missing rations.
+
+* Shearing transformations.
+
+* Turbulence shader.
+
+* Marble shader.
+
+* Variant reflection.
+
+* Faked surface normals.
+
+* Light groups. (Lights illuminating only some objects.)
+
+* Orthogonal camera.
+
+* Fisheye camera.
+
+* Panorama camera.
+
+* Focal blur.
+
+* Box.
+
+* Cylinder.
+
+* Torus.
+
+* Radiosity.
