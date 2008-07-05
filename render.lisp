@@ -20,61 +20,6 @@
 	  (> (q 1) 0.3)
 	  (> (q 2) 0.6)))))
 
-#+nil
-(defun render (scene camera width height &optional supersamplep)
-  (declare (fixnum width height))
-  (let* ((raster (make-array (list width height)))
-	 (scene (compile-scene scene))
-	 (camera (compile-camera camera))
-	 (note-interval (ceiling height 80)))
-    (fresh-line)
-    (start-counters)
-    (dotimes (y height)
-      (dotimes (x width)
-	(setf (aref raster x y)
-	      (raytrace (funcall camera
-                                 (- (/ (* 2 x) width) 1.0)
-                                 (- (/ (* 2 y) height) 1.0))
-                        scene)))
-      (when (zerop (mod y note-interval))
-	(princ ".")
-	(force-output)))
-    (stop-counters)
-    (maybe-report scene)
-    (values
-     raster
-     (when supersamplep
-       (let ((raster2 (make-array (list width height))))
-	 (start-counters)
-	 (write-line "Supersampling")
-	 (dotimes (y height)
-	   (dotimes (x width)
-	     (if (and (plusp x) (plusp y) (< x (1- width)) (< y (1- height))
-		      (needs-supersampling-p raster x y))
-		 (setf (aref raster2 x y)
-		       (vector-div
-			(let ((co (vector -0.5 0.0 0.5))
-                              (color (vector 0.0 0.0 0.0)))
-                          (dotimes (i 3 color)
-                            (dotimes (j 3)
-                              (let ((u (aref co i)) (v (aref co j)))
-                                (setf color
-                                      (vector-add
-                                       (raytrace
-                                        (funcall camera
-                                                 (- (/ (* 2 (+ u x)) width) 1.0)
-                                                 (- (/ (* 2 (+ v y)) height) 1.0))
-                                        scene)
-                                       color))))))
-			9.0))
-		 (setf (aref raster2 x y) (aref raster x y))))
-	   (when (zerop (mod y note-interval))
-	     (princ ".")
-	     (force-output)))
-	 (stop-counters)
-	 (maybe-report scene)
-	 raster2)))))
-
 (defun render (scene camera width height callback &key (normalize-camera t))
   (declare (fixnum width height))
   (when normalize-camera
