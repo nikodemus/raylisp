@@ -5,20 +5,22 @@
 ;;; CAMERA class is transformed to a corresponding raycasting lambda by
 ;;; COMPILE-CAMERA.
 
-(defclass camera () 
+(defclass camera ()
   ((location :accessor location-of)
    (direction :accessor direction-of)
    (up :accessor up-of)
    (right :accessor right-of)))
 
 (defmethod print-object ((camera camera) stream)
-  (print-unreadable-object (camera stream)
-    (format stream "loc: ~S dir: ~S" (location-of camera) (direction-of camera)))
+  (print-unreadable-object (camera stream :type t)
+    (format stream "loc: ~S dir: ~S right: ~S up: ~S"
+            (location-of camera) (direction-of camera)
+            (right-of camera) (up-of camera)))
   camera)
 
 (defgeneric compile-camera (camera))
 
-(defmethod initialize-instance :after ((camera camera) &key 
+(defmethod initialize-instance :after ((camera camera) &key
 				       look-at direction location
 				       focal-length sky
                                        right up aspect-ratio)
@@ -37,7 +39,7 @@
   (let ((normalized-direction
          (when direction
            (normalize direction))))
-    (unless direction        
+    (unless direction
       (unless look-at
         (setf look-at origin))
       (unless focal-length
@@ -46,13 +48,15 @@
              direction (vector-mul normalized-direction focal-length)))
     (unless (and up right)
       (unless sky
-        (setf sky y-axis))
+        (if (= 0 (aref direction 0) (aref direction 2))
+            (setf sky z-axis)
+            (setf sky y-axis)))
       (unless aspect-ratio
         (setf aspect-ratio (/ 4.0 3.0)))
       (let* ((n-sky (if sky (normalize sky) y-axis))
              (n-right (cross-product n-sky normalized-direction)))
         (setf right (vector-mul n-right aspect-ratio)
-              up (cross-product n-right normalized-direction)))))
+              up (normalize (cross-product normalized-direction n-right))))))
   (setf (location-of camera) location
         (direction-of camera) direction
         (right-of camera) right
@@ -63,7 +67,7 @@
         (right (normalize (right-of camera)))
         (image-ratio (float (/ width height))))
     (make-instance (class-of camera)
-                   :up up 
+                   :up up
                    :right (vector-mul right image-ratio)
                    :direction (direction-of camera)
                    :location (location-of camera))))
@@ -83,9 +87,10 @@
       (declare (type float rx ry))
       (note-camera-ray counters)
       (macrolet ((dim (n)
-		   `(+ (aref dir ,n) 
+		   `(+ (aref dir ,n)
 		       (* rx (aref right ,n)) (* ry (aref up ,n)))))
-	(make-ray 
+	(make-ray
 	 :origin location
 	 :direction (normalized-vector (dim 0) (dim 1) (dim 2)))))))
+
 
