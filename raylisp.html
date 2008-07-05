@@ -697,50 +697,5 @@ constructed by <a class="sym"
     </dd>
   </dl>
 
-  <h2>Future Work</h2>
-  <ul>
-    <li>CSG hierarchical bounding.</li>
-    <li>SHADOW-FUNCTION basically has the necessary infrastructure to
-      support light buffers (or multi-object caches), but they are not
-      yet implemented.</li>
-    <li>Better antialiazing.</li>
-    <li>Ray attenuation. Heterogenous media.</li>
-    <li>Vista buffer.</li>
-    <li>Backwards raytracing: Light maps for real refraction effects.</li>
-    <li>OpenGL based scene preview.</li>
-    <li>Translucent shadows.</li>
-    <li>Fake IOR.</li>
-    <li>Explain SHADER-WEIGHT.</li>
-    <li>Surface syntax for terser scene specifications:
-      (with-shader (...) 
-         ...
-         (sphere :at (0 1 2) :radius 3))
-    </li>
-    <li>Graphical scene editor.</li>
-    <li>Have RAYTRACE return a function for computing the color
-      instead of the color. This function's return value would depend
-      on shaders: by changing shaders the color would directly change
-      without full re-rendering. Symbolic raytracing of sorts:
-      raytrace and get a raster consisting of functions. Set shaders
-      and call each function to get the color for that pixel.</li>
-    <li>A real color type as opposed to RGB vectors.</li>
-    <li>Support for both wavelength and RGB representations.</li>
-    <li>Few rotations are currently missing. It might also be more
-      efficient to have transformations represented by functions
-      (especially as we could call COMPILE on them to inline the
-      constants) instead. Support for shearing.</li>
-    <li>Various turbulent shaders (needs noise), more ways to combine
-      & blend shaders. Variant reflection. Faked surface normals.</li>
-    <li>Area lights.</li>
-    <li>Light groups.</li>
-    <li>Objects: Box, cylinder, torus, faster & general sphere & plane,
-      meshes, heightfields.</li>
-    <li>Cameras: Orthogonal, fisheye, panorama, focal blur.</li>
-    <li>Radiosity.</li>
-    <li>Shader for angle-dependent reflection.</li>
-    <li>Environment sensitive shaders: dirt in hard to reach places. etc.</li>
-    <li></li>
-    <li></li>
-  </ul>
 </body>
 </html>
