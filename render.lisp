@@ -4,7 +4,7 @@
 
 (defun needs-supersampling-p (raster x y)
   (flet ((min* (dim)
-	   (loop 
+	   (loop
 	      for i from (1- x) upto (1+ x)
 	      for j from (1- y) upto (1+ y)
 	      minimizing (aref (aref raster i j) dim)))
@@ -32,7 +32,7 @@
     (dotimes (y height)
       (dotimes (x width)
 	(setf (aref raster x y)
-	      (raytrace (funcall camera 
+	      (raytrace (funcall camera
                                  (- (/ (* 2 x) width) 1.0)
                                  (- (/ (* 2 y) height) 1.0))
                         scene)))
@@ -94,15 +94,17 @@
     (fresh-line)
     (dotimes (y height)
       (dotimes (x width)
-        (funcall callback
-                 (raytrace (funcall camera 
-                                    (- (/ (* 2 x) width) 1.0)
-                                    (- (/ (* 2 y) height) 1.0)
-                                    counters)
-                           scene
-                           counters)
-                 x
-                 y))
+        (let ((rx (- (/ (* 2 x) width) 1.0))
+              (ry (- 1.0 (/ (* 2 y) height))))
+          (funcall callback
+                   (raytrace (funcall camera
+                                      rx
+                                      ry
+                                      counters)
+                             scene
+                             counters)
+                   x
+                   y)))
       (when (zerop (mod y note-interval))
 	(princ ".")
 	(force-output)))
@@ -157,7 +159,7 @@
   (let* ((compiled-scene (scene-compiled-scene scene))
          (unbounded (compiled-scene-objects compiled-scene))
          (tree (compiled-scene-tree compiled-scene))
-         (hit (when unbounded 
+         (hit (when unbounded
                 (%find-intersection ray unbounded counters shadow))))
     (if tree
         (or (kd-traverse tree ray counters shadow)
