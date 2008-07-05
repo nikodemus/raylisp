@@ -1,5 +1,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :mcclim)
+  (load (compile-file (merge-pathnames "clim-patch.lisp" (or *load-truename* *compile-file-truename*))))
   (defpackage "RAYLISP-GUI"
     (:use "CLIM-LISP" "CLIM")
     (:import-from "RAYLISP" 
@@ -52,10 +54,13 @@
   (window-clear (find-pane-named *application-frame* 'canvas))
   (window-clear (find-pane-named *application-frame* 'repl)))
 
+(defvar *last-scene-name* nil)
+
 (define-raylisp-frame-command (com-render-scene :name t)
     ()
   (let* ((name (accept 'string :prompt "Scene Name"))
-         (scene (gethash (intern (string-upcase name) :raylisp) raylisp::*scenes*)))
+         (scene (gethash (setf *last-scene-name* (intern (string-upcase name) :raylisp)) 
+                         raylisp::*scenes*)))
     (if scene
         (render-scene scene (find-pane-named *application-frame* 'canvas))
         (format t "No scene named ~S found." name))))
@@ -81,6 +86,15 @@
       (format t "~&KD tree in use.~%")
       (format t "~&KD tree not in used.~%")))
 
+(define-raylisp-frame-command (com-again :name t)
+    ()
+  (let* ((name *last-scene-name*)
+         (scene (gethash name raylisp::*scenes*)))
+    (cond (scene
+           (format t "Rendering ~A" name)
+           (render-scene scene (find-pane-named *application-frame* 'canvas)))
+          (t
+           (format t "No scene named ~A" name)))))
 
 (defun run ()
   (run-frame-top-level (make-application-frame 'raylisp-frame)))
