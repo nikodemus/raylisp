@@ -97,9 +97,12 @@
 		     -1.0 ; parallel
 		     (- (/ (aref (transform-vector (ray-origin ray) inverse) 1)
 			   dy)))))
-	 (when (< epsilon s (ray-extent ray))
-	   (setf (ray-extent ray) s)
-	   t)))
+	 (if (< epsilon s (ray-extent ray))
+             (progn
+               (setf (ray-extent ray) s)
+               t)
+             (progn
+               nil))))
      :normal
      (constantly (transform/normalize-vector y-axis adjunct)))))
 
@@ -476,19 +479,21 @@ source such as the sun or moon."))
 
 (defclass checker (shader)
   ((odd :initarg :odd :accessor odd-of)
-   (even :initarg :even :accessor even-of)))
+   (even :initarg :even :accessor even-of)
+   (scale :initform 1 :initarg :scale :accessor scale-of)))
 
-(defun checkerp (point)
-  (declare (type vector point))
+(defun checkerp (point scale)
+  (declare (type vector point) (float scale))
   (macrolet ((dim (n)
-	       `(floor (+ epsilon (aref point ,n)))))
+	       `(floor (+ epsilon (aref point ,n)) scale)))
     (oddp (+ (dim 0) (dim 1) (dim 2)))))
 
 (defmethod compute-shader-function ((shader checker) scene)
   (let ((odd (compile-shader (odd-of shader) scene))
-	(even (compile-shader (even-of shader) scene)))
+	(even (compile-shader (even-of shader) scene))
+        (scale (float (scale-of shader))))
     (lambda (point normal dot ray counters)
-      (funcall (if (checkerp point)
+      (funcall (if (checkerp point scale)
                    odd
                    even)
                point
