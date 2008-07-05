@@ -1,10 +1,10 @@
 (in-package :raylisp)
 
 (define-scene test-0
-  (:objects 
-   (make-instance 'sphere 
+  (:objects
+   (make-instance 'sphere
                   :shader (make-instance 'flat :color red))
-   (make-instance 'sphere 
+   (make-instance 'sphere
                   :location (@ 0 -0.5 0)
                   :transform (scale (@ 3 0.5 0.5))
                   :shader (make-instance 'flat :color blue))
@@ -24,20 +24,20 @@
                   :location (@ -1.5 0.0 0.0)
                   :radius 0.1
                   :shader (make-instance 'flat :color white)))
-  (:lights 
-   (make-instance 'point-light 
+  (:lights
+   (make-instance 'point-light
                   :location (@ 10 5 -20)))
-  (:default-camera 
+  (:default-camera
       (make-instance 'pinhole
                      :location (@ 0 3 -20)
                      :look-at origin
                      :focal-length 4.0)))
 
 (define-scene test-1
-  (:objects 
-   (make-instance 'sphere 
+  (:objects
+   (make-instance 'sphere
                   :shader (make-instance 'solid :color red))
-   (make-instance 'sphere 
+   (make-instance 'sphere
                   :location (@ 0 -0.5 0)
                   :transform (scale (@ 3 0.5 0.5))
                   :shader
@@ -48,7 +48,7 @@
                    :axis 0
                    :scale 3.0)))
   (:lights
-   (make-instance 'point-light 
+   (make-instance 'point-light
                   :location (@ 10 5 -20)))
   (:ambient-light (@ 0.1 0.1 0.1))
   (:default-camera
@@ -58,7 +58,7 @@
                      :focal-length 4.0)))
 
 (define-scene test-2
-  (:objects 
+  (:objects
    (make-instance 'sphere
                   :shader
                   (make-instance
@@ -83,8 +83,8 @@
                                  (make-instance 'phong :color black)
                                  :even
                                  (make-instance 'phong :color white))))
-  (:lights 
-   (make-instance 'point-light 
+  (:lights
+   (make-instance 'point-light
                   :location (@ -30 30 -30)))
   (:background-color blue)
   (:ambient-light white)
@@ -97,7 +97,7 @@
                      :focal-length 3.0)))
 
 (define-scene test-3
-    (:objects 
+    (:objects
      (make-instance
       'csg
       :type 'intersection
@@ -116,7 +116,7 @@
                                :shader
                                (make-instance 'solid
                                               :color green)))))
-  (:lights 
+  (:lights
    (make-instance 'solar-light :direction y-axis))
   (:background-color black)
   (:ambient-light white)
@@ -129,7 +129,7 @@
                      :focal-length 3.0)))
 
 (define-scene test-4
-  (:objects 
+  (:objects
    (make-instance 'csg
                   :type 'difference
                   :objects
@@ -147,7 +147,7 @@
                                   :shader
                                   (make-instance 'solid
                                                  :color green)))))
-  (:lights 
+  (:lights
    (make-instance 'solar-light :direction (@ 1 1 0.5)))
   (:background-color black)
   (:ambient-light white)
@@ -160,11 +160,11 @@
                      :focal-length 3.0)))
 
 (define-scene test-5
-  (:objects 
-   (make-instance 'sphere 
+  (:objects
+   (make-instance 'sphere
                   :radius 0.3
                   :shader (make-instance 'solid :color white))
-   (make-instance 
+   (make-instance
     'csg
     :type 'intersection
     :objects
@@ -180,7 +180,7 @@
                     (make-instance 'solid
                                    :color red)))
     :transform (translate (@ -1 0 0))))
-  (:lights 
+  (:lights
    #+nil
    (make-instance 'solar-light :direction y-axis)
    (make-instance 'point-light :location (@ 0 200 0)))
@@ -194,7 +194,7 @@
                      :look-at origin
                      :focal-length 3.0)))
 
-(defvar *test-6-shader* 
+(defvar *test-6-shader*
   (make-instance
    'composite
    :shaders
@@ -211,7 +211,7 @@
                    :color yellow))))
 
 (define-scene test-6
-  (:objects 
+  (:objects
    (make-instance 'sphere
                   :radius 0.4
                   :location (@ -4 0 16)
@@ -358,7 +358,7 @@
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :shader *test-6-shader*)
-   (make-instance 
+   (make-instance
     'plane
     :location (@ 0 -1 0)
     :shader
@@ -368,7 +368,7 @@
                    :even
                    (make-instance 'phong :color white
                                          :ambient 0.1))))
-  (:lights 
+  (:lights
    (make-instance 'spotlight
                   :location (@ -30 30 -30)
                   :direction (@ 30 -30 35)
@@ -385,7 +385,7 @@
 
 (define-scene test-noise
   (:objects
-   (make-instance 'sphere 
+   (make-instance 'sphere
                   :radius 3.0
                   :shader (make-instance 'noise-shader
                                          :start (make-instance 'solid :color (@ 0.2 0.2 1.0))
@@ -398,6 +398,112 @@
       (make-instance 'pinhole
                      :location (@ 0 5 -5)
                      :look-at origin)))
+
+(define-scene test-x-axis-camera
+  (:objects
+   (make-instance 'sphere :shader (make-instance 'solid :color red))
+   (make-instance 'plane
+                  :normal x-axis
+                  :location (@ -1 0 0)
+                  :shader (make-instance 'checker
+                                         :odd (make-instance 'phong :color black)
+                                         :even (make-instance 'phong :color white :ambient 0.1))))
+  (:lights
+   (make-instance 'solar-light :direction (@ 1 1 1)))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 10 0 0)
+                     :look-at origin)))
+
+(define-scene test-y-axis-camera
+  (:objects
+   (make-instance 'sphere :shader (make-instance 'solid :color green))
+   (make-instance 'plane
+                  :normal y-axis
+                  :location (@ 0 -1 0)
+                  :shader (make-instance 'checker
+                                         :odd (make-instance 'phong :color black)
+                                         :even (make-instance 'phong :color white :ambient 0.1))))
+  (:lights
+   (make-instance 'solar-light :direction (@ 1 1 1)))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 10 0)
+                     :look-at origin)))
+
+(define-scene test-z-axis-camera
+  (:objects
+   (make-instance 'sphere :shader (make-instance 'solid :color blue))
+   (make-instance 'plane
+                  :normal z-axis
+                  :location (@ 0 0 -1)
+                  :shader (make-instance 'checker
+                                         :odd (make-instance 'phong :color black)
+                                         :even (make-instance 'phong :color white :ambient 0.1))))
+  (:lights
+   (make-instance 'solar-light :direction (@ 1 1 1)))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 0 10)
+                     :look-at origin)))
+
+(define-scene test-transform
+  (:objects
+   (make-instance 'sphere :shader (make-instance 'solid :color red))
+   (make-instance 'sphere
+                  :shader (make-instance 'solid :color blue)
+                  :transform (matrix-product (translate* 0 2 0)
+                                             (rotate-around z-axis 1.5)))
+   (make-instance 'plane
+                  :location (@ 0 -1 0)
+                  :shader (make-instance 'checker
+                                         :odd (make-instance 'phong :color black)
+                                         :even (make-instance 'phong :color white :ambient 0.1))))
+  (:lights
+   (make-instance 'solar-light :direction (@ 1 1 1)))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 1 10 -10)
+                     :look-at origin)))
+
+(define-scene test-perspective
+  (:objects
+   (make-instance 'sphere
+                  :location (@ 10 0 0) :shader (make-instance 'solid :color red))
+   (make-instance 'sphere
+                  :location (@ -10 0 0) :shader (make-instance 'solid :color green))
+   (make-instance 'sphere
+                  :location (@ 0 0 0) :shader (make-instance 'solid :color blue))
+   (make-instance 'sphere
+                  :location (@ 0 0 10) :shader (make-instance 'solid :color (@ 1 1 0)))
+   (make-instance 'sphere
+                  :location (@ 0 0 -10) :shader (make-instance 'solid :color (@ 0 1 1)))
+   (make-instance 'csg
+                  :type 'difference
+                  :objects (list
+                            (make-instance 'plane
+                                           :normal (@ 0 1 0)
+                                           :location (@ 0 -1 0)
+                                           ;; BUG: This transform does not currently affect the shader!
+                                           :transform (rotate-around z-axis (/ (float pi) -4))
+                                           :shader (make-instance 'checker
+                                                                  :scale 5
+                                                                  :odd (make-instance 'phong :color black)
+                                                                  :even (make-instance 'phong :color white :ambient 0.1)))
+                            (make-instance 'plane
+                                           :normal (@ 0 0 -1)
+                                           :location (@ 0 0 -0.01)
+                                           :shader (make-instance 'checker
+                                                                  :scale 5
+                                                                  :odd (make-instance 'phong :color black)
+                                                                  :even (make-instance 'phong :color white :ambient 0.1))))))
+  (:lights
+   (make-instance 'solar-light :direction (@ 1 1 1)))
+  (:default-camera
+      (make-instance 'pinhole
+                     :location (@ 0 20 30)
+                     :look-at (@ 0 -1 0)
+                     :focal-length 3.0)))
 
 ;;;# Tests
 ;;;
@@ -415,7 +521,7 @@
        (cond ((approximates ,n-form ,n-expect)
 	      (incf *passed-test-count*))
 	     (t
-	      (warn "~A failed.~% Expected: ~S, got ~S." 
+	      (warn "~A failed.~% Expected: ~S, got ~S."
 		    ',name ,n-expect ,n-form)
 	      (pushnew ',name *failed-tests*)))
        ',name)))
@@ -432,11 +538,11 @@
     (let* ((failed (length *failed-tests*))
 	   (total (+ *passed-test-count* failed)))
       (when *failed-tests*
-	(format t "~A failed tests:~%  ~{~A ~}~%" 
+	(format t "~A failed tests:~%  ~{~A ~}~%"
 		failed
 		(reverse *failed-tests*)))
       (format t "~&~A tests of ~A passed. (~A%)~%"
-	      *passed-test-count* total 
+	      *passed-test-count* total
 	      (* 100.0 (/ *passed-test-count* total))))))
 
 (defun test-math ()
@@ -452,7 +558,7 @@
 	 (direction (normalize (@ -1 0 1)))
 	 (ray (make-ray :origin from :direction direction)))
     (multiple-value-bind (reflected refracted)
-	(spawn-rays (make-intersection :point origin 
+	(spawn-rays (make-intersection :point origin
 				       :normal (@ 0 0 -1)
 				       :n.d (dot-product (@ 0 0 -1) direction))
 		    ray
@@ -480,7 +586,7 @@
 
 (defun test-sphere ()
   (flet ((make-sphere (radius location &key transform)
-	   (compile-scene-object (make-instance 'sphere 
+	   (compile-scene-object (make-instance 'sphere
                                                 :radius radius
                                                 :location location
                                                 :transform transform)
@@ -499,7 +605,7 @@
 	    2.0)
       (test sphere.1.3 (intersect s (@ 1 0.001 -2) z-axis)
 	    -1.0)
-      (test sphere.1.4 
+      (test sphere.1.4
             (let* ((o (@ 0 0 -2))
 		   (d (intersect s o z-axis)))
 	      (normal s (vector-add o (vector-mul z-axis d))))
@@ -509,7 +615,7 @@
 	    1.5)
       (test sphere.2.2 (intersect s (@ 0 0 -1) z-axis)
 	    0.5)
-      (test sphere.2.3 
+      (test sphere.2.3
 	    (let* ((o (@ 0 0 -2))
 		   (d (intersect s o z-axis)))
 	      (normal s (vector-add o (vector-mul z-axis d))))
@@ -517,7 +623,7 @@
     (let ((s (make-sphere 1.0 (@ 1 0 0))))
       (test sphere.3.1 (intersect s (@ -0.001 0 0) z-axis)
 	    -1.0))
-    
+
     (let* ((s (make-sphere 1.0 (@ 0 -1 0)))
 	   (o (@ 0 -1 -2))
 	   (dist (intersect s o z-axis))
@@ -525,8 +631,8 @@
       (test sphere.4.1 dist 1.0)
       (test sphere.4.2 pos (@ 0 -1 -1))
       (test sphere.4.3 (normal s pos) (@ 0 0 -1)))
-    
-    (let ((s (make-sphere 1.0 (@ 0 1 0) 
+
+    (let ((s (make-sphere 1.0 (@ 0 1 0)
 			  :transform (scale (@ 2 1 1))))
 	  (x-neg (@ -3 1 0))
 	  (y-neg (@ 0 -1 0)))
@@ -545,7 +651,7 @@
 		 (ray-extent ray)
 		 -1.0))))
     (let ((p (make-plane y-axis origin)))
-      (test plane.1.1 
+      (test plane.1.1
 	    (intersect p (@ 0 1 0) (@ 0 -1 0))
 	    1.0))
     (let ((p (make-plane (@ 1 1 0) origin)))
