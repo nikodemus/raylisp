@@ -7,10 +7,10 @@
 ;;;### Sphere
 
 (defclass sphere (scene-object)
-  ((radius 
+  ((radius
     :initform (find-default :radius 'float) :initarg :radius :reader radius-of)
-   (location 
-    :initform (find-default :location 'vector) :initarg :location 
+   (location
+    :initform (find-default :location 'vector) :initarg :location
     :reader location-of)))
 
 (defun sphere-matrix (sphere)
@@ -77,7 +77,7 @@
 
 ;;;### Plane
 
-(defclass plane (scene-object) 
+(defclass plane (scene-object)
   ((normal :initform y-axis :initarg :normal :accessor normal-of)
    (location :initform origin :initarg :location :accessor location-of)))
 
@@ -132,18 +132,18 @@
 ;;; Used by both shaders and lights.
 
 (defclass color-mixin ()
-  ((color 
-    :initform (find-default :color 'vector) :initarg :color 
+  ((color
+    :initform (find-default :color 'vector) :initarg :color
     :accessor color-of)))
 
 (defclass location-mixin ()
-  ((location 
+  ((location
     :initform (find-default :location 'vector) :initarg :location
     :accessor location-of)))
 
 (defclass direction-mixin ()
-  ((direction 
-    :initform (find-default :direction 'vector) :initarg :direction 
+  ((direction
+    :initform (find-default :direction 'vector) :initarg :direction
     :accessor direction-of)))
 
 ;;;## Lights
@@ -230,7 +230,7 @@ source such as the sun or moon."))
      (constantly nd)
      :illumination
      (lambda (point lv counters)
-       (let ((ray (make-ray :origin point :direction lv)))
+       (with-ray (ray :origin point :direction lv)
 	 (if (find-scene-intersection ray scene counters t)
 	     (values black -1.0)
 	     (values color 1.0)))))))
@@ -243,7 +243,7 @@ source such as the sun or moon."))
 ;;; Mixin: provides no behaviour, only the specular slot and weight.
 
 (defclass specular ()
-  ((specular 
+  ((specular
     :initform (find-default :specular '(float 0.0 1.0))
     :initarg :specular :accessor specular-of)))
 
@@ -265,11 +265,11 @@ source such as the sun or moon."))
 ;;; Mixin: provides no behaviour, only the transmit slot.
 
 (defclass transmit ()
-  ((transmit 
+  ((transmit
     :initform (find-default :transmit '(float 0.0 1.0))
     :initarg :transmit :accessor transmit-of)))
 
-(defmethod shader-weight + ((shader transmit)) 
+(defmethod shader-weight + ((shader transmit))
   (transmit-of shader))
 
 ;;;### Ambient Shader
@@ -291,36 +291,44 @@ source such as the sun or moon."))
 (defclass raytrace (shader specular transmit)
   ((ior :initform (find-default :ior '(float 0.0)) :initarg :ior :accessor ior-of)))
 
-(defmethod compute-shader-function ((shader raytrace) scene)
-  (declare (type scene scene))
+(declaim (inline weak-ray-p))
+(defun weak-ray-p (ray scene)
+  (declare (ray ray) (scene scene))
+  (or (= (ray-depth ray) (scene-depth-limit scene))
+      (< (ray-weight ray) (scene-adaptive-limit scene))))
+
+(defun compute-raytrace-shader-function (shader scene)
+  (declare (scene scene))
   (let* ((specular (coefficient (specular-of shader) shader))
 	 (transmit (coefficient (transmit-of shader) shader))
 	 (ior (ior-of shader)))
-    (flet ((weakp (ray)
-             ;; Decide if the ray is too weak to trace further. This
-             ;; is might conceptually cleaner in the RAYTRACE
-             ;; function, but is more efficient here and weak leaves
-             ;; never need to be instantiated.
-             (declare (type ray ray))
-             (or (= (ray-depth ray) (scene-depth-limit scene))
-                 (<= (ray-weight ray) (scene-adaptive-limit scene)))))
-      (cond ((plusp transmit)
-             (lambda (point normal n.d ray counters)
-               (if (weakp ray)
-                   black
-                   (multiple-value-bind (reflected refracted)
-                       (spawn-rays point normal n.d ray specular transmit ior counters)
-                     (vector-add (raytrace reflected scene counters)
-                                 (raytrace refracted scene counters))))))
-            ((plusp specular)
-             (lambda (point normal n.d ray counters)
-               (if (weakp ray)
-                   black
-                   (raytrace (reflected-ray point normal n.d ray specular counters) scene counters))))
-            (t
-             (warn "Bogus specular and transmit components, ~
+    (declare (float specular transmit ior))
+    (cond ((plusp transmit)
+           (lambda (point normal n.d ray counters)
+             (declare (optimize speed) (float n.d) (vector point normal) (ray ray))
+             (if (weak-ray-p ray scene)
+                 black
+                 (with-spawned-rays ((reflected refracted)
+                                     :point point :normal normal :dot-product n.d
+                                     :incident-ray ray :specular specular :transmit transmit
+                                     :ior ior :counters counters)
+                   (vector-add (raytrace reflected scene counters)
+                               (raytrace refracted scene counters))))))
+          ((plusp specular)
+           (lambda (point normal n.d ray counters)
+             (declare (optimize speed))
+             (if (weak-ray-p ray scene)
+                 black
+                 (with-reflected-ray (ray :point point :normal normal :dot-product n.d
+                                          :incident-ray ray :specular specular :counters counters)
+                   (raytrace ray scene counters)))))
+          (t
+           (warn "Bogus specular and transmit components, ~
                     ignoring RAYTRACE shader.")
-             (constantly black))))))
+           (constantly black)))))
+
+(defmethod compute-shader-function ((shader raytrace) scene)
+  (compute-raytrace-shader-function shader scene))
 
 ;;;## Flat Shader
 ;;;
@@ -331,7 +339,7 @@ source such as the sun or moon."))
 
 (defmethod compute-shader-function ((shader flat) scene)
   (let ((ambient-color (hadamard-product
-                        (vector-mul (scene-ambient-light scene)  
+                        (vector-mul (scene-ambient-light scene)
                                     (coefficient (ambient-of shader) shader))
                         (color-of shader))))
     (constantly ambient-color)))
@@ -346,7 +354,7 @@ source such as the sun or moon."))
 (defmethod compute-shader-function ((shader solid) scene)
   (let* ((color (color-of shader))
          (ambient-color (hadamard-product
-                         (vector-mul (scene-ambient-light scene)  
+                         (vector-mul (scene-ambient-light scene)
                                      (coefficient (ambient-of shader) shader))
                          color))
          (diffuse-color (vector-mul
@@ -368,7 +376,7 @@ source such as the sun or moon."))
                     ;; == (nx*lx + ny*ly + nz*lz)/len
 		    (let ((l.n (/ dot len)))
 		      (with-arrays (incident color)
-			(macrolet 
+			(macrolet
 			    ((dim (n)
 			       `(+ (color ,n)
 				   (* (incident ,n)
@@ -381,13 +389,13 @@ source such as the sun or moon."))
 ;;; Provides phong highlights, diffuse and ambient components.
 
 (defclass phong (shader color-mixin ambient diffuse specular)
-  ((size :initform (find-default :size 'float) :initarg :size 
+  ((size :initform (find-default :size 'float) :initarg :size
 	 :accessor size-of)))
- 
+
 (defmethod compute-shader-function ((shader phong) scene)
   (let* ((color (color-of shader))
 	 (ambient-color (hadamard-product
-                         (vector-mul (scene-ambient-light scene)  
+                         (vector-mul (scene-ambient-light scene)
                                      (coefficient (ambient-of shader) shader))
 			 color))
 	 (diffuse-color (vector-mul color (coefficient (diffuse-of shader) shader)))
@@ -413,10 +421,10 @@ source such as the sun or moon."))
 			   (n.h^p (expt (dot-product normal h) size))
 			   (s-co (* specular n.h^p)))
 		      (with-arrays (incident color)
-			(macrolet 
+			(macrolet
 			    ((dim (n)
 			       `(+ (color ,n)
-				   (* (incident ,n) (+ (* (diffuse-color ,n) l.n) 
+				   (* (incident ,n) (+ (* (diffuse-color ,n) l.n)
 						       s-co)))))
 			  (setf color (vector (dim 0) (dim 1) (dim 2)))))))))))
 	  (vector-add ambient-color color))))))

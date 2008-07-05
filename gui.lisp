@@ -1,7 +1,7 @@
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :raylisp)
   (require :mcclim)
-  (load (compile-file (merge-pathnames "clim-patch.lisp" (or *load-truename* *compile-file-truename*))))
+  (load (compile-file "clim-patch.lisp"))
   (defpackage "RAYLISP-GUI"
     (:use "CLIM-LISP" "CLIM")
     (:import-from "RAYLISP" 
@@ -97,4 +97,5 @@
            (format t "No scene named ~A" name)))))
 
 (defun run ()
+  (sb-posix:putenv "DISPLAY=:0.0")
   (run-frame-top-level (make-application-frame 'raylisp-frame)))

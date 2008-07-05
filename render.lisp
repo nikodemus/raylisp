@@ -42,12 +42,12 @@
         (let ((rx (- (/ (* 2 x) width) 1.0))
               (ry (- 1.0 (/ (* 2 y) height))))
           (funcall callback
-                   (raytrace (funcall camera
-                                      rx
-                                      ry
-                                      counters)
-                             scene
-                             counters)
+                   (funcall camera
+                            (lambda (ray)
+                              (raytrace ray scene counters))
+                            rx
+                            ry
+                            counters)
                    x
                    y)))
       (when (zerop (mod y note-interval))

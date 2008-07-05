@@ -29,7 +29,7 @@
        :min min :max max))))
 
 (declaim (inline intersect))
-(defun intersect (object ray counters &optional shadow)
+(defun intersect (object ray counters shadow)
   (multiple-value-bind (hitp x)
       (funcall (object-intersection object) ray)
     (declare (type boolean hitp) (type (or null compiled-object) x))
@@ -214,7 +214,7 @@ intersections."
       (lambda (point nlv len counters)
 	(declare (type vector point nlv) (type float len)
 		 (optimize speed))
-	(let ((ray (make-ray :origin point :direction nlv :extent len)))
+	(with-ray (ray :origin point :direction nlv :extent len)
 	  (if last
 	      (or (intersect last ray counters t)
                   (let ((int (find-scene-intersection ray scene counters t)))
@@ -246,8 +246,9 @@ intersections."
 (defgeneric shader-weight (shader)
   (:method-combination +))
 
+(declaim (inline coefficient))
 (defun coefficient (value shader)
-  (/ value (shader-weight shader)))
+  (/ (coerce value 'float) (shader-weight shader)))
 
 (declaim (inline shade))
 (defun shade (object ray counters)

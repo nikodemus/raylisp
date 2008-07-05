@@ -83,14 +83,15 @@
 	(right (right-of camera))
 	(up (up-of camera))
 	(location (location-of camera)))
-    (lambda (rx ry counters)
-      (declare (type float rx ry))
+    (lambda (fun rx ry counters)
+      (declare (float rx ry)
+               (function fun))
       (note-camera-ray counters)
       (macrolet ((dim (n)
 		   `(+ (aref dir ,n)
 		       (* rx (aref right ,n)) (* ry (aref up ,n)))))
-	(make-ray
-	 :origin location
-	 :direction (normalized-vector (dim 0) (dim 1) (dim 2)))))))
+	(with-ray (ray :origin location
+                       :direction (normalized-vector (dim 0) (dim 1) (dim 2)))
+          (funcall fun ray))))))
 
 
