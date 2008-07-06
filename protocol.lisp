@@ -34,8 +34,10 @@
       (funcall (object-intersection object) ray)
     (declare (type boolean hitp) (type (or null compiled-object) x))
     (note-intersection counters shadow hitp)
-    (when hitp 
-      (or x object))))
+    (when hitp
+      (if shadow
+          object
+          (if x x object)))))
 
 ;;;#### The inside function
 ;;;
