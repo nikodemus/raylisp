@@ -15,9 +15,9 @@
 
 (defun sphere-matrix (sphere)
   (let ((r (radius-of sphere)))
-    (matrix-product (translate (location-of sphere))
-		    (scale* r r r)
-		    (transform-of sphere))))
+    (matrix-product (transform-of sphere)
+                    (translate (location-of sphere))
+		    (scale* r r r))))
 
 (defmethod compute-object-properties ((sphere sphere) scene)
   (multiple-value-bind (inverse adjunct/inverse)
