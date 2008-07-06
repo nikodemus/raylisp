@@ -35,9 +35,10 @@
 
   <p>Note that what Raylisp calls shaders are fairly different from
     eg. Renderman shaders. In Raylisp, a shader simply determines the
-    apparent color of an intersection point: there is no rendering
-    environment for shaders to mess with. This doesn't preclude
-    combining different shaders, though.</p>
+    apparent color of an intersection point: shaders are normally purely
+    functional, and there is no rendering environment for shaders to mess with
+    &mdash; not that anything prevents users from writing shaders that use out-of-band
+    communication to talk to each other, or using side-effect.</p>
 
   <h3>Multiple Scene Representations</h3>
   
