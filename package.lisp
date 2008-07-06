@@ -11,6 +11,7 @@
   (:nicknames "RL")
   (:use "CL" "ALEXANDRIA")
   (:shadow
+   "PI"
    "FLOAT"
    "FLOATP"
    "INTERSECTION"
@@ -29,7 +30,7 @@
    "COMPILE-SCENE-OBJECT"
    "COMPILE-SCENE-LIGHT"
    
-
+   "PI"
    "FLOAT"
    "FLOATP"
    "INTERSECTION"

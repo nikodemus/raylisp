@@ -39,6 +39,8 @@
 (defconstant float-positive-infinity (/ 1.0 0.0))
 (defconstant float-negative-infinity (/ -1.0 0.0))
 
+(defconstant pi (float cl:pi))
+
 ;;;# Utilities
 ;;;
 ;;; Note: RAYLISP shadows VECTOR and SIMPLE-VECTOR; we set up things
