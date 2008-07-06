@@ -47,7 +47,7 @@
   (lights nil :type list)
   (tree nil :type (or null kd-node)))
 
-(defparameter *use-kd-tree* nil)
+(defparameter *use-kd-tree* t)
 
 (defun compile-scene (scene)
   (let ((c-scene (make-compiled-scene)))
