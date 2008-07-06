@@ -218,14 +218,11 @@ intersections."
 	(declare (type vector point nlv) (type float len)
 		 (optimize speed))
 	(with-ray (ray :origin point :direction nlv :extent len)
-	  (if last
-	      (or (intersect last ray counters t)
-                  (let ((int (find-scene-intersection ray scene counters t)))
-                    (when int
-                      (setf last int))))
-              (let ((int (find-scene-intersection ray scene counters t)))
-                (when int
-                  (setf last int)))))))))
+	  (when (or (and last (intersect last ray counters t))
+                    (let ((int (find-scene-intersection ray scene counters t)))
+                      (when int
+                        (setf last int))))
+            t))))))
 
 ;;;## Shader protocol
 ;;;
