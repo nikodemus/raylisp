@@ -84,7 +84,11 @@
     :accessor transform-of)
    (shader 
     :initform (find-default :shader '(or null shader)) :initarg :shader 
-    :accessor shader-of)))
+    :accessor shader-of)
+   (name
+    :initarg :name
+    :initform nil
+    :accessor name-of)))
 
 (defstruct (compiled-object (:conc-name object-))
   (intersection (required-argument :intersection)
@@ -92,7 +96,8 @@
   (normal (required-argument :normal) :type (function (vector) vector))
   (shader (required-argument :shader) :type compiled-shader)
   (min nil :type (or null vector))
-  (max nil :type (or null vector)))
+  (max nil :type (or null vector))
+  (name nil))
 
 ;;;## Lights
 

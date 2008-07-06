@@ -26,7 +26,8 @@
        :intersection intersection
        :normal normal
        :shader (compile-shader (shader-of object) scene)
-       :min min :max max))))
+       :min min :max max
+       :name (name-of object)))))
 
 (declaim (inline intersect))
 (defun intersect (object ray counters shadow)
