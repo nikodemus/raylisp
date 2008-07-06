@@ -90,6 +90,12 @@
     :initform nil
     :accessor name-of)))
 
+(defmethod transform-of :around ((object scene-object))
+  (let ((transform (call-next-method)))
+    (etypecase transform
+      (cons (apply #'matrix-product (reverse transform)))
+      ((or null matrix) transform))))
+
 (defstruct (compiled-object (:conc-name object-))
   (intersection (required-argument :intersection)
                 :type (function (ray) (values boolean &optional compiled-object)))
