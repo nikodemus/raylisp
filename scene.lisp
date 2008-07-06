@@ -11,6 +11,7 @@
 ;;; is controlled by various scene protocols.
 
 (defstruct scene 
+  (name nil)
   (objects nil :type list)
   (lights nil :type list)
   (depth-limit (find-default :depth-limit 'fixnum) :type fixnum)
@@ -21,9 +22,9 @@
   (default-camera)
   (compiled-scene))
 
-(defvar *scenes* (make-hash-table))
+(defparameter *scenes* (make-hash-table))
 
-(defmacro define-scene (name &body alist)
+(defmacro defscene (name &body alist)
   (flet ((get-key (name &optional use-default-type)
            (let ((forms (cdr (assoc name alist))))
              (cond (use-default-type
@@ -33,13 +34,14 @@
                     `(list ,@forms))))))
     `(progn
        (setf (gethash ',name *scenes*)
-             (make-scene :objects ,(get-key :objects)
-                         :lights ,(get-key :lights)
+             (make-scene :name ',name
+                         :objects (flatten ,(get-key :objects))
+                         :lights (flatten ,(get-key :lights))
                          :background-color ,(get-key :background-color 'vector)
                          :ambient-light ,(get-key :ambient-light 'vector)
                          :adaptive-limit ,(get-key :adaptive-limit '(float 0.0 1.0))
                          :depth-limit ,(get-key :depth-limit 'fixnum)
-                         :default-camera ,(get-key :default-camera t)))
+                         :default-camera ,(get-key :camera t)))
        ',name)))
 
 (defstruct compiled-scene

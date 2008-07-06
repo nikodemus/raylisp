@@ -1,39 +1,130 @@
 (in-package :raylisp)
 
-(define-scene test-0
-  (:objects
-   (make-instance 'sphere
-                  :shader (make-instance 'flat :color red))
-   (make-instance 'sphere
-                  :location (@ 0 -0.5 0)
-                  :transform (scale (@ 3 0.5 0.5))
-                  :shader (make-instance 'flat :color blue))
-   (make-instance 'sphere
-                  :location (@ 1.0 0.0 0.0)
-                  :radius 0.1
-                  :shader (make-instance 'flat :color white))
-   (make-instance 'sphere
-                  :location (@ 1.5 0.0 0.0)
-                  :radius 0.1
-                  :shader (make-instance 'flat :color white))
-   (make-instance 'sphere
-                  :location (@ -1.0 0.0 0.0)
-                  :radius 0.1
-                  :shader (make-instance 'flat :color white))
-   (make-instance 'sphere
-                  :location (@ -1.5 0.0 0.0)
-                  :radius 0.1
-                  :shader (make-instance 'flat :color white)))
-  (:lights
-   (make-instance 'point-light
-                  :location (@ 10 5 -20)))
-  (:default-camera
-      (make-instance 'pinhole
-                     :location (@ 0 3 -20)
-                     :look-at origin
-                     :focal-length 4.0)))
+;; notional scale: 1 unit = 10cm
 
-(define-scene test-1
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (let* ((chessboard
+          (make-instance 'checker
+                         :odd
+                         (make-instance 'phong :color black)
+                         :even
+                         (make-instance 'phong :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))
+         (bright-red
+          (make-instance 'phong :color red :diffuse 1.0 :specular 1.0 :ambient 0.5))
+         (bright-blue
+          (make-instance 'phong :color blue :diffuse 1.0 :specular 1.0 :ambient 0.5))
+         (floor
+          (make-instance 'plane :shader chessboard))
+         (lamp
+          (make-instance 'point-light :location (@ 0 30 0) :color white))
+         (sun
+          (make-instance 'solar-light :direction (@ 1 1 0) :color white))
+         (view
+          (make-instance 'pinhole
+                         :location (@ 0 18 -30)
+                         :look-at origin
+                         :focal-length 4.0))
+         (floor-view
+          (make-instance 'pinhole
+                         :location (@ 0 0 -30)
+                         :look-at origin
+                         :focal-length 4.0))
+         (top-view
+          (make-instance 'pinhole
+                         :location (@ 0 18 0)
+                         :look-at origin
+                         :focal-length 4.0)))
+    (defparameter *chessboard* chessboard)
+    (defparameter *bright-red* bright-red)
+    (defparameter *bright-blue* bright-blue)
+    (defparameter *floor* floor)
+    (defparameter *lamp* lamp)
+    (defparameter *sun* sun)
+    (defparameter *view* view)
+    (defparameter *floor-view* floor-view)
+    (defparameter *top-view* top-view)))
+
+(defscene test-test-lab
+  ;; Sanity check.
+  (:objects
+   *floor*)
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-spheres
+  ;; All in a grid.
+  (:objects
+   *floor*
+   (loop for i from -3 upto 3
+         collect (make-instance 'sphere
+                                :radius 1.0
+                                :transform (translate* (* 3 i) 1 0)
+                                :shader *bright-red*))
+   (loop for i from -3 upto 3
+         collect (make-instance 'sphere
+                                :radius 0.5
+                                :location (@ (* 3 i) 3 0)
+                                :shader *bright-red*))
+   (loop for i from -3 upto 3
+         collect (make-instance 'sphere
+                                :radius 0.5
+                                :transform (translate* (* 3 i) 5 0)
+                                :shader *bright-red*))
+   (make-instance 'sphere
+                  :transform (list (scale* 5 0.5 0.5) (translate* 0 2 -5))
+                  :shader *bright-blue*))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-sphere-intersection
+  ;; No wierd shadows on the floor, etc.
+  (:objects
+   *floor*
+   (make-instance 'csg
+                  :type 'intersection
+                  :objects (list (make-instance 'sphere 
+                                                :location (@ 1.5 -0.1 0)
+                                                :radius 4.0
+                                                :shader *bright-red*)
+                                 (make-instance 'sphere 
+                                                :location (@ -1.5 -0.1 0)
+                                                :radius 4.0
+                                                :shader *bright-blue*))))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-plane-intersection
+  (:objects
+   (make-instance
+    'csg
+    :type 'intersection
+    :objects
+    (list
+     (make-instance 'plane
+                    :normal (@ 0 0 -1)
+                    :location (@ 0 0 1)
+                    :shader *chessboard*)
+     (make-instance 'plane
+                    :normal (@ 1 1 0)
+                    :location (@ 1 0 0)
+                    :shader *bright-red*)
+     (make-instance 'plane
+                    :normal (@ -1 1 0)
+                    :location (@ -1 0 0)
+                    :shader *bright-red*)
+     *floor*)))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-1
   (:objects
    (make-instance 'sphere
                   :shader (make-instance 'solid :color red))
@@ -51,13 +142,13 @@
    (make-instance 'point-light
                   :location (@ 10 5 -20)))
   (:ambient-light (@ 0.1 0.1 0.1))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 3 -20)
                      :look-at origin
                      :focal-length 4.0)))
 
-(define-scene test-2
+(defscene test-2
   (:objects
    (make-instance 'sphere
                   :shader
@@ -77,12 +168,7 @@
                                    :color yellow))))
    (make-instance 'plane
                   :location (@ 0 -1 0)
-                  :shader
-                  (make-instance 'checker
-                                 :odd
-                                 (make-instance 'phong :color black)
-                                 :even
-                                 (make-instance 'phong :color white))))
+                  :shader *chessboard*))
   (:lights
    (make-instance 'point-light
                   :location (@ -30 30 -30)))
@@ -90,13 +176,13 @@
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 12)
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 0.5 -4)
                      :look-at origin
                      :focal-length 3.0)))
 
-(define-scene test-3
+(defscene test-3
     (:objects
      (make-instance
       'csg
@@ -122,13 +208,13 @@
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 1.5 -10)
                      :look-at origin
                      :focal-length 3.0)))
 
-(define-scene test-4
+(defscene test-4
   (:objects
    (make-instance 'csg
                   :type 'difference
@@ -153,33 +239,53 @@
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 8 6.5 -2)
                      :look-at origin
                      :focal-length 3.0)))
 
-(define-scene test-5
+(defscene test-5
   (:objects
-   (make-instance 'sphere
-                  :radius 0.3
-                  :shader (make-instance 'solid :color white))
+   #+nil
+   (list   
+    (make-instance 'sphere
+                   :radius 1.0
+                   :transform (translate (@ 1 0 0))
+                   :shader (make-instance 'solid :color red))
+    (make-instance 'sphere
+                   :radius 1.0
+                   :transform (translate (@ 0 1 0))
+                   :shader (make-instance 'solid :color green))
+    (make-instance 'sphere
+                   :radius 1.0
+                   :transform (translate (@ 0 0 1))
+                   :shader (make-instance 'solid :color blue)))
+   (make-instance 'plane
+                  :normal (@ -0.5 1 0)
+                  :shader (make-instance 'solid :color white))   
+   #+nil
+   (loop for i from -100 upto 100
+         collect (make-instance 'sphere
+                                :radius 0.5
+                                :transform (translate (@ 0 0 i))
+                                :shader (make-instance 'solid :color purple)))
    (make-instance
     'csg
     :type 'intersection
     :objects
     (list
+     (make-instance 'plane (@ ))
      (make-instance 'plane
-                    :normal (@ -0.5 1 0)
-                    :shader
-                    (make-instance 'solid
-                                   :color green))
+                    :normal (@ 0 1 0)
+                    :location (@ 0 -1 0)
+                    :shader (make-instance 'solid :color yellow))
      (make-instance 'plane
                     :normal (@ 0.5 1 0)
-                    :shader
-                    (make-instance 'solid
-                                   :color red)))
-    :transform (translate (@ -1 0 0))))
+                    :shader (make-instance 'solid :color white))
+     (make-instance 'plane
+                    :normal (@ -0.5 1 0)
+                    :shader (make-instance 'solid :color purple)))))
   (:lights
    #+nil
    (make-instance 'solar-light :direction y-axis)
@@ -188,9 +294,9 @@
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
-                     :location (@ 0 3 -10)
+                     :location (@ 0 100 30)
                      :look-at origin
                      :focal-length 3.0)))
 
@@ -210,7 +316,7 @@
                    :ambient 0.1
                    :color yellow))))
 
-(define-scene test-6
+(defscene test-6
   (:objects
    (make-instance 'sphere
                   :radius 0.4
@@ -377,13 +483,13 @@
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 16)
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 0.5 -4)
                      :look-at origin
                      :focal-length 3.0)))
 
-(define-scene test-noise
+(defscene test-noise
   (:objects
    (make-instance 'sphere
                   :radius 3.0
@@ -394,12 +500,12 @@
   (:lights
    (make-instance 'solar-light :direction (@ -1 1 -1)))
   (:ambient-light (@ 0.1 0.1 0.1))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 5 -5)
                      :look-at origin)))
 
-(define-scene test-x-axis-camera
+(defscene test-x-axis-camera
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid :color red))
    (make-instance 'plane
@@ -410,12 +516,12 @@
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 10 0 0)
                      :look-at origin)))
 
-(define-scene test-y-axis-camera
+(defscene test-y-axis-camera
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid :color green))
    (make-instance 'plane
@@ -426,12 +532,12 @@
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 10 0)
                      :look-at origin)))
 
-(define-scene test-z-axis-camera
+(defscene test-z-axis-camera
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid :color blue))
    (make-instance 'plane
@@ -442,12 +548,12 @@
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 0 10)
                      :look-at origin)))
 
-(define-scene test-transform
+(defscene test-transform
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid :color red))
    (make-instance 'sphere
@@ -461,12 +567,12 @@
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 1 10 -10)
                      :look-at origin)))
 
-(define-scene test-perspective
+(defscene test-perspective
   (:objects
    (make-instance 'sphere
                   :location (@ 10 0 0) :shader (make-instance 'solid :color red))
@@ -499,7 +605,7 @@
                                                                   :even (make-instance 'phong :color white :ambient 0.1))))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
-  (:default-camera
+  (:camera
       (make-instance 'pinhole
                      :location (@ 0 20 30)
                      :look-at (@ 0 -1 0)
