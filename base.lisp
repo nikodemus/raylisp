@@ -39,7 +39,7 @@
 (defconstant float-positive-infinity (/ 1.0 0.0))
 (defconstant float-negative-infinity (/ -1.0 0.0))
 
-(defconstant pi (float cl:pi))
+(defconstant pi (coerce cl:pi 'float))
 
 ;;;# Utilities
 ;;;
