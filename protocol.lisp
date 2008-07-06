@@ -248,7 +248,8 @@ intersections."
 
 (declaim (inline coefficient))
 (defun coefficient (value shader)
-  (/ (coerce value 'float) (shader-weight shader)))
+  (declare (float value))
+  (/ value (the float (shader-weight shader))))
 
 (declaim (inline shade))
 (defun shade (object ray counters)
