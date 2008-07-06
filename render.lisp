@@ -20,6 +20,32 @@
 	  (> (q 1) 0.3)
 	  (> (q 2) 0.6)))))
 
+(defvar *image-coordinates* nil)
+
+(defun shoot-ray (scene camera x y width height &key (normalize-camera t))
+  (declare (fixnum width height))
+  (when normalize-camera
+    (setf camera (normalize-camera camera width height)))
+  (let* ((scene (compile-scene scene))
+	 (camera (compile-camera camera))
+         (counters (make-counters))
+         (start (get-internal-run-time))
+         (result))
+    (let ((rx (- (/ (* 2 x) width) 1.0))
+          (ry (- 1.0 (/ (* 2 y) height)))
+          (*image-coordinates* (cons x y)))
+      (funcall camera
+               (lambda (ray)
+                 (if result
+                     (error "never")
+                     (setf result (raytrace ray scene counters))))
+               rx
+               ry
+               counters)
+      x
+      y)
+    result))
+
 (defun render (scene camera width height callback &key (normalize-camera t))
   (declare (fixnum width height))
   (when normalize-camera
@@ -40,7 +66,8 @@
     (dotimes (y height)
       (dotimes (x width)
         (let ((rx (- (/ (* 2 x) width) 1.0))
-              (ry (- 1.0 (/ (* 2 y) height))))
+              (ry (- 1.0 (/ (* 2 y) height)))
+              (*image-coordinates* (cons x y)))
           (funcall callback
                    (funcall camera
                             (lambda (ray)
