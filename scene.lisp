@@ -1,5 +1,11 @@
 (in-package :raylisp)
 
+(defclass name-mixin ()
+  ((name :initarg :name :reader name-of)))
+
+(defmethod name-of ((name symbol))
+  name)
+
 ;;;# Scene Representation
 ;;;
 ;;; Prior to rendering scene is composed of freely mutable instances:
@@ -73,7 +79,8 @@
 ;;; As a convenience feature NIL is also accepted as a shader (representing
 ;;; constant black).
 
-(defclass shader () ())
+(defclass shader (name-mixin) 
+  ())
 
 (deftype compiled-shader ()
   `(function (vector vector float ray counter-vector) vector))
@@ -109,7 +116,7 @@
 
 ;;;## Lights
 
-(defclass scene-light () ())
+(defclass scene-light (name-mixin) ())
 
 (defstruct (compiled-light (:conc-name light-))
   (direction (required-argument :illumination) :type (function (vector) vector))

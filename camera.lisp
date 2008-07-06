@@ -5,7 +5,7 @@
 ;;; CAMERA class is transformed to a corresponding raycasting lambda by
 ;;; COMPILE-CAMERA.
 
-(defclass camera ()
+(defclass camera (name-mixin)
   ((location :accessor location-of)
    (direction :accessor direction-of)
    (up :accessor up-of)
