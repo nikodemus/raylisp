@@ -40,6 +40,13 @@
   (depth 0 :type (and fixnum unsigned-byte))
   (environment *global-environment* :type environment))
 
+(defmethod print-object ((ray ray) stream)
+  (print-unreadable-object (ray stream :type nil)
+    (format stream "Ray ~S @ ~S ~F~%  ~
+                    weight: ~S, depth: ~S"
+            (ray-origin ray) (ray-direction ray) (ray-extent ray)
+            (ray-weight ray) (ray-depth ray))))
+
 (defmacro with-ray ((var &rest args) &body forms)
   `(locally (declare (optimize sb-c::stack-allocate-dynamic-extent))
      (let ((,var (make-ray ,@args)))
