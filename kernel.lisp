@@ -15,11 +15,6 @@
   (ior (find-default :ior '(float 0.0)) :type (float 0.0))
   (link nil :type (or null environment)))
 
-(defmacro with-env ((var &rest args) &body forms)
-  `(locally (declare (optimize sb-c::stack-allocate-dynamic-extent))
-     (let ((,var (make-environment ,@args)))
-       ,@forms)))
-
 (defvar *global-environment* (make-environment))
 
 
