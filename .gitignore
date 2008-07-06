@@ -1,0 +1,8 @@
+_darcs
+.#*
+\#*
+.DS_Store
+*~
+*.tgz
+*.tar.gz
+*.fasl
