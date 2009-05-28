@@ -7,6 +7,10 @@
 ;;; either return or accept bare floating point values (as opposed to
 ;;; vectors or matrices) are declaimed INLINE.
 
+(declaim (inline square))
+(defun square (f)
+  (* f f))
+
 ;;; We define an EXPR replacement with a compiler macro to get
 ;;; fast powers even at the cost of some accuracy.
 (declaim (inline power))

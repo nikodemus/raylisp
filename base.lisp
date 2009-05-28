@@ -113,10 +113,6 @@ they are EQUAL."
         (t
          (equal x y))))
 
-(declaim (inline square))
-(defun square (x)
-  (* x x))
-
 (defmacro let-values (bindings &body forms)
   "MULTIPLE-VALUE-BIND equivalent for multiple bindings."
   (labels ((rec (binds)
