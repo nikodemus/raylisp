@@ -275,7 +275,6 @@
     :type 'intersection
     :objects
     (list
-     (make-instance 'plane (@ ))
      (make-instance 'plane
                     :normal (@ 0 1 0)
                     :location (@ 0 -1 0)
