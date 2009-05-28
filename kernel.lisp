@@ -48,10 +48,9 @@
             (ray-weight ray) (ray-depth ray))))
 
 (defmacro with-ray ((var &rest args) &body forms)
-  `(locally (declare (optimize sb-c::stack-allocate-dynamic-extent))
-     (let ((,var (make-ray ,@args)))
-       (declare (dynamic-extent ,var))
-       ,@forms)))
+  `(let ((,var (make-ray ,@args)))
+     (declare (sb-int:truly-dynamic-extent ,var))
+     ,@forms))
 
 ;;; Spawning new rays. The SPAWN-RAYS is quite ugly and should be fixed.
 
@@ -130,13 +129,12 @@
                 (ior local-ior))
       `(flet ((,thunk (,rel-ior ,new-env)
                 ,@forms))
-         (locally (declare (optimize sb-c::stack-allocate-dynamic-extent))
-           (if (plusp ,dot-product)
-               (let ((,tmp (environment-link ,env)))
-                 (,thunk  (/ ,ior (environment-ior ,tmp)) ,tmp))
-               (let ((,tmp (make-environment :ior ,ior :link ,env)))
-                 (declare (dynamic-extent ,tmp))
-                 (,thunk (/ (environment-ior ,env) ,ior) ,tmp))))))))
+         (if (plusp ,dot-product)
+             (let ((,tmp (environment-link ,env)))
+               (,thunk  (/ ,ior (environment-ior ,tmp)) ,tmp))
+             (let ((,tmp (make-environment :ior ,ior :link ,env)))
+               (declare (sb-int:truly-dynamic-extent ,tmp))
+               (,thunk (/ (environment-ior ,env) ,ior) ,tmp)))))))
 
 (defmacro with-spawned-rays (((reflected refracted) &key point normal dot-product incident-ray
                               specular transmit ior counters)

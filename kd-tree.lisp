@@ -67,9 +67,9 @@
 (defconstant +kd-stack-prev-index+     3)
 (defconstant +kd-stack-entry-size+     4)
 
-(declaim (inline make-kd-stack 
+(declaim (inline make-kd-stack
                     kd-stack-node kd-stack-distance kd-stack-point kd-stack-prev
-                    (setf kd-stack-node) (setf kd-stack-distance) 
+                    (setf kd-stack-node) (setf kd-stack-distance)
                     (setf kd-stack-point) (setf kd-stack-prev)))
 
 (defun make-kd-stack (kd-node)
@@ -109,8 +109,7 @@
 
 ;;; RayTravAlgRECB from Appendix C.
 (defun kd-traverse (root ray counters shadowp)
-  (declare (optimize sb-c::stack-allocate-dynamic-extent)
-           (kd-node root)
+  (declare (kd-node root)
            (ray ray))
   (multiple-value-bind (entry-distance exit-distance)
       (ray/box-intersections ray (kd-min root) (kd-max root))
@@ -124,7 +123,7 @@
             (entry-pointer 0)
             (ray-origin (ray-origin ray))
             (ray-direction (ray-direction ray)))
-        (declare (dynamic-extent stack))
+        (declare (sb-int:truly-dynamic-extent stack))
         (setf (kd-stack-distance stack entry-pointer) entry-distance
               (kd-stack-point stack entry-pointer)
               (if (>= entry-distance 0.0)
@@ -171,16 +170,16 @@
                                                (next-axis (next-axis axis))
                                                (prev-axis (prev-axis axis)))
                                            (setf (aref point axis) split)
-                                           (setf (aref point next-axis) 
+                                           (setf (aref point next-axis)
                                                  (+ (aref ray-origin next-axis)
                                                     (* distance (aref ray-direction next-axis))))
-                                           (setf (aref point prev-axis) 
+                                           (setf (aref point prev-axis)
                                                  (+ (aref ray-origin prev-axis)
                                                     (* distance (aref ray-direction prev-axis))))
                                            point))))
                                :cont))
                    (when current-node
-                     (let ((intersection (%find-intersection* ray 
+                     (let ((intersection (%find-intersection* ray
                                                               (kd-objects current-node)
                                                               (kd-stack-distance stack entry-pointer)
                                                               (kd-stack-distance stack exit-pointer)
@@ -319,7 +318,7 @@
         (intersection-cost objects))))
 
 (defun intersection-cost (objects)
-  ;; FIXME: Some objects are cheap, some expensive.
+  ;; FIXME: Some objects are cheap, some expensive!
   (* 0.01 (length objects)))
 
 (defun intersection-probability (objects parent-area)
