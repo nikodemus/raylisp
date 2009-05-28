@@ -17,4 +17,4 @@
    (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("camera"))
-   (:file "tests" :depends-on ("output" "render"))))
+   (:file "tests" :depends-on ("output" "render" "component"))))
