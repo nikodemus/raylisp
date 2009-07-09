@@ -93,7 +93,7 @@ intersections."
 
 (defmacro csg-lambda (fun origin direction)
   (let ((ci (gensym "CSG-INTERSECTION")))
-    `(lambda (,ci)
+    `(sb-int:named-lambda %csg-lambda (,ci)
        (funcall ,fun (adjust-vec ,origin
                                  ,direction
                                  (csg-intersection-distance ,ci))))))
@@ -113,8 +113,8 @@ intersections."
                       all-left all-right)
                 (type (function (vec) t) inside-left inside-right))
        (macrolet
-           ((make-lambda (find-left find-right)
-              `(lambda (ray)
+           ((make-lambda (name find-left find-right)
+              `(sb-int:named-lambda ,name (ray)
                  (declare (type ray ray) (optimize speed))
                  (let* ((o (transform-point (ray-origin ray) inverse))
                         (d (transform-direction (ray-direction ray) inverse))
@@ -122,6 +122,7 @@ intersections."
                                         (funcall all-left o d)))
                         (sy (,find-right (csg-lambda inside-left o d)
                                          (funcall all-right o d))))
+                   (declare (dynamic-extent o d))
                    (let ((s (if (and sx sy)
                                 (if (< (csg-intersection-distance sx)
                                        (csg-intersection-distance sy))
@@ -133,11 +134,109 @@ intersections."
                        (values t (csg-intersection-object s))))))))
          (ecase (type-of node)
            (intersection
-            (make-lambda find-if find-if))
+            (make-lambda csg-intersection-lambda find-if find-if))
            (difference
-            (make-lambda find-if-not find-if))))))
+            (make-lambda csg-difference-lambda find-if-not find-if))))))
    :normal
    #'undelegated-csg-normal))
+
+;;; KLUDGE: SBCL's built-in MERGE is slow.
+;;;
+;;; FIXME: There have to be more efficient ways to do this...
+;;; Maybe instead of simple-vectors of csg-intersections
+;;; we should have a simple-vector like this:
+;;; #(distance object distance object distance...)?
+(defun merge-csg-intersections (v1 v2)
+  (declare (simple-vector v1 v2) (optimize speed))
+  (let* ((l1 (length v1))
+         (l2 (length v2))
+         (result (make-array (+ l1 l2)))
+         (pr 0)
+         (p1 0)
+         (p2 0))
+    (macrolet ((handle-comparison ()
+                 `(cond ((< (csg-intersection-distance i1) (csg-intersection-distance i2))
+                         (setf (aref result pr) i1)
+                         (incf pr)
+                         (cond ((>= (incf p1) l1)
+                                (setf (aref result pr) i2)
+                                (incf pr)
+                                (if (>= (incf p2) l2)
+                                    (go :end)
+                                    (go :finish-from-v2)))
+                               (t
+                                (go :loop-with-i2))))
+                        (t
+                         (setf (aref result pr) i2)
+                         (incf pr)
+                         (cond ((>= (incf p2) l2)
+                                (setf (aref result pr) i1)
+                                (incf pr)
+                                (if (>= (incf p1) l1)
+                                    (go :end)
+                                    (go :finish-from-v1)))
+                               (t
+                                (go :loop-with-i1)))))))
+      (tagbody
+         (cond ((>= p1 l1)
+                (go :finish-from-v2))
+               ((>= p2 l2)
+                (go :finish-from-v1)))
+         (let ((i1 (aref v1 p1))
+               (i2 (aref v2 p2)))
+           (declare (type csg-intersection i1 i2))
+           (tagbody
+              (handle-comparison)
+            :loop-with-i1
+              (setf i2 (aref v2 p2))
+              (handle-comparison)
+            :loop-with-i2
+              (setf i1 (aref v1 p1))
+              (handle-comparison)))
+       :finish-from-v1
+         (replace result v1 :start1 pr :start2 p1)
+         (go :end)
+       :finish-from-v2
+         (replace result v2 :start1 pr :start2 p2)
+         (go :end)
+       :end)
+      (unless (every #'csg-intersection-p result)
+        (break "~S and ~S gave ~S" v1 v2 result))
+      result)))
+
+(defun fast-remove-if-not (function vector)
+  (declare (function function)
+           (simple-vector vector)
+           (optimize speed))
+  (let* ((len (length vector))
+         (result (make-array len))
+         (p 0))
+    (declare (fixnum p))
+    (dotimes (i len)
+      (declare (optimize (sb-c::insert-array-bounds-checks 0)))
+      (let ((elt (aref vector i)))
+        (when (funcall function elt)
+          (setf (aref result p) elt)
+          (setf p (logand most-positive-fixnum (+ 1 p))))))
+    (sb-kernel:%shrink-vector result p)
+    result))
+
+(defun fast-remove-if (function vector)
+  (declare (function function)
+           (simple-vector vector)
+           (optimize speed))
+  (let* ((len (length vector))
+         (result (make-array len))
+         (p 0))
+    (declare (fixnum p))
+    (dotimes (i len)
+      (declare (optimize (sb-c::insert-array-bounds-checks 0)))
+      (let ((elt (aref vector i)))
+        (unless (funcall function elt)
+          (setf (aref result p) elt)
+          (setf p (logand most-positive-fixnum (+ 1 p))))))
+    (sb-kernel:%shrink-vector result p)
+    result))
 
 (defmethod compute-csg-properties ((node csg-node) scene)
   (let-plists ((((:all-intersections all-left) (:inside inside-left)) (compute-csg-properties (left-of node) scene))
@@ -148,24 +247,19 @@ intersections."
      :all-intersections
      ;; FIXME: Don't we need to obey the transform here?
      (macrolet
-         ((make-lambda (remove-left remove-right)
-            `(lambda (origin direction)
-               (declare (type vec origin direction))
-               ;; FIXME: There have to be more efficient ways to do this...
-               ;; Maybe instead of simple-vectors of csg-intersections
-               ;; we should have a simple-vector like this:
-               ;; #(distance object distance object distance...)?
-               (merge 'simple-vector
-                      (,remove-left (csg-lambda inside-right origin direction)
-                                    (funcall all-left origin direction))
-                      (,remove-right (csg-lambda inside-left origin direction)
-                                     (funcall all-right origin direction))
-                      #'< :key #'csg-intersection-distance))))
+         ((make-lambda (name remove-left remove-right)
+            `(sb-int:named-lambda ,name (origin direction)
+               (declare (type vec origin direction) (optimize speed))
+               (merge-csg-intersections
+                (,remove-left (csg-lambda inside-right origin direction)
+                              (funcall all-left origin direction))
+                (,remove-right (csg-lambda inside-left origin direction)
+                               (funcall all-right origin direction))))))
        (ecase (type-of node)
          (intersection
-          (make-lambda remove-if-not remove-if-not))
+          (make-lambda csg-intersection-merge fast-remove-if-not fast-remove-if-not))
          (difference
-          (make-lambda remove-if remove-if-not))))
+          (make-lambda csg-difference-merge fast-remove-if fast-remove-if-not))))
      :inside
      (macrolet ((make-lambda (combine)
                   `(lambda (point)
@@ -257,13 +351,20 @@ intersections."
 
 (declaim (inline shade))
 (defun shade (object ray counters)
+  (declare (optimize speed))
   (let* ((point (adjust-vec (ray-origin ray) (ray-direction ray)
                             (ray-extent ray)))
 	 (normal (funcall (object-normal object) point))
 	 (n.d (dot-product normal (ray-direction ray))))
-    (funcall (object-shader object)
-             point
-             (if (plusp n.d) (vec* normal -1.0) normal)
-             n.d
-             ray
-             counters)))
+    (flet ((%shade (n)
+             (funcall (object-shader object)
+                      point
+                      n
+                      n.d
+                      ray
+                      counters)))
+      (if (plusp n.d)
+          (let ((n2 (vec* normal -1.0)))
+            (declare (dynamic-extent n2))
+            (%shade n2))
+          (%shade normal)))))

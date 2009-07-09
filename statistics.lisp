@@ -22,6 +22,9 @@
 (defmacro incf* (place)
   `(setf ,place (logand #xffffffff (+ ,place 1))))
 
+(defmacro incf-fixnum (place)
+  `(setf ,place (logand most-positive-fixnum (+ ,place 1))))
+
 (defun note-intersection (counters shadowp hitp)
   (declare (counter-vector counters))
   (let ((slot (if hitp

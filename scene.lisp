@@ -122,5 +122,5 @@
   (direction (required-argument :illumination) :type (function (vec) vec))
   (illumination
    (required-argument :illumination)
-   :type (function (vec vec) (values vec float &optional))))
+   :type (function (vec vec counter-vector) (values vec float &optional))))
 

@@ -110,7 +110,8 @@
 ;;; RayTravAlgRECB from Appendix C.
 (defun kd-traverse (root ray counters shadowp)
   (declare (kd-node root)
-           (ray ray))
+           (ray ray)
+           (optimize speed))
   (multiple-value-bind (entry-distance exit-distance)
       (ray/box-intersections ray (kd-min root) (kd-max root))
     (declare (type (or null float) entry-distance)
@@ -131,6 +132,7 @@
                   ray-origin))
         (let ((exit-pointer 1)
               (far-child nil))
+          (declare (fixnum exit-pointer))
           (setf (kd-stack-distance stack exit-pointer) exit-distance)
           (setf (kd-stack-point stack exit-pointer)
                 (adjust-vec ray-origin ray-direction exit-distance))
@@ -162,9 +164,9 @@
                                               current-node (kd-right current-node))))
                                  (let ((distance (/ (- split (aref ray-origin axis)) (aref ray-direction axis)))
                                        (tmp exit-pointer))
-                                   (incf exit-pointer)
+                                   (incf-fixnum exit-pointer)
                                    (when (= exit-pointer entry-pointer)
-                                     (incf exit-pointer))
+                                     (incf-fixnum exit-pointer))
                                    (setf (kd-stack-prev stack exit-pointer) tmp
                                          (kd-stack-distance stack exit-pointer) distance
                                          (kd-stack-node stack exit-pointer) far-child
@@ -195,7 +197,8 @@
                       exit-pointer (kd-stack-prev stack entry-pointer))))))))
 
 (defun ray/box-intersections (ray bmin bmax)
-  (declare (type vec bmin bmax))
+  (declare (type vec bmin bmax)
+           (optimize speed))
   (let ((dir (ray-direction ray))
         (orig (ray-origin ray)))
     (with-arrays (dir orig)

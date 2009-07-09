@@ -35,7 +35,7 @@
           (ry (- 1.0 (/ (* 2 y) height)))
           (*image-coordinates* (cons x y)))
       (funcall camera
-               (lambda (ray)
+               (sb-int:named-lambda shoot-ray-callback (ray)
                  (if result
                      (error "never")
                      (setf result (raytrace ray scene counters))))
@@ -47,7 +47,7 @@
     result))
 
 (defun render (scene camera width height callback &key (normalize-camera t))
-  (declare (fixnum width height))
+  (declare (fixnum width height) (optimize speed))
   (when normalize-camera
     (setf camera (normalize-camera camera width height)))
   (let* ((scene (compile-scene scene))
@@ -60,26 +60,30 @@
                          (t
                           (error "Not a valid callback: ~S" callback))))
          (counters (make-counters))
-         (start (get-internal-run-time)))
-    (declare (function callback))
+         (start (get-internal-run-time))
+         (fheight (float height))
+         (fwidth (float width)))
+    (declare (function callback camera))
     (fresh-line)
-    (dotimes (y height)
-      (dotimes (x width)
-        (let ((rx (- (/ (* 2 x) width) 1.0))
-              (ry (- 1.0 (/ (* 2 y) height)))
-              (*image-coordinates* (cons x y)))
-          (funcall callback
-                   (funcall camera
-                            (lambda (ray)
-                              (raytrace ray scene counters))
-                            rx
-                            ry
-                            counters)
-                   x
-                   y)))
-      (when (zerop (mod y note-interval))
-	(princ ".")
-	(force-output)))
+    (flet ((trace-1-ray (ray)
+             (raytrace ray scene counters)))
+      (declare (dynamic-extent #'trace-1-ray))
+      (dotimes (y height)
+        (dotimes (x width)
+          (let ((rx (- (/ (* 2.0 x) fwidth) 1.0))
+                (ry (- 1.0 (/ (* 2.0 y) fheight)))
+                (*image-coordinates* (cons x y)))
+            (funcall callback
+                     (funcall camera
+                              #'trace-1-ray
+                              rx
+                              ry
+                              counters)
+                     x
+                     y)))
+        (when (zerop (mod y note-interval))
+          (princ ".")
+          (force-output))))
     (maybe-report scene counters (- (get-internal-run-time) start))))
 
 (defvar *debugging* nil)

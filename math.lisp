@@ -87,11 +87,11 @@ if there are no positive real roots greater then epsilon."
 
 (declaim (inline pos-quad-roots))
 (defun pos-quad-roots (a b c)
-  "Returns a vector of positive roots for ax^2+bx+c."
+  "Returns positive roots for ax^2+bx+c."
   (declare (type float a b c))
   (let ((d (- (square b) (* 4.0 a c))))
     (if (minusp d)
-        (float-vector)
+        (values -1.0 -1.0)
         (let* ((sqrt-d (sqrt d))
                (2a (* 2.0 a))
                (r1 (/ (+ (- b) sqrt-d) 2a))
@@ -99,13 +99,13 @@ if there are no positive real roots greater then epsilon."
           (cond ((significantp r1)
                  (if (significantp r2)
                      (if (< r1 r2)
-                         (float-vector r1 r2)
-                         (float-vector r2 r1))
-                     (float-vector r1)))
+                         (values r1 r2)
+                         (values r2 r1))
+                     (values r1 -1.0)))
                 ((significantp r2)
-                 (float-vector r2))
+                 (values r2 -1.0))
                 (t
-                 (float-vector)))))))
+                 (values -1.0 -1.0)))))))
 
 ;;;## Vectors
 
@@ -165,6 +165,8 @@ if there are no positive real roots greater then epsilon."
 	    (transpose-matrix inverse))))
 
 (declaim (inline transform-point transform-direction))
+(declaim (ftype (sb-int:sfunction (vec matrix) vec)
+                transform-point transform-direction))
 (defun transform-point (point matrix)
   (transform-vec point matrix 1.0))
 (defun transform-direction (direction matrix)

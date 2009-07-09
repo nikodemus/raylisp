@@ -27,7 +27,8 @@
       (inverse-and-adjunct/inverse-matrix (sphere-matrix sphere))
     (list
      :intersection
-     (lambda (ray)
+     (sb-int:named-lambda sphere-intersection (ray)
+       (declare (optimize speed))
        (let* ((o2 (transform-point (ray-origin ray) inverse))
               (d2 (transform-direction (ray-direction ray) inverse)))
          (declare (dynamic-extent o2 d2))
@@ -54,6 +55,7 @@
                       (x (aref v 0))
                       (y (aref v 1))
                       (z (aref v 2)))
+                 (declare (dynamic-extent v))
                  (cond (init
                         (setf min-x x
                               min-y y
@@ -88,21 +90,32 @@
   (let* ((inverse (inverse-matrix (sphere-matrix sphere)))
 	 (compiled (compile-scene-object sphere scene)))
     (list
+     ;; FIXME: To reduce consing even further: stack allocate
+     ;; the csg-interactions and pass a continuation in here.
+     ;; ...alternatively, pre-allocate a csg-intersection buffer.
      :all-intersections
-     (lambda (origin direction)
+     (sb-int:named-lambda sphere-all-intersections (origin direction)
+       (declare (optimize speed))
        (let ((o (transform-point origin inverse))
              (d (transform-direction direction inverse)))
          (declare (dynamic-extent o d))
-         (map 'simple-vector
-            (lambda (d)
-              (make-csg-intersection :distance d :object compiled))
-            (pos-quad-roots (dot-product d d)
-                            (* 2.0 (dot-product d o))
-                            (- (dot-product o o) 1.0)))))
+         (multiple-value-bind (r1 r2)
+             (pos-quad-roots (dot-product d d)
+                             (* 2.0 (dot-product d o))
+                             (- (dot-product o o) 1.0))
+           (cond ((= -1.0 r1)
+                  #())
+                 ((= -1.0 r2)
+                  (simple-vector (make-csg-intersection :distance r1 :object compiled)))
+                 (t
+                  (simple-vector (make-csg-intersection :distance r1 :object compiled)
+                                 (make-csg-intersection :distance r2 :object compiled)))))))
      :inside
      (lambda (point)
        (> (+ 1.0 epsilon)
-	  (vec-length (transform-point point inverse)))))))
+          (let ((p (transform-point point inverse)))
+            (declare (dynamic-extent p))
+            (vec-length p)))))))
 
 ;;;### Plane
 
@@ -120,12 +133,15 @@
       (inverse-and-adjunct-matrix (plane-matrix plane))
     (list
      :intersection
-     (lambda (ray)
-       (let* ((dy (aref (transform-direction (ray-direction ray) inverse) 1))
+     (sb-int:named-lambda plane-intersection (ray)
+       (let* ((d (transform-direction (ray-direction ray) inverse))
+              (dy (aref d 1))
 	      (s (if (zerop dy)
 		     -1.0 ; parallel
-		     (- (/ (aref (transform-point (ray-origin ray) inverse) 1)
-			   dy)))))
+		     (let ((o (transform-point (ray-origin ray) inverse)))
+                       (declare (dynamic-extent o))
+                       (- (/ (aref o 1) dy))))))
+         (declare (dynamic-extent d))
 	 (if (< epsilon s (ray-extent ray))
              (progn
                (setf (ray-extent ray) s)
@@ -140,11 +156,15 @@
 	(c-object (compile-scene-object plane scene)))
     (list
      :all-intersections
-     (lambda (origin direction)
-       (let ((d (let ((dy (aref (transform-direction direction inverse) 1)))
+     (sb-int:named-lambda plane-all-intersections (origin direction)
+       (let ((d (let* ((d (transform-direction direction inverse))
+                       (dy (aref d 1)))
+                  (declare (dynamic-extent d))
 		  (if (zerop dy)
 		      -1.0 ; parallel
-		      (- (/ (aref (transform-point origin inverse) 1) dy))))))
+		      (let ((o (transform-point origin inverse)))
+                        (declare (dynamic-extent o))
+                        (- (/ (aref o 1) dy)))))))
 	 (if (significantp d)
 	     (simple-vector
 	      (make-csg-intersection
@@ -153,8 +173,11 @@
 	     #())))
      :inside
      (lambda (point)
+       (declare (optimize speed))
        (> epsilon
-	  (aref (transform-point point inverse) 1))))))
+          (let ((p (transform-point point inverse)))
+            (declare (dynamic-extent p))
+            (aref p 1)))))))
 
 ;;;## General Purpose Mixins
 ;;;
@@ -188,12 +211,14 @@
   (let* ((location (location-of light))
 	 (color (color-of light))
 	 (shadow-fun (shadow-function location scene)))
+    (declare (function shadow-fun))
     (list
      :incident-light
      (lambda (point)
        (vec- location point))
      :illumination
      (lambda (point light-vector counters)
+       (declare (optimize speed))
        (let* ((len (vec-length light-vector))
 	      (nlv (vec/ light-vector len)))
 	 (if (funcall shadow-fun point nlv len counters)
@@ -232,10 +257,10 @@ begin the maximum value. Spotlight fades towards its edges."))
        (vec- location point))
      :illumination
      (lambda (point light-vector counters)
+       (declare (optimize speed))
        (let* ((len (vec-length light-vector))
               (nlv (vec/ light-vector len))
               (dot (- (dot-product nlv direction))))
-         (declare (dynamic-extent nlv))
          (if (or (< dot aperture) (funcall shadow-fun point nlv len counters))
              (values black -1.0)
              (values (funcall fader color dot) len)))))))
@@ -387,9 +412,11 @@ source such as the sun or moon."))
                          color))
          (diffuse-color (vec* color
                               (coefficient (diffuse-of shader) shader))))
+    (declare (type vec color ambient-color diffuse-color))
     (with-arrays (diffuse-color)
-      ;; DOT as argument is?
-      (lambda (point normal dot ray counters)
+      ;; DOT as argument is ignores -- is this correct?
+      (sb-int:named-lambda shade-solid (point normal dot ray counters)
+        (declare (optimize speed))
         (declare (ignore ray))
 	(let ((color ambient-color))
           ;; FIXME: Is there a way to store the list of lights directly here,
@@ -429,20 +456,25 @@ source such as the sun or moon."))
 	 (diffuse-color (vec* color (coefficient (diffuse-of shader) shader)))
 	 (specular (coefficient (specular-of shader) shader))
 	 (size (size-of shader)))
-    (declare (type float specular size))
+    (declare (type float specular)
+             (type (single-float (0.0)) size)
+             (type vec color ambient-color diffuse-color))
     (with-arrays (diffuse-color)
-      (lambda (point normal dot ray counters)
+      ;; FIXME: dot ignored?
+      (sb-int:named-lambda shade-phong (point normal dot ray counters)
+        (declare (optimize speed))
 	(let ((color black)
 	      (dir (ray-direction ray)))
 	  (dolist (light (compiled-scene-lights (scene-compiled-scene scene)))
 	    (let* ((lv (light-vector light point))
 		   (dot (dot-product lv normal)))
+              (declare (single-float dot))
 	      (when (plusp dot)
 		(multiple-value-bind (incident len) (illuminate light point lv counters)
 		  (when (plusp len)
 		    (let* ((l.n (/ dot len))
 			   (h (normalize (vec- lv dir))) ; FIXME: why must we normalize?
-			   (n.h^p (expt (dot-product normal h) size))
+			   (n.h^p (expt (the (single-float 0.0) (dot-product normal h)) size))
 			   (s-co (* specular n.h^p)))
 		      (with-arrays (incident color)
 			(macrolet
@@ -474,7 +506,8 @@ source such as the sun or moon."))
              (type float scale)
              (optimize speed))
     (if (smoothp shader)
-        (lambda (point normal dot ray counters)
+        (sb-int:named-lambda shade-smooth-gradient (point normal dot ray counters)
+          (declare (optimize speed))
           (declare (type vec point))
           (let* ((start (funcall start point normal dot ray counters))
                  (end (funcall end point normal dot ray counters))
@@ -483,7 +516,8 @@ source such as the sun or moon."))
             (if (> 1.0 ratio)
                 (vec-lerp start end (* ratio 0.5))
                 (vec-lerp end start (* ratio 0.5)))))
-        (lambda (point normal dot ray counters)
+        (sb-int:named-lambda shade-gradient (point normal dot ray counters)
+          (declare (optimize speed))
           (declare (type vec point))
           (let* ((start (funcall start point normal dot ray counters))
                  (end (funcall end point normal dot ray counters))
@@ -509,7 +543,7 @@ source such as the sun or moon."))
              (start-color (funcall start point normal n.d ray counters))
              (end-color (funcall end point normal n.d ray counters)))
         (declare (dynamic-extent v))
-        (vec-lerp start-color end-color (clamp noise 0.0 1.0))))))
+        (%vec-lerp v start-color end-color (clamp noise 0.0 1.0))))))
 
 ;;;## Checker Shader
 ;;;
@@ -531,7 +565,8 @@ source such as the sun or moon."))
   (let ((odd (compile-shader (odd-of shader) scene))
 	(even (compile-shader (even-of shader) scene))
         (scale (float (scale-of shader))))
-    (lambda (point normal dot ray counters)
+    (sb-int:named-lambda shade-checher (point normal dot ray counters)
+      (declare (optimize speed))
       (funcall (if (checkerp point scale)
                    odd
                    even)
@@ -553,12 +588,11 @@ source such as the sun or moon."))
                               (the function (compile-shader shader scene)))
 			    (shaders-of shader)))
 	 (count (float (length functions))))
-    (lambda (point normal dot ray counters)
+    (sb-int:named-lambda shade-composite (point normal dot ray counters)
       (declare (optimize speed))
       (let ((result (alloc-vec)))
-        (declare (dynamic-extent result))
         (dolist (fun functions)
+          (declare (function fun))
           (%vec+ result result
-                 (funcall (sb-ext:truly-the (function (&rest t) (values vec &optional)) fun)
-                          point normal dot ray counters)))
+                 (funcall fun point normal dot ray counters)))
         (%vec/ result result count)))))

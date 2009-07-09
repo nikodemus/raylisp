@@ -92,7 +92,6 @@
   ;;
   (let ((result (alloc-vec))
         (tmp (alloc-vec)))
-    (declare (dynamic-extent tmp))
     ;; These are all directions, so no worries about the 4th element.
     (%normalize result
                 (%vec+
@@ -133,7 +132,6 @@
              (let ((,tmp (or (environment-link ,env) *global-environment*)))
                (,thunk  (/ ,ior (environment-ior ,tmp)) ,tmp))
              (let ((,tmp (make-environment :ior ,ior :link ,env)))
-               (declare (dynamic-extent ,tmp))
                (,thunk (/ (environment-ior ,env) ,ior) ,tmp)))))))
 
 (defmacro with-spawned-rays (((reflected refracted) &key point normal dot-product incident-ray
