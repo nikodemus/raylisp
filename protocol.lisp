@@ -94,9 +94,9 @@ intersections."
 (defmacro csg-lambda (fun origin direction)
   (let ((ci (gensym "CSG-INTERSECTION")))
     `(lambda (,ci)
-       (funcall ,fun (adjust-vector ,origin
-				    ,direction
-				    (csg-intersection-distance ,ci))))))
+       (funcall ,fun (adjust-vec ,origin
+                                 ,direction
+                                 (csg-intersection-distance ,ci))))))
 
 (defun undelegated-csg-normal (point)
   (declare (ignore point))
@@ -109,14 +109,14 @@ intersections."
 	  (inverse (if matrix (inverse-matrix matrix) (identity-matrix))))
      (let-plists ((((:all-intersections all-left) (:inside inside-left)) (compute-csg-properties (left-of node) scene))
 		  (((:all-intersections all-right) (:inside inside-right)) (compute-csg-properties (right-of node) scene)))
-       (declare (type (function (vector vector) (simple-array csg-intersection (*)))
+       (declare (type (function (vec vec) (simple-array csg-intersection (*)))
                       all-left all-right)
-                (type (function (vector) t) inside-left inside-right))
-       (macrolet 
+                (type (function (vec) t) inside-left inside-right))
+       (macrolet
            ((make-lambda (find-left find-right)
               `(lambda (ray)
-                 (declare (type ray ray))
-                 (let* ((o (transform-vector (ray-origin ray) inverse))
+                 (declare (type ray ray) (optimize speed))
+                 (let* ((o (transform-point (ray-origin ray) inverse))
                         (d (transform-direction (ray-direction ray) inverse))
                         (sx (,find-left (csg-lambda inside-right o d)
                                         (funcall all-left o d)))
@@ -134,7 +134,7 @@ intersections."
          (ecase (type-of node)
            (intersection
             (make-lambda find-if find-if))
-           (difference 
+           (difference
             (make-lambda find-if-not find-if))))))
    :normal
    #'undelegated-csg-normal))
@@ -142,15 +142,15 @@ intersections."
 (defmethod compute-csg-properties ((node csg-node) scene)
   (let-plists ((((:all-intersections all-left) (:inside inside-left)) (compute-csg-properties (left-of node) scene))
                (((:all-intersections all-right) (:inside inside-right)) (compute-csg-properties (right-of node) scene)))
-    (declare (type (function (vector vector) simple-vector) all-left all-right)
-	     (type (function (vector) t) inside-left inside-right))
+    (declare (type (function (vec vec) simple-vector) all-left all-right)
+	     (type (function (vec) t) inside-left inside-right))
     (list
      :all-intersections
      ;; FIXME: Don't we need to obey the transform here?
-     (macrolet 
+     (macrolet
          ((make-lambda (remove-left remove-right)
             `(lambda (origin direction)
-               (declare (type vector origin direction))
+               (declare (type vec origin direction))
                ;; FIXME: There have to be more efficient ways to do this...
                ;; Maybe instead of simple-vectors of csg-intersections
                ;; we should have a simple-vector like this:
@@ -188,7 +188,7 @@ intersections."
      :illumination illumination)))
 
 (declaim (inline light-vector illuminate))
-	 
+
 (defun light-vector (light point)
   (funcall (light-direction light) point))
 
@@ -215,7 +215,7 @@ intersections."
 	  (last nil))
       (declare (type (or null compiled-object) last))
       (lambda (point nlv len counters)
-	(declare (type vector point nlv) (type float len)
+	(declare (type vec point nlv) (type float len)
 		 (optimize speed))
 	(with-ray (ray :origin point :direction nlv :extent len)
 	  (when (or (and last (intersect last ray counters t))
@@ -237,6 +237,10 @@ intersections."
 
 (defgeneric compute-shader-function (shader scene))
 
+(declaim (ftype (function (t t) (values (function (vec vec float ray t)
+                                                  (values vec &optional))
+                                        &optional))
+                compile-shader))
 (defun compile-shader (shader scene)
   (compute-shader-function shader scene))
 
@@ -253,13 +257,13 @@ intersections."
 
 (declaim (inline shade))
 (defun shade (object ray counters)
-  (let* ((point (adjust-vector (ray-origin ray) (ray-direction ray) 
-			       (ray-extent ray)))
+  (let* ((point (adjust-vec (ray-origin ray) (ray-direction ray)
+                            (ray-extent ray)))
 	 (normal (funcall (object-normal object) point))
 	 (n.d (dot-product normal (ray-direction ray))))
     (funcall (object-shader object)
-             point 
-             (if (plusp n.d) (reverse-vector normal) normal)
+             point
+             (if (plusp n.d) (vec* normal -1.0) normal)
              n.d
-	     ray
+             ray
              counters)))

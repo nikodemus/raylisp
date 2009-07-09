@@ -82,13 +82,22 @@
 	(force-output)))
     (maybe-report scene counters (- (get-internal-run-time) start))))
 
+(defvar *debugging* nil)
+
+(defmacro with-debug ((continue) &body body)
+  `(handler-bind ((error (lambda (c)
+                           (unless *debugging*
+                             (let ((*debugging* t))
+                               (cerror ,continue "Oops:~% ~A" c))))))
+     ,@body))
+
 (defun raytrace (ray scene counters)
   "Traces the RAY in SCENE, returning the apparent color."
   (let* ((object (find-scene-intersection ray scene counters))
          (color (if object
                     (shade object ray counters)
                     (scene-background-color scene))))
-    (vector-mul color (ray-weight ray))))
+    (vec* color (ray-weight ray))))
 
 (defun %find-intersection (ray all-objects counters &optional shadow)
   (declare (optimize speed))

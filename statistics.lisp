@@ -30,7 +30,7 @@
                       +intersection-miss-slot+)
                   (if shadowp
                       +shadow-hit-slot+
-                      +intersection-hit-slot+)))) 
+                      +intersection-hit-slot+))))
     (incf* (aref counters slot)))
   counters)
 
@@ -98,10 +98,10 @@
 	    (getf counters :camera)
 	    (getf counters :reflected)
 	    (getf counters :refracted)
-	    intersections hits 
+	    intersections hits
 	    (unless (zerop intersections)
 	      (round (* 100 (/ hits intersections))))
-	    shadow-tests shadows 
+	    shadow-tests shadows
 	    (unless (zerop shadows)
 	      (round (* 100 (/ shadows shadow-tests))))
             (float (/ time internal-time-units-per-second)))))

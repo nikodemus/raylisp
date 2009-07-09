@@ -1,7 +1,7 @@
 (in-package :raylisp)
 
-(declaim (ftype (function (vector) (values float &optional)) vector-noise))
-(declaim (ftype (function (vector float float) (values float &optional)) turbulence perlin-noise))
+(declaim (ftype (function (vec) (values float &optional)) vector-noise))
+(declaim (ftype (function (vec float float) (values float &optional)) turbulence perlin-noise))
 
 (declaim (type (simple-array (unsigned-byte 8) (512)) +perlin-noise-vector+))
 (define-constant +perlin-noise-vector+
@@ -43,7 +43,7 @@
   :test #'equalp)
 
 (locally (declare (optimize speed))
-  (labels      
+  (labels
      ((lerp (v a b)
         (declare (type float v a b))
         (+ a (* v (- b a))))
@@ -53,7 +53,7 @@
               (values res (- f res))))
       (%truncate (f)
         (declare (type float f))
-        (if (< #.(float most-negative-fixnum) f #.(float most-positive-fixnum)) 
+        (if (< #.(float most-negative-fixnum) f #.(float most-positive-fixnum))
             (let ((res (sb-ext:truly-the fixnum (sb-kernel:%unary-truncate f))))
               (values res (- f res)))
             (%%truncate f)))
@@ -75,8 +75,8 @@
              ((cy y) (%floor y))
              ((cz z) (%floor z)))
           (declare (type (signed-byte 32) cx cy cz))
-          (let ((cx (logand cx 255))   
-                (cy (logand cy 255))   
+          (let ((cx (logand cx 255))
+                (cy (logand cy 255))
                 (cz (logand cz 255)))
             (declare (type (unsigned-byte 16) cx cy cz))
             (flet ((fade (e)
@@ -91,7 +91,7 @@
                      ;; Low 4bits hash code
                      ;; into 12 grad.dirs
                      (let* ((h (logand hash 15))
-                            (u (if (or (< h 8) (= h 12) (= h 13)) 
+                            (u (if (or (< h 8) (= h 12) (= h 13))
                                    x
                                    y))
                             (v (if (or (< h 4) (= h 12) (= h 13))
@@ -114,10 +114,10 @@
                   (lerp
                    w
                    (lerp
-                    v 
+                    v
                     (lerp
-                     u                       
-                     (grad (noise1 AA) x y z) 
+                     u
+                     (grad (noise1 AA) x y z)
                      (grad (noise1 BA) (- x 1) y z))
                     (lerp
                      u
@@ -144,7 +144,7 @@ not a bug -- of this implementation is that noise *seems* to be 0.0 at each
 point on a unit-cube lattice."
      (with-arrays (v)
        (noise3 (v 0) (v 1) (v 2))))
-  
+
    (defun turbulence (v lo hi)
      "Turbulance function. Based on Ken Perlin's SIGGRAPH 92 course notes."
      (declare (type float lo hi))
@@ -165,7 +165,7 @@ point on a unit-cube lattice."
                           (t
                            r))))
            (recurse lo)))))
-  
+
    (defun perlin-noise (v octaves persistence)
      (with-arrays (v)
        (let ((total 0.0)

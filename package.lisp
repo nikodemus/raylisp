@@ -9,7 +9,7 @@
 
 (defpackage "RAYLISP"
   (:nicknames "RL")
-  (:use "CL" "ALEXANDRIA")
+  (:use "CL" "ALEXANDRIA" "SB-CGA")
   (:shadow
    "PI"
    "FLOAT"
@@ -18,6 +18,7 @@
    "SIMPLE-VECTOR"
    "VECTOR"
    "TYPE-OF")
+  (:shadowing-import-from :sb-cga #:rotate)
   (:export
    ;; protocol classes
    "SCENE-OBJECT"
@@ -29,7 +30,7 @@
    ;; scene compilation
    "COMPILE-SCENE-OBJECT"
    "COMPILE-SCENE-LIGHT"
-   
+
    "PI"
    "FLOAT"
    "FLOATP"

@@ -1,10 +1,11 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :sb-sprof)
   (require :raylisp)
   (require :mcclim)
   (load (compile-file "clim-patch.lisp"))
   (defpackage "RAYLISP-GUI"
     (:use "CLIM-LISP" "CLIM")
-    (:import-from "RAYLISP" 
+    (:import-from "RAYLISP"
                   "@"
                   "ORIGIN")
     (:export "RUN")))
@@ -21,9 +22,9 @@
   (array-dimension raster 1))
 
 (defun vector-rgba (vector)
-  (declare (raylisp::vector vector))
+  (declare (type raylisp::vec vector) (optimize speed))
   (flet ((dim (i)
-           (floor (* 255 (raylisp::clamp (aref vector i) 0 1)))))
+           (floor (* 255 (raylisp::clamp (aref vector i) 0.0 1.0)))))
     (let ((r (dim 0))
           (g (dim 1))
           (b (dim 2)))
@@ -55,7 +56,7 @@
     (raylisp::render scene (raylisp::scene-default-camera scene)
                      width height
                      (lambda (color x y)
-                       (declare (type (simple-array single-float (3)) color)
+                       (declare (type sb-cga:vec color)
                                 (type fixnum x y))
                        ;; FIXME: Gamma...
                        (let ((rgba (vector-rgba color)))
@@ -97,6 +98,15 @@
     ()
   (window-clear (find-pane-named *application-frame* 'repl)))
 
+(define-raylisp-frame-command (com-start-profiling :name t)
+    ()
+  (sb-sprof:start-profiling :sample-interval 0.05))
+
+(define-raylisp-frame-command (com-report :name t)
+    ()
+  (sb-sprof:stop-profiling)
+  (sb-sprof:report :type :flat))
+
 (defvar *last-scene-name* nil)
 
 (define-raylisp-frame-command (com-render-scene :name t)
@@ -112,6 +122,13 @@
     ()
   (maphash (lambda (name scene)
              (render-scene scene (find-pane-named *application-frame* 'canvas)))
+           raylisp::*scenes*))
+
+(define-raylisp-frame-command (com-list-scenes :name t)
+    ()
+  (maphash (lambda (name scene)
+             (declare (ignore scene))
+             (format t "~&~A~%" name))
            raylisp::*scenes*))
 
 (define-raylisp-frame-command (com-stress :name t)
@@ -157,3 +174,6 @@
 (defun run ()
   (sb-posix:putenv "DISPLAY=:0.0")
   (run-frame-top-level (make-application-frame 'raylisp-frame)))
+
+#+nil
+(run)

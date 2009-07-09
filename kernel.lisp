@@ -17,7 +17,6 @@
 
 (defvar *global-environment* (make-environment))
 
-
 ;;; RAY represents an individual ray. Immutable except for the EXTENT
 ;;; slot, which is used by object intersection functions to store the
 ;;; intersection point.
@@ -33,8 +32,8 @@
 
 (declaim (inline make-ray))
 (defstruct (ray)
-  (origin (required-argument) :type vector)
-  (direction (required-argument) :type vector)
+  (origin (required-argument) :type vec)
+  (direction (required-argument) :type vec)
   (extent float-positive-infinity :type float)
   (weight 1.0 :type (float 0.0 1.0))
   (depth 0 :type (and fixnum unsigned-byte))
@@ -49,16 +48,16 @@
 
 (defmacro with-ray ((var &rest args) &body forms)
   `(let ((,var (make-ray ,@args)))
-     (declare (sb-int:truly-dynamic-extent ,var))
+     (declare (dynamic-extent ,var))
      ,@forms))
 
 ;;; Spawning new rays. The SPAWN-RAYS is quite ugly and should be fixed.
 
 (declaim (inline reflected-ray-direction))
 (defun reflected-ray-direction (normal dot ray)
-  (declare (vector normal)
-           (ray ray)
-           (float dot))
+  (declare (type vec normal)
+           (type ray ray)
+           (type float dot))
   ;; The code below is really this, but avoid intermediate vectors.
   ;; FIXME: It would be nice if we had compiler-macros for this...
   ;;
@@ -74,16 +73,16 @@
                   `(+ (d ,i) (* (normal ,i) f))))
        (let* ((x (dim 0)) (y (dim 1)) (z (dim 2))
               (l (sqrt (+ (* x x) (* y y) (* z z)))))
-         (vector (/ x l) (/ y l) (/ z l)))))))
+         (vec (/ x l) (/ y l) (/ z l)))))))
 
 (declaim (inline refracted-ray-direction))
 (defun refracted-ray-direction (normal dot ray rel-ior cs2)
-  (declare (vector normal)
-           (ray ray)
-           (float dot rel-ior cs2))
+  (declare (type vec normal)
+           (type ray ray)
+           (type float dot rel-ior cs2))
   ;; The code below is really this, but avoids
   ;; intermediate vectors. FIXME: It would be nice if we
-  ;; had compiler-macros toq do this...
+  ;; had compiler-macros to do this...
   ;;
   ;;  (normalize
   ;;   (vector-add
@@ -91,18 +90,19 @@
   ;;                (- (* rel-ior (abs dot)) (sqrt cs2)))
   ;;    (vector-mul (ray-direction ray) rel-ior)))
   ;;
-  (let ((d (ray-direction ray))
-        (f (- (* rel-ior (abs dot)) (sqrt cs2))))
-    (with-arrays (normal d)
-      (macrolet ((dim (i)
-                   `(+ (* f (normal ,i)) (* rel-ior (d ,i)))))
-        (let* ((x (dim 0)) (y (dim 1)) (z (dim 2))
-               (l (sqrt (+ (* x x) (* y y) (* z z)) )))
-          (vector (/ x l) (/ y l) (/ z l)))))))
+  (let ((result (alloc-vec))
+        (tmp (alloc-vec)))
+    (declare (dynamic-extent tmp))
+    ;; These are all directions, so no worries about the 4th element.
+    (%normalize result
+                (%vec+
+                 result
+                 (%vec* result normal (- (* rel-ior (abs dot)) (sqrt cs2)))
+                 (%vec* tmp (ray-direction ray) rel-ior)))))
 
-
-(defmacro with-reflected-ray ((reflected &key point normal dot-product incident-ray specular counters)
-                              &body forms)
+(defmacro with-reflected-ray
+    ((reflected &key point normal dot-product incident-ray specular counters)
+     &body forms)
   ;; Intersection normal is always on the side of ray origin, but
   ;; precalculated N.D may be negative:
   ;;
@@ -130,10 +130,10 @@
       `(flet ((,thunk (,rel-ior ,new-env)
                 ,@forms))
          (if (plusp ,dot-product)
-             (let ((,tmp (environment-link ,env)))
+             (let ((,tmp (or (environment-link ,env) *global-environment*)))
                (,thunk  (/ ,ior (environment-ior ,tmp)) ,tmp))
              (let ((,tmp (make-environment :ior ,ior :link ,env)))
-               (declare (sb-int:truly-dynamic-extent ,tmp))
+               (declare (dynamic-extent ,tmp))
                (,thunk (/ (environment-ior ,env) ,ior) ,tmp)))))))
 
 (defmacro with-spawned-rays (((reflected refracted) &key point normal dot-product incident-ray
@@ -162,4 +162,4 @@
                      (,thunk ,r1 ,r2))
                    ;; total internal reflection
                    ;; FIXME: the second dummy ray here seems like an ugly hack
-                   (,thunk ,r1 (load-time-value (make-ray :origin origin :direction x-axis :weight 0.0)))))))))))
+                   (,thunk ,r1 (load-time-value (make-ray :origin +origin+ :direction x-axis :weight 0.0)))))))))))

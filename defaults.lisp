@@ -8,7 +8,7 @@
 ;;; The reason we do this is the ability to store and change default
 ;;; values all in one go.
 
-(defparameter *default-values* 
+(defparameter *default-values*
   (list :adaptive-limit 0.05
 	:ambient 0.3
 	:ambient-light white
@@ -16,7 +16,7 @@
 	:color white
 	:depth-limit 5
 	:ior 1.0
-	:location origin
+	:location +origin+
 	:radius 1.0
 	:shader nil
 	:size 40.0

@@ -1,7 +1,7 @@
 (in-package :asdf)
 
 (defsystem :raylisp
-  :depends-on (:alexandria)
+  :depends-on (:alexandria :sb-cga)
   :components
   ((:file "package")
    (:file "base" :depends-on ("package"))

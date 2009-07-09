@@ -35,17 +35,17 @@
   (when (and sky up right)
     (error ":SKY given in addition to :UP and :RIGHT."))
   (unless location
-    (setf location (vector 0.0 2.0 -10.0)))
+    (setf location (vec 0.0 2.0 -10.0)))
   (let ((normalized-direction
          (when direction
            (normalize direction))))
     (unless direction
       (unless look-at
-        (setf look-at origin))
+        (setf look-at +origin+))
       (unless focal-length
         (setf focal-length 1.0))
-      (setf normalized-direction (normalize (vector-sub look-at location))
-             direction (vector-mul normalized-direction focal-length)))
+      (setf normalized-direction (normalize (vec- look-at location))
+            direction (vec* normalized-direction focal-length)))
     (unless (and up right)
       (unless sky
         (if (= 0 (aref direction 0) (aref direction 2))
@@ -55,7 +55,7 @@
         (setf aspect-ratio (/ 4.0 3.0)))
       (let* ((n-sky (if sky (normalize sky) y-axis))
              (n-right (cross-product n-sky normalized-direction)))
-        (setf right (vector-mul n-right aspect-ratio)
+        (setf right (vec* n-right aspect-ratio)
               up (normalize (cross-product normalized-direction n-right))))))
   (setf (location-of camera) location
         (direction-of camera) direction
@@ -68,7 +68,7 @@
         (image-ratio (float (/ width height))))
     (make-instance (class-of camera)
                    :up up
-                   :right (vector-mul right image-ratio)
+                   :right (vec* right image-ratio)
                    :direction (direction-of camera)
                    :location (location-of camera))))
 
@@ -91,7 +91,7 @@
 		   `(+ (aref dir ,n)
 		       (* rx (aref right ,n)) (* ry (aref up ,n)))))
 	(with-ray (ray :origin location
-                       :direction (normalized-vector (dim 0) (dim 1) (dim 2)))
+                       :direction (normalized-vec (dim 0) (dim 1) (dim 2)))
           (funcall fun ray))))))
 
 

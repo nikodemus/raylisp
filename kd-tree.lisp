@@ -19,8 +19,8 @@
       (1- axis)))
 
 (defstruct (kd-node  (:constructor nil))
-  (min (required-argument) :type vector)
-  (max (required-argument) :type vector))
+  (min (required-argument) :type vec)
+  (max (required-argument) :type vec))
 
 (declaim (inline kd-min kd-max))
 
@@ -123,24 +123,27 @@
             (entry-pointer 0)
             (ray-origin (ray-origin ray))
             (ray-direction (ray-direction ray)))
-        (declare (sb-int:truly-dynamic-extent stack))
+        (declare (dynamic-extent stack))
         (setf (kd-stack-distance stack entry-pointer) entry-distance
               (kd-stack-point stack entry-pointer)
               (if (>= entry-distance 0.0)
-                  (adjust-vector ray-origin ray-direction entry-distance)
+                  (adjust-vec ray-origin ray-direction entry-distance)
                   ray-origin))
         (let ((exit-pointer 1)
               (far-child nil))
-          (setf (kd-stack-distance stack exit-pointer) exit-distance
-                (kd-stack-point stack exit-pointer) (adjust-vector ray-origin ray-direction exit-distance)
-                (kd-stack-node stack exit-pointer) nil)
+          (setf (kd-stack-distance stack exit-pointer) exit-distance)
+          (setf (kd-stack-point stack exit-pointer)
+                (adjust-vec ray-origin ray-direction exit-distance))
+          (setf (kd-stack-node stack exit-pointer) nil)
           (loop while current-node
                 do (loop until (kd-leaf-p current-node)
                          do (tagbody
                                (let* ((split (kd-plane-position current-node))
                                       (axis (kd-axis current-node))
-                                      (entry-projection (aref (the vector (kd-stack-point stack entry-pointer)) axis))
-                                      (exit-projection (aref (the vector (kd-stack-point stack  exit-pointer)) axis)))
+                                      (entry-projection
+                                       (aref (the vec (kd-stack-point stack entry-pointer)) axis))
+                                      (exit-projection
+                                       (aref (the vec (kd-stack-point stack  exit-pointer)) axis)))
                                  (cond ((<= entry-projection split)
                                         (cond ((<= exit-projection split)
                                                (setf current-node (kd-left current-node))
@@ -166,7 +169,7 @@
                                          (kd-stack-distance stack exit-pointer) distance
                                          (kd-stack-node stack exit-pointer) far-child
                                          (kd-stack-point stack exit-pointer)
-                                         (let ((point (alloc-vector))
+                                         (let ((point (make-array 3 :element-type 'float))
                                                (next-axis (next-axis axis))
                                                (prev-axis (prev-axis axis)))
                                            (setf (aref point axis) split)
@@ -177,22 +180,22 @@
                                                  (+ (aref ray-origin prev-axis)
                                                     (* distance (aref ray-direction prev-axis))))
                                            point))))
-                               :cont))
-                   (when current-node
-                     (let ((intersection (%find-intersection* ray
-                                                              (kd-objects current-node)
-                                                              (kd-stack-distance stack entry-pointer)
-                                                              (kd-stack-distance stack exit-pointer)
-                                                              counters
-                                                              shadowp)))
-                       (when intersection
-                         (return-from kd-traverse intersection))))
-                   (setf entry-pointer exit-pointer
-                         current-node (kd-stack-node stack exit-pointer)
-                         exit-pointer (kd-stack-prev stack entry-pointer))))))))
+                             :cont))
+                (when current-node
+                  (let ((intersection (%find-intersection* ray
+                                                           (kd-objects current-node)
+                                                           (kd-stack-distance stack entry-pointer)
+                                                           (kd-stack-distance stack exit-pointer)
+                                                           counters
+                                                           shadowp)))
+                    (when intersection
+                      (return-from kd-traverse intersection))))
+                (setf entry-pointer exit-pointer
+                      current-node (kd-stack-node stack exit-pointer)
+                      exit-pointer (kd-stack-prev stack entry-pointer))))))))
 
 (defun ray/box-intersections (ray bmin bmax)
-  (declare (vector bmin bmax))
+  (declare (type vec bmin bmax))
   (let ((dir (ray-direction ray))
         (orig (ray-origin ray)))
     (with-arrays (dir orig)
@@ -228,10 +231,10 @@
         (cond (this-min
                (push object bounded)
                (if min
-                   (setf min (vector-min min this-min this-max)
-                         max (vector-max max this-min this-max))
-                   (setf min (vector-min this-min this-max)
-                         max (vector-max this-min this-max))))
+                   (setf min (vec-min min this-min this-max)
+                         max (vec-max max this-min this-max))
+                   (setf min (vec-min this-min this-max)
+                         max (vec-max this-min this-max))))
               (t
                (push object unbounded)))))
     (values (when bounded
@@ -242,11 +245,11 @@
   (with-arrays (old)
     (ecase axis
      (0
-      (vector point (old 1) (old 2)))
+      (vec point (old 1) (old 2)))
      (1
-      (vector (old 0) point (old 2)))
+      (vec (old 0) point (old 2)))
      (2
-      (vector (old 0) (old 1) point)))))
+      (vec (old 0) (old 1) point)))))
 
 (defun subdivide (objects min max)
   (if objects
@@ -333,6 +336,7 @@
     (surface-area* min max)))
 
 (defun surface-area* (min max)
+  (declare (type vec min max))
   (let ((x (- (aref max 0) (aref min 0)))
         (y (- (aref max 1) (aref min 1)))
         (z (- (aref max 2) (aref min 2))))

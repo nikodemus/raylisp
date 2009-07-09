@@ -8,11 +8,11 @@
 (defun save-ppm (raster pathname)
   (let ((width (array-dimension raster 0))
 	(height (array-dimension raster 1)))
-    (with-open-file (ppm pathname 
+    (with-open-file (ppm pathname
 		     :direction :output :if-exists :supersede
 		     :element-type '(unsigned-byte 8))
       (flet ((puts (string)
-	       (write-sequence (map 'simple-vector #'char-code string) 
+	       (write-sequence (map 'simple-vector #'char-code string)
 			       ppm)
 	       (write-byte (char-code #\newline) ppm))
 	     (color-byte (x y c)

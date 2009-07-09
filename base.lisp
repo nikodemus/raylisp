@@ -1,29 +1,19 @@
 (in-package :raylisp)
 
-;;;# Floating Point Format
-;;;
-;;; Raylisp can be built to use any Common Lisp floating point format.
-;;; The choice depends on the value of *READ-DEFAULT-FLOAT-FORMAT* at
-;;; build-time; the format used is saved in *FLOAT-FORMAT*.
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *float-format* '#.*read-default-float-format*)
-  (setf *read-default-float-format* *float-format*))
-
 (deftype float (&optional (min '*) (max '*))
-  `(,*float-format* ,min ,max))
+  `(single-float ,min ,max))
 
 (declaim (inline float))
 (defun float (x)
-  (coerce x 'float))
+  (coerce x 'single-float))
 
 (declaim (inline floatp))
 (defun floatp (x)
-  (typep x 'float))
+  (typep x 'single-float))
 
 (macrolet ((def (name)
 	     `(defconstant ,(intern (format nil "~A-FLOAT" name))
-		,(intern (format nil "~A-~A" name *float-format*)))))
+		,(intern (format nil "~A-SINGLE-FLOAT" name)))))
   (def most-positive)
   (def least-positive-normalized)
   (def least-positive)
@@ -31,15 +21,12 @@
   (def least-negative-normalized)
   (def most-negative))
 
-(macrolet ((def (name)
-	     `(defconstant ,(intern (format nil "FLOAT-~A" name))
-		,(intern (format nil "~A-~A" *float-format* name)))))
-  (def epsilon))
+(defconstant float-epsilon single-float-epsilon)
 
 (defconstant float-positive-infinity (/ 1.0 0.0))
 (defconstant float-negative-infinity (/ -1.0 0.0))
 
-(defconstant pi (coerce cl:pi 'float))
+(defconstant pi +pi+)
 
 ;;;# Utilities
 ;;;
@@ -59,27 +46,19 @@
   `(cl:vector ,@args))
 
 (defun float-vector (&rest contents)
-  (let ((array (make-array (length contents) :element-type 'float))
-        (i -1))
-    (declare (fixnum i))
-    (dolist (elt contents)
-      (setf (aref array (incf i)) elt))
-    array))
+  (make-array (length contents) :element-type 'float :initial-contents contents))
 
 (define-compiler-macro float-vector (&rest contents)
   (declare (list contents))
   (if (not contents)
       #.(make-array 0 :element-type 'float)
       (let ((form
-             (with-gensyms (array)
-               `(let ((,array (make-array ,(length contents) :element-type 'float)))
-                  ,@(let ((i -1))
-                         (mapcar (lambda (elt)
-                                   `(setf (aref ,array ,(incf i)) ,elt))
-                                 contents))
-                  ,array))))
+             `(make-array ,(length contents) :element-type 'float
+                          :initial-contents (list ,@contents))))
         (if (every #'floatp contents)
-            `(load-time-value ,form)
+            `(sb-ext:truly-the
+              (simple-array float (,(length contents)))
+              (load-time-value ,form t))
             form))))
 
 (defmacro with-arrays (arrays &body body)
@@ -125,7 +104,7 @@ they are EQUAL."
 
 (defmacro let-plists (bindings &body forms)
   "DESTRUCTURING-BIND &KEY utility."
-  (let (all-vars) 
+  (let (all-vars)
     (labels ((rec (binds)
                (if binds
                    (destructuring-bind ((vars plist-form) &rest tail) binds
@@ -158,7 +137,7 @@ site."
                                 `(required-argument
                                   ,(intern (string spec) :keyword))))
                           keywords)))
-    `(defmacro ,name (&rest args &key ,@keywords)       
+    `(defmacro ,name (&rest args &key ,@keywords)
        (declare (ignore ,@(mapcar (lambda (spec)
                                     (if (consp spec) (car spec) spec))
                                   keywords)))

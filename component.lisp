@@ -10,14 +10,17 @@
   ((radius
     :initform (find-default :radius 'float) :initarg :radius :reader radius-of)
    (location
-    :initform (find-default :location 'vector) :initarg :location
+    :initform (find-default :location 'vec) :initarg :location
     :reader location-of)))
+
+(defun xmatrix* (&rest args)
+  (apply #'matrix* (remove nil args)))
 
 (defun sphere-matrix (sphere)
   (let ((r (radius-of sphere)))
-    (matrix-product (transform-of sphere)
-                    (translate (location-of sphere))
-		    (scale* r r r))))
+    (xmatrix* (transform-of sphere)
+              (translate (location-of sphere))
+              (scale* r r r))))
 
 (defmethod compute-object-properties ((sphere sphere) scene)
   (multiple-value-bind (inverse adjunct/inverse)
@@ -25,14 +28,12 @@
     (list
      :intersection
      (lambda (ray)
-       (let-values (((ox oy oz)
-                     (transform-vector-values (ray-origin ray) inverse))
-                    ((dx dy dz)
-                     (transform-direction-values (ray-direction ray) inverse)))
-         (let ((s (min-pos-quad-root (+ (square dx) (square dy) (square dz))
-                                     (* 2.0 (dot-product* dx dy dz ox oy oz))
-                                     (- (+ (square ox) (square oy) (square oz))
-                                        1.0))))
+       (let* ((o2 (transform-point (ray-origin ray) inverse))
+              (d2 (transform-direction (ray-direction ray) inverse)))
+         (declare (dynamic-extent o2 d2))
+         (let ((s (min-pos-quad-root (+ (dot-product d2 d2))
+                                     (* 2.0 (dot-product d2 o2))
+                                     (- (dot-product o2 o2) 1.0))))
            ;; FIXME: If we need to follow this pattern elsewhere, then there is no
            ;; need to check against epsilon in MIN-POS-QUAD-ROOT.
            (when (< epsilon s (ray-extent ray))
@@ -40,12 +41,48 @@
              t))))
      :normal
      (lambda (point)
-       (transform/normalize-vector point adjunct/inverse)))))
+       (normalize (transform-point point adjunct/inverse))))))
+
+(defun transform-extents (a b matrix)
+  ;; Naive method: transform all corners.
+  ;; See http://www.ics.uci.edu/~arvo/code/TransformingBoxes.c
+  ;; for a better way.
+  (with-arrays (a b)
+    (let (min-x min-y min-z max-x max-y max-z)
+      (flet ((tran (i j k &optional init)
+               (let* ((v (transform-point (vec i j k) matrix))
+                      (x (aref v 0))
+                      (y (aref v 1))
+                      (z (aref v 2)))
+                 (cond (init
+                        (setf min-x x
+                              min-y y
+                              min-z z
+                              max-x x
+                              max-y y
+                              max-z z))
+                       (t
+                        (minf min-x x)
+                        (minf min-y y)
+                        (minf min-z z)
+                        (maxf max-x x)
+                        (maxf max-y y)
+                        (maxf max-z z))))))
+        (tran (a 0) (a 1) (a 2) t)
+        (tran (a 0) (a 1) (b 2))
+        (tran (a 0) (b 1) (a 2))
+        (tran (a 0) (b 1) (b 2))
+        (tran (b 0) (a 1) (a 2))
+        (tran (b 0) (a 1) (b 2))
+        (tran (b 0) (b 1) (a 2))
+        (tran (b 0) (b 1) (b 2)))
+      (values (vec min-x min-y min-z)
+              (vec max-x max-y max-z)))))
 
 (defmethod compute-object-extents ((sphere sphere))
-  (let ((matrix (sphere-matrix sphere)))
-    (values (transform-vector (vector -1.0 -1.0 -1.0) matrix)
-	    (transform-vector (vector 1.0 1.0 1.0) matrix))))
+  (transform-extents (vec -1.0 -1.0 -1.0)
+                     (vec 1.0 1.0 1.0)
+                     (sphere-matrix sphere)))
 
 (defmethod compute-csg-properties ((sphere sphere) scene)
   (let* ((inverse (inverse-matrix (sphere-matrix sphere)))
@@ -53,38 +90,30 @@
     (list
      :all-intersections
      (lambda (origin direction)
-       ;; FIXME: for some reason SBCL gives a lot for float to pointer
-       ;; notes for these -values calls, and I don't understand why.
-       ;; Possibly register exhaustion? Need to benchmark, and see if
-       ;; packing the results into vectors that will be throws away is
-       ;; faster...
-       (let-values (((ox oy oz) (transform-vector-values origin inverse))
-                    ((dx dy dz) (transform-direction-values direction inverse)))
-	 (map 'simple-vector
-	      (lambda (d)
-		(make-csg-intersection :distance d :object compiled))
-	      (pos-quad-roots (dot-product* dx dy dz
-                                            dx dy dz)
-                              (* 2.0 (dot-product* dx dy dz
-                                                   ox oy oz))
-                              (- (dot-product* ox oy oz
-                                               ox oy oz)
-                                 1.0)))))
+       (let ((o (transform-point origin inverse))
+             (d (transform-direction direction inverse)))
+         (declare (dynamic-extent o d))
+         (map 'simple-vector
+            (lambda (d)
+              (make-csg-intersection :distance d :object compiled))
+            (pos-quad-roots (dot-product d d)
+                            (* 2.0 (dot-product d o))
+                            (- (dot-product o o) 1.0)))))
      :inside
      (lambda (point)
        (> (+ 1.0 epsilon)
-	  (vector-length (transform-vector point inverse)))))))
+	  (vec-length (transform-point point inverse)))))))
 
 ;;;### Plane
 
 (defclass plane (scene-object)
   ((normal :initform y-axis :initarg :normal :accessor normal-of)
-   (location :initform origin :initarg :location :accessor location-of)))
+   (location :initform +origin+ :initarg :location :accessor location-of)))
 
 (defun plane-matrix (plane)
-  (matrix-product (transform-of plane)
-		  (translate (location-of plane))
-		  (reorient y-axis (normal-of plane))))
+  (xmatrix* (transform-of plane)
+            (translate (location-of plane))
+            (reorient y-axis (normal-of plane))))
 
 (defmethod compute-object-properties ((plane plane) scene)
   (multiple-value-bind (inverse adjunct)
@@ -95,7 +124,7 @@
        (let* ((dy (aref (transform-direction (ray-direction ray) inverse) 1))
 	      (s (if (zerop dy)
 		     -1.0 ; parallel
-		     (- (/ (aref (transform-vector (ray-origin ray) inverse) 1)
+		     (- (/ (aref (transform-point (ray-origin ray) inverse) 1)
 			   dy)))))
 	 (if (< epsilon s (ray-extent ray))
              (progn
@@ -104,7 +133,7 @@
              (progn
                nil))))
      :normal
-     (constantly (transform/normalize-vector y-axis adjunct)))))
+     (constantly (normalize (transform-point y-axis adjunct))))))
 
 (defmethod compute-csg-properties ((plane plane) scene)
   (let ((inverse (inverse-matrix (plane-matrix plane)))
@@ -115,7 +144,7 @@
        (let ((d (let ((dy (aref (transform-direction direction inverse) 1)))
 		  (if (zerop dy)
 		      -1.0 ; parallel
-		      (- (/ (aref (transform-vector origin inverse) 1) dy))))))
+		      (- (/ (aref (transform-point origin inverse) 1) dy))))))
 	 (if (significantp d)
 	     (simple-vector
 	      (make-csg-intersection
@@ -125,7 +154,7 @@
      :inside
      (lambda (point)
        (> epsilon
-	  (aref (transform-vector point inverse) 1))))))
+	  (aref (transform-point point inverse) 1))))))
 
 ;;;## General Purpose Mixins
 ;;;
@@ -133,17 +162,17 @@
 
 (defclass color-mixin ()
   ((color
-    :initform (find-default :color 'vector) :initarg :color
+    :initform (find-default :color 'vec) :initarg :color
     :accessor color-of)))
 
 (defclass location-mixin ()
   ((location
-    :initform (find-default :location 'vector) :initarg :location
+    :initform (find-default :location 'vec) :initarg :location
     :accessor location-of)))
 
 (defclass direction-mixin ()
   ((direction
-    :initform (find-default :direction 'vector) :initarg :direction
+    :initform (find-default :direction 'vec) :initarg :direction
     :accessor direction-of)))
 
 ;;;## Lights
@@ -162,11 +191,11 @@
     (list
      :incident-light
      (lambda (point)
-       (vector-sub location point))
+       (vec- location point))
      :illumination
      (lambda (point light-vector counters)
-       (let* ((len (vector-length light-vector))
-	      (nlv (vector-div light-vector len)))
+       (let* ((len (vec-length light-vector))
+	      (nlv (vec/ light-vector len)))
 	 (if (funcall shadow-fun point nlv len counters)
 	     (values black -1.0)
 	     (values color len)))))))
@@ -183,11 +212,9 @@ begin the maximum value. Spotlight fades towards its edges."))
   (declare (type (float -1.0 1.0) aperture))
   (let ((scale (/ 1.0 (- 1.0 aperture))))
     (lambda (color f)
-      (declare (type vector color)
+      (declare (type vec color)
                (type float f))
-      (vector-mul
-       color
-       (* (- f aperture) scale)))))
+      (vec* color (* (- f aperture) scale)))))
 
 (defmethod compute-light-properties ((light spotlight) scene)
   (let* ((location (location-of light))
@@ -198,16 +225,17 @@ begin the maximum value. Spotlight fades towards its edges."))
          (fader (linear-fader aperture)))
     (declare (type float aperture)
              (type function fader shadow-fun)
-             (type vector direction location color))
+             (type vec direction location color))
     (list
      :incident-light
      (lambda (point)
-       (vector-sub location point))
+       (vec- location point))
      :illumination
      (lambda (point light-vector counters)
-       (let* ((len (vector-length light-vector))
-              (nlv (vector-div light-vector len))
+       (let* ((len (vec-length light-vector))
+              (nlv (vec/ light-vector len))
               (dot (- (dot-product nlv direction))))
+         (declare (dynamic-extent nlv))
          (if (or (< dot aperture) (funcall shadow-fun point nlv len counters))
              (values black -1.0)
              (values (funcall fader color dot) len)))))))
@@ -305,15 +333,15 @@ source such as the sun or moon."))
     (declare (float specular transmit ior))
     (cond ((plusp transmit)
            (lambda (point normal n.d ray counters)
-             (declare (optimize speed) (float n.d) (vector point normal) (ray ray))
+             (declare (optimize speed) (float n.d) (type vec point normal) (ray ray))
              (if (weak-ray-p ray scene)
                  black
                  (with-spawned-rays ((reflected refracted)
                                      :point point :normal normal :dot-product n.d
                                      :incident-ray ray :specular specular :transmit transmit
                                      :ior ior :counters counters)
-                   (vector-add (raytrace reflected scene counters)
-                               (raytrace refracted scene counters))))))
+                   (vec+ (raytrace reflected scene counters)
+                         (raytrace refracted scene counters))))))
           ((plusp specular)
            (lambda (point normal n.d ray counters)
              (declare (optimize speed))
@@ -339,8 +367,8 @@ source such as the sun or moon."))
 
 (defmethod compute-shader-function ((shader flat) scene)
   (let ((ambient-color (hadamard-product
-                        (vector-mul (scene-ambient-light scene)
-                                    (coefficient (ambient-of shader) shader))
+                        (vec* (scene-ambient-light scene)
+                              (coefficient (ambient-of shader) shader))
                         (color-of shader))))
     (constantly ambient-color)))
 
@@ -354,13 +382,13 @@ source such as the sun or moon."))
 (defmethod compute-shader-function ((shader solid) scene)
   (let* ((color (color-of shader))
          (ambient-color (hadamard-product
-                         (vector-mul (scene-ambient-light scene)
-                                     (coefficient (ambient-of shader) shader))
+                         (vec* (scene-ambient-light scene)
+                               (coefficient (ambient-of shader) shader))
                          color))
-         (diffuse-color (vector-mul
-                         color
-                         (coefficient (diffuse-of shader) shader))))
+         (diffuse-color (vec* color
+                              (coefficient (diffuse-of shader) shader))))
     (with-arrays (diffuse-color)
+      ;; DOT as argument is?
       (lambda (point normal dot ray counters)
         (declare (ignore ray))
 	(let ((color ambient-color))
@@ -381,7 +409,7 @@ source such as the sun or moon."))
 			       `(+ (color ,n)
 				   (* (incident ,n)
                                       (* (diffuse-color ,n) l.n)))))
-			  (setf color (vector (dim 0) (dim 1) (dim 2)))))))))))
+			  (setf color (vec (dim 0) (dim 1) (dim 2)))))))))))
           color)))))
 
 ;;;## Phong Shader
@@ -395,10 +423,10 @@ source such as the sun or moon."))
 (defmethod compute-shader-function ((shader phong) scene)
   (let* ((color (color-of shader))
 	 (ambient-color (hadamard-product
-                         (vector-mul (scene-ambient-light scene)
-                                     (coefficient (ambient-of shader) shader))
+                         (vec* (scene-ambient-light scene)
+                               (coefficient (ambient-of shader) shader))
 			 color))
-	 (diffuse-color (vector-mul color (coefficient (diffuse-of shader) shader)))
+	 (diffuse-color (vec* color (coefficient (diffuse-of shader) shader)))
 	 (specular (coefficient (specular-of shader) shader))
 	 (size (size-of shader)))
     (declare (type float specular size))
@@ -413,11 +441,7 @@ source such as the sun or moon."))
 		(multiple-value-bind (incident len) (illuminate light point lv counters)
 		  (when (plusp len)
 		    (let* ((l.n (/ dot len))
-			   (h (normalize (vector-sub lv dir))) ; FIXME:
-                                                               ; why
-                                                               ; must
-                                                               ; we
-                                                               ; normalize?
+			   (h (normalize (vec- lv dir))) ; FIXME: why must we normalize?
 			   (n.h^p (expt (dot-product normal h) size))
 			   (s-co (* specular n.h^p)))
 		      (with-arrays (incident color)
@@ -426,8 +450,8 @@ source such as the sun or moon."))
 			       `(+ (color ,n)
 				   (* (incident ,n) (+ (* (diffuse-color ,n) l.n)
 						       s-co)))))
-			  (setf color (vector (dim 0) (dim 1) (dim 2)))))))))))
-	  (vector-add ambient-color color))))))
+			  (setf color (vec (dim 0) (dim 1) (dim 2)))))))))))
+	  (vec+ ambient-color color))))))
 
 ;;;## Gradient Shader
 ;;;
@@ -447,20 +471,25 @@ source such as the sun or moon."))
         (scale (/ 1.0 (scale-of shader))))
     (declare (type (integer 0 2) axis)
              (type function start end)
-             (type float scale))
+             (type float scale)
+             (optimize speed))
     (if (smoothp shader)
         (lambda (point normal dot ray counters)
+          (declare (type vec point))
           (let* ((start (funcall start point normal dot ray counters))
                  (end (funcall end point normal dot ray counters))
-                 (ratio (mod (* (aref point axis) scale) 2.0)))
+                 (ratio (imod (* (aref point axis) scale) 2.0)))
+            (declare (type vec start end))
             (if (> 1.0 ratio)
-                (vector-lerp start end (* ratio 0.5))
-                (vector-lerp end start (* ratio 0.5)))))
+                (vec-lerp start end (* ratio 0.5))
+                (vec-lerp end start (* ratio 0.5)))))
         (lambda (point normal dot ray counters)
+          (declare (type vec point))
           (let* ((start (funcall start point normal dot ray counters))
                  (end (funcall end point normal dot ray counters))
-                 (ratio (mod (* (aref point axis) scale) 1.0)))
-            (vector-lerp start end ratio))))))
+                 (ratio (imod (* (aref point axis) scale) 1.0)))
+            (declare (type vec start end))
+            (vec-lerp start end ratio))))))
 
 ;;; NOISE-SHADER
 
@@ -473,13 +502,14 @@ source such as the sun or moon."))
   (let ((start (compile-shader (start-of shader) scene))
         (end (compile-shader (end-of shader) scene))
         (scale (/ 1.0 (scale-of shader))))
+    (declare (optimize speed))
     (lambda (point normal n.d ray counters)
-      (let ((noise (vector-noise (vector-mul point scale)))
-            (start-color (funcall start point normal n.d ray counters))
-            (end-color (funcall end point normal n.d ray counters)))
-        (vector-lerp start-color end-color (clamp noise 0.0 1.0))))))
-
-
+      (let* ((v (vec* point scale))
+             (noise (vector-noise v))
+             (start-color (funcall start point normal n.d ray counters))
+             (end-color (funcall end point normal n.d ray counters)))
+        (declare (dynamic-extent v))
+        (vec-lerp start-color end-color (clamp noise 0.0 1.0))))))
 
 ;;;## Checker Shader
 ;;;
@@ -491,9 +521,10 @@ source such as the sun or moon."))
    (scale :initform 1 :initarg :scale :accessor scale-of)))
 
 (defun checkerp (point scale)
-  (declare (type vector point) (float scale))
+  (declare (type vec point) (float scale)
+           (optimize speed))
   (macrolet ((dim (n)
-	       `(floor (+ epsilon (aref point ,n)) scale)))
+               `(ifloor (+ epsilon (aref point ,n)) scale)))
     (oddp (+ (dim 0) (dim 1) (dim 2)))))
 
 (defmethod compute-shader-function ((shader checker) scene)
@@ -518,13 +549,16 @@ source such as the sun or moon."))
   ((shaders :initarg :shaders :accessor shaders-of)))
 
 (defmethod compute-shader-function ((shader composite) scene)
-  (let* ((functions (mapcar (lambda (shader) (compile-shader shader scene))
+  (let* ((functions (mapcar (lambda (shader)
+                              (the function (compile-shader shader scene)))
 			    (shaders-of shader)))
 	 (count (float (length functions))))
     (lambda (point normal dot ray counters)
-      (vector-div (reduce (lambda (c f)
-			    (vector-add c (funcall f point normal dot ray counters)))
-			  functions
-			  :initial-value black)
-		  count))))
-
+      (declare (optimize speed))
+      (let ((result (alloc-vec)))
+        (declare (dynamic-extent result))
+        (dolist (fun functions)
+          (%vec+ result result
+                 (funcall (sb-ext:truly-the (function (&rest t) (values vec &optional)) fun)
+                          point normal dot ray counters)))
+        (%vec/ result result count)))))

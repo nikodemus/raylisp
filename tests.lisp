@@ -22,17 +22,17 @@
          (view
           (make-instance 'pinhole
                          :location (@ 0 18 -30)
-                         :look-at origin
+                         :look-at +origin+
                          :focal-length 4.0))
          (floor-view
           (make-instance 'pinhole
                          :location (@ 0 0 -30)
-                         :look-at origin
+                         :look-at +origin+
                          :focal-length 4.0))
          (top-view
           (make-instance 'pinhole
                          :location (@ 0 18 0)
-                         :look-at origin
+                         :look-at +origin+
                          :focal-length 4.0)))
     (defparameter *chessboard* chessboard)
     (defparameter *bright-red* bright-red)
@@ -53,6 +53,11 @@
   (:camera
    *view*))
 
+(defun xtranslate* (x y z)
+  (translate* (float x) (float y) (float z)))
+(defun xscale* (x y z)
+  (scale* (float x) (float y) (float z)))
+
 (defscene test-spheres
   ;; All in a grid.
   (:objects
@@ -60,7 +65,7 @@
    (loop for i from -3 upto 3
          collect (make-instance 'sphere
                                 :radius 1.0
-                                :transform (translate* (* 3 i) 1 0)
+                                :transform (xtranslate* (* 3 i) 1 0)
                                 :shader *bright-red*))
    (loop for i from -3 upto 3
          collect (make-instance 'sphere
@@ -70,10 +75,10 @@
    (loop for i from -3 upto 3
          collect (make-instance 'sphere
                                 :radius 0.5
-                                :transform (translate* (* 3 i) 5 0)
+                                :transform (xtranslate* (* 3 i) 5 0)
                                 :shader *bright-red*))
    (make-instance 'sphere
-                  :transform (list (scale* 5 0.5 0.5) (translate* 0 2 -5))
+                  :transform (list (xscale* 5 0.5 0.5) (xtranslate* 0 2 -5))
                   :shader *bright-blue*))
   (:lights
    *lamp*)
@@ -99,6 +104,9 @@
   (:camera
    *view*))
 
+(defun v (x y z)
+  (vec (float x) (float y) (float z)))
+
 (defscene test-plane-intersection
   (:objects
    (make-instance
@@ -107,15 +115,15 @@
     :objects
     (list
      (make-instance 'plane
-                    :normal (@ 0 0 -1)
+                    :normal (v 0 0 -1)
                     :location (@ 0 0 1)
                     :shader *chessboard*)
      (make-instance 'plane
-                    :normal (@ 1 1 0)
+                    :normal (v 1 1 0)
                     :location (@ 1 0 0)
                     :shader *bright-red*)
      (make-instance 'plane
-                    :normal (@ -1 1 0)
+                    :normal (v -1 1 0)
                     :location (@ -1 0 0)
                     :shader *bright-red*)
      *floor*)))
@@ -145,7 +153,7 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 3 -20)
-                     :look-at origin
+                     :look-at +origin+
                      :focal-length 4.0)))
 
 (defscene test-2
@@ -179,7 +187,7 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 0.5 -4)
-                     :look-at origin
+                     :look-at +origin+
                      :focal-length 3.0)))
 
 (defscene test-3
@@ -211,7 +219,34 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 1.5 -10)
-                     :look-at origin
+                     :look-at +origin+
+                     :focal-length 3.0)))
+
+(defscene test-3.1
+    (:objects
+     (make-instance
+      'csg
+      :type 'intersection
+      :objects (list
+                (make-instance 'sphere
+                               :location (@ -0.5 0 0)
+                               :shader
+                               (make-instance 'solid :color red))
+                (make-instance 'sphere
+                               :location (@ 0.5 0 0)
+                               :shader
+                               (make-instance 'solid
+                                              :color blue)))))
+  (:lights
+   (make-instance 'solar-light :direction y-axis))
+  (:background-color black)
+  (:ambient-light white)
+  (:adaptive-limit 0.01)
+  (:depth-limit 5)
+  (:camera
+      (make-instance 'pinhole
+                     :location (@ 0 1.5 -10)
+                     :look-at +origin+
                      :focal-length 3.0)))
 
 (defscene test-4
@@ -234,7 +269,7 @@
                                   (make-instance 'solid
                                                  :color green)))))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 1 0.5)))
+   (make-instance 'solar-light :direction (v 1 1 0.5)))
   (:background-color black)
   (:ambient-light white)
   (:adaptive-limit 0.01)
@@ -242,7 +277,7 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 8 6.5 -2)
-                     :look-at origin
+                     :look-at +origin+
                      :focal-length 3.0)))
 
 (defscene test-5
@@ -262,7 +297,7 @@
                    :transform (translate (@ 0 0 1))
                    :shader (make-instance 'solid :color blue)))
    (make-instance 'plane
-                  :normal (@ -0.5 1 0)
+                  :normal (v -0.5 1 0)
                   :shader (make-instance 'solid :color white))   
    #+nil
    (loop for i from -100 upto 100
@@ -276,14 +311,14 @@
     :objects
     (list
      (make-instance 'plane
-                    :normal (@ 0 1 0)
+                    :normal (v 0 1 0)
                     :location (@ 0 -1 0)
                     :shader (make-instance 'solid :color yellow))
      (make-instance 'plane
-                    :normal (@ 0.5 1 0)
+                    :normal (v 0.5 1 0)
                     :shader (make-instance 'solid :color white))
      (make-instance 'plane
-                    :normal (@ -0.5 1 0)
+                    :normal (v -0.5 1 0)
                     :shader (make-instance 'solid :color purple)))))
   (:lights
    #+nil
@@ -296,7 +331,7 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 100 30)
-                     :look-at origin
+                     :look-at +origin+
                      :focal-length 3.0)))
 
 (defvar *test-6-shader*
@@ -476,7 +511,7 @@
   (:lights
    (make-instance 'spotlight
                   :location (@ -30 30 -30)
-                  :direction (@ 30 -30 35)
+                  :direction (v 30 -30 35)
                   :aperture 0.98))
   (:background-color blue)
   (:ambient-light white)
@@ -485,7 +520,7 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 0.5 -4)
-                     :look-at origin
+                     :look-at +origin+
                      :focal-length 3.0)))
 
 (defscene test-noise
@@ -497,12 +532,12 @@
                                          :end (make-instance 'solid :color white)
                                          :scale 0.8)))
   (:lights
-   (make-instance 'solar-light :direction (@ -1 1 -1)))
+   (make-instance 'solar-light :direction (v -1 1 -1)))
   (:ambient-light (@ 0.1 0.1 0.1))
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 5 -5)
-                     :look-at origin)))
+                     :look-at +origin+)))
 
 (defscene test-x-axis-camera
   (:objects
@@ -518,7 +553,7 @@
   (:camera
       (make-instance 'pinhole
                      :location (@ 10 0 0)
-                     :look-at origin)))
+                     :look-at +origin+)))
 
 (defscene test-y-axis-camera
   (:objects
@@ -530,11 +565,11 @@
                                          :odd (make-instance 'phong :color black)
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 1 1)))
+   (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 10 0)
-                     :look-at origin)))
+                     :look-at +origin+)))
 
 (defscene test-z-axis-camera
   (:objects
@@ -546,30 +581,30 @@
                                          :odd (make-instance 'phong :color black)
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 1 1)))
+   (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 0 10)
-                     :look-at origin)))
+                     :look-at +origin+)))
 
 (defscene test-transform
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid :color red))
    (make-instance 'sphere
                   :shader (make-instance 'solid :color blue)
-                  :transform (matrix-product (translate* 0 2 0)
-                                             (rotate-around z-axis 1.5)))
+                  :transform (matrix* (xtranslate* 0 2 0)
+                                       (rotate-around z-axis 1.5)))
    (make-instance 'plane
                   :location (@ 0 -1 0)
                   :shader (make-instance 'checker
                                          :odd (make-instance 'phong :color black)
                                          :even (make-instance 'phong :color white :ambient 0.1))))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 1 1)))
+   (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole
                      :location (@ 1 10 -10)
-                     :look-at origin)))
+                     :look-at +origin+)))
 
 (defscene test-perspective
   (:objects
@@ -587,7 +622,7 @@
                   :type 'difference
                   :objects (list
                             (make-instance 'plane
-                                           :normal (@ 0 1 0)
+                                           :normal (v 0 1 0)
                                            :location (@ 0 -1 0)
                                            ;; BUG: This transform does not currently affect the shader!
                                            :transform (rotate-around z-axis (/ (float pi) -4))
@@ -596,14 +631,14 @@
                                                                   :odd (make-instance 'phong :color black)
                                                                   :even (make-instance 'phong :color white :ambient 0.1)))
                             (make-instance 'plane
-                                           :normal (@ 0 0 -1)
+                                           :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
                                            :shader (make-instance 'checker
                                                                   :scale 5
                                                                   :odd (make-instance 'phong :color black)
                                                                   :even (make-instance 'phong :color white :ambient 0.1))))))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 1 1)))
+   (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole
                      :location (@ 0 20 30)
@@ -652,34 +687,34 @@
 
 (defun test-math ()
   (test math.1
-	(transform-vector y-axis (reorient y-axis (@ 1 1 1)))
-	(normalize (@ 1 1 1)))
-  (test math.2 (vector 1.0 2.0 4.654) (@ 1 2 4.654)))
+	(transform-point y-axis (reorient y-axis (v 1 1 1)))
+	(normalize (v 1 1 1)))
+  (test math.2 (vec 1.0 2.0 4.654) (@ 1 2 4.654)))
 
 ;;; FIXME: OBSOLETE
 #+nil
 (defun test-ray ()
   (let* ((from (@ 1 0 -1))
-	 (direction (normalize (@ -1 0 1)))
+	 (direction (normalize (v -1 0 1)))
 	 (ray (make-ray :origin from :direction direction)))
     (multiple-value-bind (reflected refracted)
-	(spawn-rays (make-intersection :point origin
-				       :normal (@ 0 0 -1)
-				       :n.d (dot-product (@ 0 0 -1) direction))
+	(spawn-rays (make-intersection :point +origin+
+				       :normal (v 0 0 -1)
+				       :n.d (dot-product (v 0 0 -1) direction))
 		    ray
 		    0.2
 		    0.7
 		    1.8)
       (test ray.1.1
 	    (ray-direction reflected)
-	    (normalize (@ -1 0 -1)))
+	    (normalize (v -1 0 -1)))
       (test ray.1.2
 	    (ray-direction refracted)
-	    (@ -0.3928 0 0.9196))
+	    (v -0.3928 0 0.9196))
       (multiple-value-bind (reflected refracted)
 	  (spawn-rays (make-intersection :point (ray-direction refracted)
-					 :normal (@ 0 0 -1)
-					 :n.d (dot-product (@ 0 0 1) (ray-direction refracted)))
+					 :normal (v 0 0 -1)
+					 :n.d (dot-product (v 0 0 1) (ray-direction refracted)))
 		      refracted
 		      0.2
 		      0.7
@@ -703,7 +738,7 @@
 	     (if (intersect x ray)
 		 (ray-extent ray)
 		 -1.0))))
-    (let ((s (make-sphere 1.0 origin)))
+    (let ((s (make-sphere 1.0 +origin+)))
       (test sphere.1.1 (intersect s (@ 0 0 -2) z-axis)
 	    1.0)
       (test sphere.1.2 (intersect s (@ 1 0 -2) z-axis)
@@ -713,9 +748,9 @@
       (test sphere.1.4
             (let* ((o (@ 0 0 -2))
 		   (d (intersect s o z-axis)))
-	      (normal s (vector-add o (vector-mul z-axis d))))
+	      (normal s (vec+ o (vec* z-axis d))))
 	    (@ 0 0 -1)))
-    (let ((s (make-sphere 0.5 origin)))
+    (let ((s (make-sphere 0.5 +origin+)))
       (test sphere.2.1 (intersect s (@ 0 0 -2) z-axis)
 	    1.5)
       (test sphere.2.2 (intersect s (@ 0 0 -1) z-axis)
@@ -723,7 +758,7 @@
       (test sphere.2.3
 	    (let* ((o (@ 0 0 -2))
 		   (d (intersect s o z-axis)))
-	      (normal s (vector-add o (vector-mul z-axis d))))
+	      (normal s (vec+ o (vec* z-axis d))))
 	    (@ 0 0 -1)))
     (let ((s (make-sphere 1.0 (@ 1 0 0))))
       (test sphere.3.1 (intersect s (@ -0.001 0 0) z-axis)
@@ -732,7 +767,7 @@
     (let* ((s (make-sphere 1.0 (@ 0 -1 0)))
 	   (o (@ 0 -1 -2))
 	   (dist (intersect s o z-axis))
-	   (pos (vector-add o (vector-mul z-axis dist))))
+	   (pos (vec+ o (vec* z-axis dist))))
       (test sphere.4.1 dist 1.0)
       (test sphere.4.2 pos (@ 0 -1 -1))
       (test sphere.4.3 (normal s pos) (@ 0 0 -1)))
@@ -755,11 +790,11 @@
 	     (if (intersect x ray)
 		 (ray-extent ray)
 		 -1.0))))
-    (let ((p (make-plane y-axis origin)))
+    (let ((p (make-plane y-axis +origin+)))
       (test plane.1.1
 	    (intersect p (@ 0 1 0) (@ 0 -1 0))
 	    1.0))
-    (let ((p (make-plane (@ 1 1 0) origin)))
+    (let ((p (make-plane (@ 1 1 0) +origin+)))
       (test plane.2.1
 	    (intersect p (@ 0 1 0) (@ -1 0 0))
 	    1.0)
@@ -769,11 +804,11 @@
       (let ((o (@ 0 1 0))
 	    (d (@ -1 0.1 0)))
 	(test plane.2.3
-	      (normal p (adjust-vector o d (intersect p o d)))
+	      (normal p (adjust-vec o d (intersect p o d)))
 	      (normalize (@ 1 1 0)))))
     (let ((p (make-plane (@ 1 1 0) (@ -1 0 0))))
       (test plane.3.1
-	    (intersect p origin (@ 0 -1 0))
+	    (intersect p +origin+ (@ 0 -1 0))
 	    1.0))))
 
 
