@@ -124,6 +124,9 @@
     (labels ((recurse (objects x)
                (if (not objects)
                    x
+                   ;; Object intersection functions are responsible for
+                   ;; further limiting the RAY-EXTENT when they hit, we just
+                   ;; need to scan them all.
                    (let ((hit (intersect (car objects) ray counters shadowp)))
                      (if hit
                          (if shadowp
@@ -139,6 +142,10 @@
                ;; and even that should not really be needed, but TEST-KD-SPLIT-2
                ;; catches here without the 2xEPSILON, and I don't have the energy
                ;; to track down the issue right now.
+               ;;
+               ;; ...but probably it is because object intersection functions
+               ;; are not aware of MIN: so we probably need RAY-MIN and
+               ;; RAY-MAX instead of just RAY-EXTENT.
                (assert (<= (- min (* 2 epsilon)) (ray-extent ray) (+ max (* 2 epsilon)))
                        (min max (ray-extent ray))
                        "~S is not in range ~S - ~S" (ray-extent ray) min max))

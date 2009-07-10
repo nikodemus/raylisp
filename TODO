@@ -4,6 +4,9 @@
 #+STARTUP: oddeven
 
 * TODO FIXME
+*** TODO Need RAY-MIN in addition to RAY-EXTENT
+    Otherwise %FIND-INTERSECTION* can find intersections closer than
+    it wants.
 *** TODO Shaders are not currently affected by object transformations
     Since TRANSFORM belongs SCENE-OBJECT is seems better to deal with
     it outside user-provided functions. ...tricky, tricky...

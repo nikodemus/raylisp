@@ -48,7 +48,7 @@
 (defgeneric compute-csg-properties (object scene))
 
 (defclass csg-type ()
-  ((type 
+  ((type
     :initform (find-default :type '(member difference intersection))
     :initarg :type :accessor type-of)))
 

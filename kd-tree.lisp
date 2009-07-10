@@ -167,6 +167,9 @@
                                    (incf-fixnum exit-pointer)
                                    (when (= exit-pointer entry-pointer)
                                      (incf-fixnum exit-pointer))
+                                   ;; FIXME: seem better to either use explicit recursion, or
+                                   ;; at least split the stack into several: one stack per object
+                                   ;; type, so we don't need to cons up vectors to store there...
                                    (setf (kd-stack-prev stack exit-pointer) tmp
                                          (kd-stack-distance stack exit-pointer) distance
                                          (kd-stack-node stack exit-pointer) far-child
