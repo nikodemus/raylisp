@@ -671,6 +671,86 @@
                      :look-at (@ 0 -1 0)
                      :focal-length 3.0)))
 
+(defscene test-mirror
+  (:objects
+   *floor*
+   (make-instance 'plane
+                  :normal (v -0.5 0 -1)
+                  :location (v 3 0 3)
+                  :shader
+                  (make-instance 'composite
+                                 :shaders
+                                 (list
+                                  (make-instance 'raytrace
+                                                 :specular 0.95
+                                                 :transmit 0.0)
+                                  (make-instance 'flat
+                                                 :ambient 0.05
+                                                 :color black))))
+   (make-instance 'sphere
+                  :radius 3.0
+                  :location (v -0.5 3 -4)
+                  :shader
+                  (make-instance
+                   'composite
+                   :shaders
+                   (list
+                    (make-instance 'raytrace
+                                   :specular 0.1
+                                   :transmit 0.9
+                                   :ior 1.2)
+                    (make-instance 'phong
+                                   :specular 0.5
+                                   :size 40.0
+                                   :diffuse 0.15
+                                   :ambient 0.1
+                                   :color yellow))))
+   (make-instance 'sphere
+                  :radius 1.0
+                  :location (v 0 1 0)
+                  :shader *bright-red*))
+  (:lights
+   (make-instance 'point-light
+                  :color (v 2.0 2.0 2.0)
+                  :location (v -40 20 -5)))
+  (:camera
+   *view*))
+
+;;; FIXME: Something VERY wrong here!
+;;;
+;;; I think the reason is that normal computations never see
+;;; the transforms applied to the CSG object. That is, the intersection
+;;; function for a CSG node returns the subobject as secondary value,
+;;; and the transformation of the CSG itself is lost.
+(defscene test-sphere-difference
+  (:objects
+   *floor*
+   (make-instance 'sphere
+                  :radius 4.0
+                  :location (@ 0 3 0)
+                  :transform (list
+                              (rotate-around x-axis (/ pi 4))
+                              (translate* -4.0 0.0 -2.0))
+                  :shader *bright-red*
+                  :name "control")
+   (make-instance 'csg
+                  :type 'difference
+                  :transform (rotate-around x-axis (/ pi 4))
+                  :objects (list
+                            (make-instance 'sphere
+                                           :radius 4.0
+                                           :location (@ 0 3 0)
+                                           :shader *bright-red*
+                                           :name "source")
+                            (make-instance 'plane
+                                           :location (@ 0 -10 0)
+                                           :shader *bright-blue*
+                                           :name "cut"))))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
 ;;;# Tests
 ;;;
 ;;; Raylisp includes both test scenes, and a number of functional

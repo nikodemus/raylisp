@@ -4,6 +4,13 @@
 #+STARTUP: oddeven
 
 * TODO FIXME
+*** TODO CSG objects with transformation don't work right
+    See TEST-SPHERE-DIFFERENCE. Probable cause is the lost
+    transformation for normals. Possibly the best way to deal with
+    this would be to pass the parent transformation to children
+    in COMPUTE-CSG-PROPERTIES, and have the children apply it
+    instead of the parent? Kluding this for normals seems like a quick
+    way to verify the theory, anyways.
 *** TODO Need RAY-MIN in addition to RAY-EXTENT
     Otherwise %FIND-INTERSECTION* can find intersections closer than
     it wants.
@@ -17,15 +24,19 @@
     be possible to tell the system to use the either to cuttee or the
     cutter. (Currently cutter is always used.)
 * TODO ARCHITECTURE
-*** TODO Support for manual hierarchical bounding
-    Sometimes humans are better.
+*** TODO Light buffers in SHADOW-FUNCTION
 *** TODO CSG bounding
 ***** TODO Check if we currently currently bound CSG objects sensibly
       For intersections use intersection of bounding boxes, for
       differences use the bounding box of the cuttee.
 ***** TODO Automatic hierarchies
       Deeps CSG should benefit from this
-*** TODO Light buffers in SHADOW-FUNCTION
+*** TODO Antialiasing
+*** TODO Translucent shadows
+    Possibly just a shader?
+*** TODO Support for manual hierarchical bounding
+    Sometimes humans are better.
+*** TODO Path tracing
 *** TODO Multithreading
 *** TODO Ray attenuation in transparent objects
     Simple homogenous mediums to start with.
@@ -46,9 +57,6 @@
     (Symbolic raytracing.)
 *** TODO Real colors. (Wavelength based rendering.)
 
-*** TODO Antialiasing
-*** TODO Translucent shadows
-    Possibly just a shader?
 * TODO SCENE COMPONENTS
 *** TODO Area lights
 *** TODO Fake area lights
@@ -68,6 +76,7 @@
 *** TODO Polygons
 *** TODO Meshes
 *** TODO Radiosity shader
+*** TODO Metallic shaders
 * TODO CAMERAS
 *** TODO Orthogonal camera
 *** TODO Fisheye camera
