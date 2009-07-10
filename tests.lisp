@@ -651,7 +651,7 @@
                                            :normal (v 0 1 0)
                                            :location (@ 0 -1 0)
                                            ;; BUG: This transform does not currently affect the shader!
-                                           :transform (rotate-around z-axis (/ (float pi) -4))
+                                           :transform (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker
                                                                   :scale 5
                                                                   :odd (make-instance 'phong :color black)
@@ -716,12 +716,6 @@
   (:camera
    *view*))
 
-;;; FIXME: Something VERY wrong here!
-;;;
-;;; I think the reason is that normal computations never see
-;;; the transforms applied to the CSG object. That is, the intersection
-;;; function for a CSG node returns the subobject as secondary value,
-;;; and the transformation of the CSG itself is lost.
 (defscene test-sphere-difference
   (:objects
    *floor*
@@ -836,7 +830,8 @@
                                                 :radius radius
                                                 :location location
                                                 :transform transform)
-                                 (make-scene)))
+                                 (make-scene)
+                                 (identity-matrix)))
 	 (normal (object point)
 	   (funcall (object-normal object) point))
 	 (intersect (x from dir)
@@ -888,7 +883,8 @@
 (defun test-plane ()
   (flet ((make-plane (n v)
 	   (compile-scene-object (make-instance 'plane :normal n :location v)
-                                 (make-scene)))
+                                 (make-scene)
+                                 (identity-matrix)))
 	 (normal (x v)
 	   (funcall (object-normal x) v))
 	 (intersect (x from dir)

@@ -10,18 +10,18 @@
 ;;; bounding protocol if possible.
 ;;;
 
-(defgeneric compute-object-properties (scene-object scene))
+(defgeneric compute-object-properties (scene-object scene transform))
 
-(defgeneric compute-object-extents (scene-object))
+(defgeneric compute-object-extents (scene-object transform))
 
-(defmethod compute-object-extents ((object scene-object))
+(defmethod compute-object-extents ((object scene-object) transform)
   nil)
 
-(defun compile-scene-object (object scene)
+(defun compile-scene-object (object scene transform)
   (destructuring-bind (&key intersection normal)
-      (compute-object-properties object scene)
+      (compute-object-properties object scene transform)
     (assert (and intersection normal))
-    (multiple-value-bind (min max) (compute-object-extents object)
+    (multiple-value-bind (min max) (compute-object-extents object transform)
       (make-compiled-object
        :intersection intersection
        :normal normal
@@ -45,7 +45,7 @@
 ;;; must accept a vector designating a point, and return true if that point
 ;;; is inside the object.
 
-(defgeneric compute-csg-properties (object scene))
+(defgeneric compute-csg-properties (object scene transform))
 
 (defclass csg-type ()
   ((type
@@ -66,11 +66,11 @@ tree of CSG-NODE instances."))
 	      (make-instance 'csg-node :left x :right y))
 	    (objects-of csg))))
 
-(defmethod compute-object-properties ((csg csg) scene)
-  (compute-object-properties (csg-nodes csg) scene))
+(defmethod compute-object-properties ((csg csg) scene transform)
+  (compute-object-properties (csg-nodes csg) scene transform))
 
-(defmethod compute-csg-properties ((csg csg) scene)
-  (compute-csg-properties (csg-nodes csg) scene))
+(defmethod compute-csg-properties ((csg csg) scene transform)
+  (compute-csg-properties (csg-nodes csg) scene transform))
 
 (defclass csg-node (scene-object csg-type)
   ((left :initarg :left :accessor left-of)
@@ -102,13 +102,14 @@ intersections."
   (declare (ignore point))
   (error "CSG normal not delegated."))
 
-(defmethod compute-object-properties ((node csg-node) scene)
-  (list
-   :intersection
-   (let* ((matrix (transform-of node))
-	  (inverse (if matrix (inverse-matrix matrix) (identity-matrix))))
-     (let-plists ((((:all-intersections all-left) (:inside inside-left)) (compute-csg-properties (left-of node) scene))
-		  (((:all-intersections all-right) (:inside inside-right)) (compute-csg-properties (right-of node) scene)))
+(defmethod compute-object-properties ((node csg-node) scene transform)
+  (let ((matrix (matrix* transform (or (transform-of node) (identity-matrix)))))
+    (list
+     :intersection
+     (let-plists ((((:all-intersections all-left) (:inside inside-left))
+                   (compute-csg-properties (left-of node) scene matrix))
+                  (((:all-intersections all-right) (:inside inside-right))
+                   (compute-csg-properties (right-of node) scene matrix)))
        (declare (type (function (vec vec) (simple-array csg-intersection (*)))
                       all-left all-right)
                 (type (function (vec) t) inside-left inside-right))
@@ -116,8 +117,8 @@ intersections."
            ((make-lambda (name find-left find-right)
               `(sb-int:named-lambda ,name (ray)
                  (declare (type ray ray) (optimize speed))
-                 (let* ((o (transform-point (ray-origin ray) inverse))
-                        (d (transform-direction (ray-direction ray) inverse))
+                 (let* ((o (ray-origin ray))
+                        (d (ray-direction ray))
                         (sx (,find-left (csg-lambda inside-right o d)
                                         (funcall all-left o d)))
                         (sy (,find-right (csg-lambda inside-left o d)
@@ -136,9 +137,9 @@ intersections."
            (intersection
             (make-lambda csg-intersection-lambda find-if find-if))
            (difference
-            (make-lambda csg-difference-lambda find-if-not find-if))))))
-   :normal
-   #'undelegated-csg-normal))
+            (make-lambda csg-difference-lambda find-if-not find-if)))))
+     :normal
+     #'undelegated-csg-normal)))
 
 ;;; KLUDGE: SBCL's built-in MERGE is slow.
 ;;;
@@ -238,14 +239,15 @@ intersections."
     (sb-kernel:%shrink-vector result p)
     result))
 
-(defmethod compute-csg-properties ((node csg-node) scene)
-  (let-plists ((((:all-intersections all-left) (:inside inside-left)) (compute-csg-properties (left-of node) scene))
-               (((:all-intersections all-right) (:inside inside-right)) (compute-csg-properties (right-of node) scene)))
+(defmethod compute-csg-properties ((node csg-node) scene transform)
+  (let-plists ((((:all-intersections all-left) (:inside inside-left))
+                (compute-csg-properties (left-of node) scene transform))
+               (((:all-intersections all-right) (:inside inside-right))
+                (compute-csg-properties (right-of node) scene transform)))
     (declare (type (function (vec vec) simple-vector) all-left all-right)
 	     (type (function (vec) t) inside-left inside-right))
     (list
      :all-intersections
-     ;; FIXME: Don't we need to obey the transform here?
      (macrolet
          ((make-lambda (name remove-left remove-right)
             `(sb-int:named-lambda ,name (origin direction)

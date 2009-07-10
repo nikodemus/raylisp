@@ -22,9 +22,9 @@
               (translate (location-of sphere))
               (scale* r r r))))
 
-(defmethod compute-object-properties ((sphere sphere) scene)
+(defmethod compute-object-properties ((sphere sphere) scene transform)
   (multiple-value-bind (inverse adjunct/inverse)
-      (inverse-and-adjunct/inverse-matrix (sphere-matrix sphere))
+      (inverse-and-adjunct/inverse-matrix (matrix* transform (sphere-matrix sphere)))
     (list
      :intersection
      (sb-int:named-lambda sphere-intersection (ray)
@@ -81,14 +81,14 @@
       (values (vec min-x min-y min-z)
               (vec max-x max-y max-z)))))
 
-(defmethod compute-object-extents ((sphere sphere))
+(defmethod compute-object-extents ((sphere sphere) transform)
   (transform-extents (vec -1.0 -1.0 -1.0)
                      (vec 1.0 1.0 1.0)
-                     (sphere-matrix sphere)))
+                     (matrix* transform (sphere-matrix sphere))))
 
-(defmethod compute-csg-properties ((sphere sphere) scene)
-  (let* ((inverse (inverse-matrix (sphere-matrix sphere)))
-	 (compiled (compile-scene-object sphere scene)))
+(defmethod compute-csg-properties ((sphere sphere) scene transform)
+  (let* ((inverse (inverse-matrix (matrix* transform (sphere-matrix sphere))))
+	 (compiled (compile-scene-object sphere scene transform)))
     (list
      ;; FIXME: To reduce consing even further: stack allocate
      ;; the csg-interactions and pass a continuation in here.
@@ -128,9 +128,9 @@
             (translate (location-of plane))
             (reorient y-axis (normal-of plane))))
 
-(defmethod compute-object-properties ((plane plane) scene)
+(defmethod compute-object-properties ((plane plane) scene transform)
   (multiple-value-bind (inverse adjunct)
-      (inverse-and-adjunct-matrix (plane-matrix plane))
+      (inverse-and-adjunct-matrix (matrix* transform (plane-matrix plane)))
     (list
      :intersection
      (sb-int:named-lambda plane-intersection (ray)
@@ -151,9 +151,9 @@
      :normal
      (constantly (normalize (transform-point y-axis adjunct))))))
 
-(defmethod compute-csg-properties ((plane plane) scene)
-  (let ((inverse (inverse-matrix (plane-matrix plane)))
-	(c-object (compile-scene-object plane scene)))
+(defmethod compute-csg-properties ((plane plane) scene transform)
+  (let ((inverse (inverse-matrix (matrix* transform (plane-matrix plane))))
+	(c-object (compile-scene-object plane scene transform)))
     (list
      :all-intersections
      (sb-int:named-lambda plane-all-intersections (origin direction)
@@ -173,7 +173,6 @@
 	     #())))
      :inside
      (lambda (point)
-       (declare (optimize speed))
        (> epsilon
           (let ((p (transform-point point inverse)))
             (declare (dynamic-extent p))
@@ -377,7 +376,7 @@ source such as the sun or moon."))
                    (raytrace ray scene counters)))))
           (t
            (warn "Bogus specular and transmit components, ~
-                    ignoring RAYTRACE shader.")
+                  ignoring RAYTRACE shader.")
            (constantly black)))))
 
 (defmethod compute-shader-function ((shader raytrace) scene)

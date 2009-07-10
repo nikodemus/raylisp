@@ -32,23 +32,62 @@
 
 (defmacro defscene (name &body alist)
   (flet ((get-key (name &optional use-default-type)
-           (let ((forms (cdr (assoc name alist))))
+           (let* ((cell (assoc name alist))
+                  (forms (cdr cell)))
+             (when cell
+               (setf alist (remove cell alist)))
              (cond (use-default-type
                     (assert (not (cdr forms)))
                     (or (car forms) (find-default name use-default-type)))
                    (t
                     `(list ,@forms))))))
-    `(progn
-       (setf (gethash ',name *scenes*)
-             (make-scene :name ',name
-                         :objects (flatten ,(get-key :objects))
-                         :lights (flatten ,(get-key :lights))
-                         :background-color ,(get-key :background-color 'vec)
-                         :ambient-light ,(get-key :ambient-light 'vec)
-                         :adaptive-limit ,(get-key :adaptive-limit '(float 0.0 1.0))
-                         :depth-limit ,(get-key :depth-limit 'fixnum)
-                         :default-camera ,(get-key :camera t)))
-       ',name)))
+    (prog1
+        `(progn
+           (setf (gethash ',name *scenes*)
+                 (make-scene :name ',name
+                             :objects (flatten ,(get-key :objects))
+                             :lights (flatten ,(get-key :lights))
+                             :background-color ,(get-key :background-color 'vec)
+                             :ambient-light ,(get-key :ambient-light 'vec)
+                             :adaptive-limit ,(get-key :adaptive-limit '(float 0.0 1.0))
+                             :depth-limit ,(get-key :depth-limit 'fixnum)
+                             :default-camera ,(get-key :camera t)))
+           ',name)
+      (when alist
+        (cerror "Nevermind them." "Unrecognized scene options: ~S" alist)))))
+
+;; +;;; Symbols can be used to refer to named scene components
+;; +
+;; +(macrolet ((def (type &key (short type))
+;; +             (let ((table (format-symbol :raylisp "*NAMED-~AS*" type))
+;; +                   (find (format-symbol :raylisp "FIND-~A" short)))
+;; +               `(progn
+;; +                  (defparameter ,table (make-hash-table))
+;; +                  (defmacro ,(format-symbol :raylisp "DEF~A" short) (name (&key
+;; +                    `(setf (gethash ',name ,',table)
+;; +                           (let ((thing (make-instance ',class ,@args :name ',n
+;; +                             (check-type thing (or symbol ,',type))
+;; +                             (cons thing ',args))))
+;; +                  (defun ,find (name)
+;; +                    (check-type name symbol)
+;; +                    (multiple-value-bind (info ok) (gethash name ,table)
+;; +                      (unless ok
+;; +                        (error "Undefined ~A: ~S" ',type name))
+;; +                      (car info)))
+;; +                  (defun ,(format-symbol :raylisp "ENSURE-~A" short) (thing)
+;; +                    (if (typep thing ',type)
+;; +                        thing
+;; +                        (,find thing)))
+;; +                  (defun ,(format-symbol :raylisp "~S-SOURCE" short) (thing)
+;; +                    (let ((name (name-of thing)))
+;; +                      (when name
+;; +                        (multiple-value-bind (info ok) (gethash name ,table)
+;; +                          (when ok
+;; +                            `(make-instance ',(class-name (class-of (car info))
+;; +  (def shader)
+;; +  (def scene-object :short object)
+;; +  (def scene-light :short light)
+;; +  (def camera))
 
 (defstruct compiled-scene
   (objects nil :type list)
@@ -61,7 +100,7 @@
   (let ((c-scene (make-compiled-scene)))
     (setf (scene-compiled-scene scene) c-scene)
     (let ((c-objs (mapcar (lambda (obj)
-                                  (compile-scene-object obj scene))
+                                  (compile-scene-object obj scene (identity-matrix)))
                                 (scene-objects scene))))
             (if *use-kd-tree*
                 (multiple-value-bind (kd unbounded) (make-kd-tree c-objs)
