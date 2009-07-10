@@ -26,6 +26,10 @@
        :intersection intersection
        :normal normal
        :shader (compile-shader (shader-of object) scene)
+       :transform (let ((m (transform-of object)))
+                    (if m
+                        (inverse-matrix (matrix* transform m))
+                        (inverse-matrix transform)))
        :min min :max max
        :name (name-of object)))))
 
@@ -333,7 +337,7 @@ intersections."
 
 (defgeneric compute-shader-function (shader scene))
 
-(declaim (ftype (function (t t) (values (function (vec vec float ray t)
+(declaim (ftype (function (t t) (values (function (compiled-object vec vec float ray t)
                                                   (values vec &optional))
                                         &optional))
                 compile-shader))
@@ -360,6 +364,7 @@ intersections."
 	 (n.d (dot-product normal (ray-direction ray))))
     (flet ((%shade (n)
              (funcall (object-shader object)
+                      object
                       point
                       n
                       n.d

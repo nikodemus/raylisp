@@ -149,6 +149,7 @@
                 :type (function (ray) (values boolean &optional compiled-object)))
   (normal (required-argument :normal) :type (function (vec) vec))
   (shader (required-argument :shader) :type compiled-shader)
+  (transform (required-argument :transform) :type matrix)
   (min nil :type (or null vec))
   (max nil :type (or null vec))
   (name nil))

@@ -7,17 +7,15 @@
 *** TODO Need RAY-MIN in addition to RAY-EXTENT
     Otherwise %FIND-INTERSECTION* can find intersections closer than
     it wants.
-*** TODO Shaders are not currently affected by object transformations
-    Since TRANSFORM belongs SCENE-OBJECT is seems better to deal with
-    it outside user-provided functions. ...tricky, tricky...
+* TODO ARCHITECTURE
+*** TODO Need to be able to transform textures independently from objects
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO Named scene components (from master)
 *** TODO CSG differences showing the cuttee-surface
     This is kind of nice the way it now works, actually, but it should
     be possible to tell the system to use the either to cuttee or the
     cutter. (Currently cutter is always used.)
-* TODO ARCHITECTURE
-*** TODO Named scene components (from master)
 *** TODO Manual bounding of objects
 *** TODO Light buffers in SHADOW-FUNCTION
 *** TODO CSG bounding

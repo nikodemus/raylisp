@@ -650,7 +650,6 @@
                             (make-instance 'plane
                                            :normal (v 0 1 0)
                                            :location (@ 0 -1 0)
-                                           ;; BUG: This transform does not currently affect the shader!
                                            :transform (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker
                                                                   :scale 5
