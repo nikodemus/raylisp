@@ -1,81 +1,76 @@
-FIXME
+-*- mode: org; mode: auto-fill -*-
+#+STARTUP: hidestars
+#+STARTUP: odd
+#+STARTUP: oddeven
 
-* Shaders are not currently affected by object transformations: since TRANSFORM
-  belongs SCENE-OBJECT is seems better to deal with it outside user-provided
-  functions. ...tricky, tricky...
+* TODO FIXME
+*** TODO Shaders are not currently affected by object transformations
+    Since TRANSFORM belongs SCENE-OBJECT is seems better to deal with
+    it outside user-provided functions. ...tricky, tricky...
+*** TODO Shared CSG shaders
+    It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO CSG differences showing the cuttee-surface
+    This is kind of nice the way it now works, actually, but it should
+    be possible to tell the system to use the either to cuttee or the
+    cutter. (Currently cutter is always used.)
+* TODO ARCHITECTURE
+*** TODO Support for manual hierarchical bounding
+    Sometimes humans are better.
+*** TODO CSG bounding
+***** TODO Check if we currently currently bound CSG objects sensibly
+      For intersections use intersection of bounding boxes, for
+      differences use the bounding box of the cuttee.
+***** TODO Automatic hierarchies
+      Deeps CSG should benefit from this
+*** TODO Light buffers in SHADOW-FUNCTION
+*** TODO Multithreading
+*** TODO Ray attenuation in transparent objects
+    Simple homogenous mediums to start with.
+*** TODO Volumetric rendering
+*** TODO Vista buffer
+    Projected bounding boxes to make fast decisions. At least those
+    pixels where there is only a single object that can contribute
+    are probably worth dealing with, no matter how good the KD tree
+    is. Saving a perfect vista buffer from previous rendering might
+    also be cool (this requires scenes to know when their geometry
+    has changed, though.)
+*** TODO Photon maps
+*** TODO Backwards raytracing
+    (Sampling the scene from light sources, collecting only those
+    that hit the image plane.)
+*** TODO OpenGL preview.
+*** TODO Computing functions to shade a given pixel
+    (Symbolic raytracing.)
+*** TODO Real colors. (Wavelength based rendering.)
 
-* Shared CSG shaders.
+*** TODO Antialiasing
+*** TODO Translucent shadows
+    Possibly just a shader?
+* TODO SCENE COMPONENTS
+*** TODO Area lights
+*** TODO Fake area lights
+    AKA fake soft shadows, aka cheap soft shadows.
+*** TODO Fake IOR
+    Aka cheap caustics.
+*** TODO Turbulence shader
+*** TODO Marble shader
+*** TODO Variant reflection
+*** TODO Faked surface normals
+*** TODO Light groups
+    Lights illuminating only some objects
+*** TODO Box
+*** TODO Cylinder
+*** TODO Torus
+*** TODO Height fields
+*** TODO Polygons
+*** TODO Meshes
+*** TODO Radiosity shader
+* TODO CAMERAS
+*** TODO Orthogonal camera
+*** TODO Fisheye camera
+*** TODO Panorama camera
+*** TODO Focal blur
+* TODO MISCELLANY
+*** Shearing transformations
+    Nice constructor on SB-CGA needed.
 
-* CSG differences showing the cuttee-surface (shader of cutter delegates
-  somehow.)
-
-* Test splitting of object in KD-tree construction for scenes where
-  all objects overly other objects along the axes.
-
-ARCHITECTURE
-
-* Support for manual hierarchical bounding.
-
-* Automatics hierarchical bounding for CSG
-
-* Light buffers in SHADOW-FUNCTION.
-
-* Rending protocol.
-
-* Ray attenuation.
-
-* Heterogenous media.
-
-* Vista buffer. Saving a perfect vista buffer from previous rendering.
-
-* Backwards raytracing.
-
-* OpenGL preview.
-
-* Computing functions to shade a given pixel. (Symbolic raytracing.)
-
-* Real colors. (Wavelength based rendering.)
-
-* Representing transformations with functions. (COMPILE to inline constants.)
-
-COMPONENTS
-
-* Antialiasing.
-
-* Area lights.
-
-* Fake area lights.
-
-* Translucent shadows.
-
-* Fake IOR.
-
-* Missing rations.
-
-* Shearing transformations.
-
-* Turbulence shader.
-
-* Marble shader.
-
-* Variant reflection.
-
-* Faked surface normals.
-
-* Light groups. (Lights illuminating only some objects.)
-
-* Orthogonal camera.
-
-* Fisheye camera.
-
-* Panorama camera.
-
-* Focal blur.
-
-* Box.
-
-* Cylinder.
-
-* Torus.
-
-* Radiosity.

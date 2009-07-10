@@ -260,8 +260,6 @@
         (if point
             (let ((new-max (new-corner point axis max))
                   (new-min (new-corner point axis min)))
-              #+nil
-              (assert (and left right min max new-min new-max))
               (let-values (((left-kd left-depth) (subdivide left min new-max))
                            ((right-kd right-depth) (subdivide right new-min max)))
                 (let ((depth (max left-depth right-depth)))
@@ -312,8 +310,8 @@
 
 (defun split-cost (left right parent-area)
   (* (if (and left right)
-         1
-         0.8d0)
+         0.9d0
+         1)
      (+ (* (intersection-probability left parent-area)
            (intersection-cost left))
         (* (intersection-probability right parent-area)

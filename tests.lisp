@@ -58,6 +58,32 @@
 (defun xscale* (x y z)
   (scale* (float x) (float y) (float z)))
 
+(defscene test-kd-split-1
+  (:objects
+   (loop for j from -10 upto 10
+         append (loop for i from -10 upto 10
+                      collect (make-instance 'sphere
+                                             :radius 1.0
+                                             :transform (xtranslate* (* 0.5 i) 0 (* 0.5 j))
+                                             :shader *bright-red*))))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-kd-split-2
+  (:objects
+   (loop for j from -10 upto 10
+         append (loop for i from -10 upto 10
+                      collect (make-instance 'sphere
+                                             :radius 1.0
+                                             :transform (xtranslate* (* 2.5 i) 0 (* 2.5 j))
+                                             :shader *bright-red*))))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
 (defscene test-spheres
   ;; All in a grid.
   (:objects
