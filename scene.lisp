@@ -113,12 +113,17 @@
 		  (scene-lights scene))))
   scene)
 
+(defclass transform-mixin ()
+  ((transform
+    :initform (identity-matrix) :initarg :transform
+    :accessor transform-of)))
+
 ;;;## Shaders
 ;;;
 ;;; As a convenience feature NIL is also accepted as a shader (representing
 ;;; constant black).
 
-(defclass shader (name-mixin)
+(defclass shader (name-mixin transform-mixin)
   ())
 
 (deftype compiled-shader ()
@@ -126,11 +131,8 @@
 
 ;;;## Objects
 
-(defclass scene-object ()
-  ((transform
-    :initform (find-default :transform '(or null matrix)) :initarg :transform
-    :accessor transform-of)
-   (shader
+(defclass scene-object (transform-mixin)
+  ((shader
     :initform (find-default :shader '(or null shader)) :initarg :shader
     :accessor shader-of)
    (name
@@ -149,7 +151,6 @@
                 :type (function (ray) (values boolean &optional compiled-object)))
   (normal (required-argument :normal) :type (function (vec) vec))
   (shader (required-argument :shader) :type compiled-shader)
-  (transform (required-argument :transform) :type matrix)
   (min nil :type (or null vec))
   (max nil :type (or null vec))
   (name nil))

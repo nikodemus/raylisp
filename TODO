@@ -8,7 +8,6 @@
     Otherwise %FIND-INTERSECTION* can find intersections closer than
     it wants.
 * TODO ARCHITECTURE
-*** TODO Need to be able to transform textures independently from objects
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
 *** TODO Named scene components (from master)

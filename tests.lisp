@@ -744,6 +744,31 @@
   (:camera
    *view*))
 
+(defscene test-shader-transform
+  (:objects
+   (make-instance 'sphere
+                  :radius 0.2
+                  :shader (make-instance 'solid :color green))
+   (make-instance 'plane
+                  :location (v 0 0.1 0)
+                  :shader
+                  (make-instance 'checker
+                                 :transform (scale* 2.0 2.0 2.0)
+                                 :odd (make-instance 'phong :color black)
+                                 :even
+                                 (make-instance 'checker
+                                                :odd (make-instance 'phong :color black)
+                                                :even (make-instance 'phong :color white)
+                                                :transform (matrix*
+                                                            (rotate* 0.0 (/ +pi+ 4) 0.0)
+                                                            (let ((s (/ 1.0 (sqrt 2.0))))
+                                                              (scale* s s s))
+                                                            (translate* 0.5 0.0 0.5))))))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
 ;;;# Tests
 ;;;
 ;;; Raylisp includes both test scenes, and a number of functional

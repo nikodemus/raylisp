@@ -25,11 +25,7 @@
       (make-compiled-object
        :intersection intersection
        :normal normal
-       :shader (compile-shader (shader-of object) scene)
-       :transform (let ((m (transform-of object)))
-                    (if m
-                        (inverse-matrix (matrix* transform m))
-                        (inverse-matrix transform)))
+       :shader (compile-shader (shader-of object) object scene transform)
        :min min :max max
        :name (name-of object)))))
 
@@ -335,16 +331,16 @@ intersections."
 ;;;
 ;;; must accept an INTERSECTION and a RAY, and return the apparent color.
 
-(defgeneric compute-shader-function (shader scene))
+(defgeneric compute-shader-function (shader object scene transform))
 
-(declaim (ftype (function (t t) (values (function (compiled-object vec vec float ray t)
+(declaim (ftype (function (t t t t) (values (function (compiled-object vec vec float ray t)
                                                   (values vec &optional))
                                         &optional))
                 compile-shader))
-(defun compile-shader (shader scene)
-  (compute-shader-function shader scene))
+(defun compile-shader (shader object scene transform)
+  (compute-shader-function shader object scene transform))
 
-(defmethod compute-shader-function ((null null) scene)
+(defmethod compute-shader-function ((null null) object scene transform)
   (constantly black))
 
 (defgeneric shader-weight (shader)
