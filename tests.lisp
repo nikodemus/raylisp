@@ -6,13 +6,13 @@
   (let* ((chessboard
           (make-instance 'checker
                          :odd
-                         (make-instance 'phong :color black)
+                         (make-instance 'phong-shader :color black)
                          :even
-                         (make-instance 'phong :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))
+                         (make-instance 'phong-shader :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))
          (bright-red
-          (make-instance 'phong :color red :diffuse 1.0 :specular 1.0 :ambient 0.5))
+          (make-instance 'phong-shader :color red :diffuse 1.0 :specular 1.0 :ambient 0.5))
          (bright-blue
-          (make-instance 'phong :color blue :diffuse 1.0 :specular 1.0 :ambient 0.5))
+          (make-instance 'phong-shader :color blue :diffuse 1.0 :specular 1.0 :ambient 0.5))
          (floor
           (make-instance 'plane :shader chessboard))
          (lamp
@@ -61,8 +61,8 @@
                   :location (v 0.0 4.0 -2.0)
                   :shader (make-instance 'marble-shader
                                          :transform (rotate* 0.0 0.0 1.0)
-                                         :start (make-instance 'phong :color black)
-                                         :end (make-instance 'phong :color (vec 0.7 0.7 0.7)))))
+                                         :start (make-instance 'phong-shader :color black)
+                                         :end (make-instance 'phong-shader :color (vec 0.7 0.7 0.7)))))
   (:lights
    (make-instance 'point-light
                   :location (v -10 10 -10)))
@@ -77,8 +77,8 @@
                                       (scale* 3.0 3.0 3.0))
                   :shader (make-instance 'wood-shader
                                          :transform (scale* 0.2 0.2 0.2)
-                                         :start (make-instance 'phong :color black)
-                                         :end (make-instance 'phong :color (vec 0.6 0.3 0.25)))))
+                                         :start (make-instance 'phong-shader :color black)
+                                         :end (make-instance 'phong-shader :color (vec 0.6 0.3 0.25)))))
   (:lights
    (make-instance 'point-light
                   :location (v -10 10 -10)))
@@ -118,11 +118,11 @@
               (list (make-instance 'sphere
                                    :radius 0.2
                                    :location (min-of box)
-                                   :shader (make-instance 'phong :color green))
+                                   :shader (make-instance 'phong-shader :color green))
                     (make-instance 'sphere
                                    :radius 0.2
                                    :location (max-of box)
-                                   :shader (make-instance 'phong :color green)))))
+                                   :shader (make-instance 'phong-shader :color green)))))
        (append (list box1 box2)
                (mark box1)
                (mark box2)))))
@@ -139,19 +139,19 @@
                   :objects (list (make-instance 'box
                                                 :min (vec -1.0 0.0 -1.0)
                                                 :max (vec 1.0 2.0 1.0)
-                                                :shader (make-instance 'phong :color white))
+                                                :shader (make-instance 'phong-shader :color white))
                                  (make-instance 'box
                                                 :min (vec -0.8 0.2 -1.1)
                                                 :max (vec 0.8 1.8 1.1)
-                                                :shader (make-instance 'phong :color yellow))
+                                                :shader (make-instance 'phong-shader :color yellow))
                                  (make-instance 'box
                                                 :min (vec -1.1 0.2 -0.8)
                                                 :max (vec 1.1 1.8 0.8)
-                                                :shader (make-instance 'phong :color blue))
+                                                :shader (make-instance 'phong-shader :color blue))
                                  (make-instance 'box
                                                 :min (vec -0.8 -0.1 -0.8)
                                                 :max (vec 0.8 2.1 0.8)
-                                                :shader (make-instance 'phong :color red)))))
+                                                :shader (make-instance 'phong-shader :color red)))))
   (:lights
    (make-instance 'point-light
                   :location (vec -10.0 30.0 -20.0)))
@@ -298,7 +298,7 @@
                                    :specular 0.1
                                    :transmit 0.9
                                    :ior 1.6)
-                    (make-instance 'phong
+                    (make-instance 'phong-shader
                                    :specular 0.5
                                    :size 40.0
                                    :diffuse 0.3
@@ -473,7 +473,7 @@
                    :specular 0.1
                    :transmit 0.9
                    :ior 1.6)
-    (make-instance 'phong
+    (make-instance 'phong-shader
                    :specular 0.5
                    :size 40.0
                    :diffuse 0.3
@@ -634,9 +634,9 @@
     :shader
     (make-instance 'checker
                    :odd
-                   (make-instance 'phong :color black)
+                   (make-instance 'phong-shader :color black)
                    :even
-                   (make-instance 'phong :color white
+                   (make-instance 'phong-shader :color white
                                          :ambient 0.1))))
   (:lights
    (make-instance 'spotlight
@@ -676,8 +676,8 @@
                   :normal x-axis
                   :location (@ -1 0 0)
                   :shader (make-instance 'checker
-                                         :odd (make-instance 'phong :color black)
-                                         :even (make-instance 'phong :color white :ambient 0.1))))
+                                         :odd (make-instance 'phong-shader :color black)
+                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
   (:camera
@@ -692,8 +692,8 @@
                   :normal y-axis
                   :location (@ 0 -1 0)
                   :shader (make-instance 'checker
-                                         :odd (make-instance 'phong :color black)
-                                         :even (make-instance 'phong :color white :ambient 0.1))))
+                                         :odd (make-instance 'phong-shader :color black)
+                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -708,8 +708,8 @@
                   :normal z-axis
                   :location (@ 0 0 -1)
                   :shader (make-instance 'checker
-                                         :odd (make-instance 'phong :color black)
-                                         :even (make-instance 'phong :color white :ambient 0.1))))
+                                         :odd (make-instance 'phong-shader :color black)
+                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -727,8 +727,8 @@
    (make-instance 'plane
                   :location (@ 0 -1 0)
                   :shader (make-instance 'checker
-                                         :odd (make-instance 'phong :color black)
-                                         :even (make-instance 'phong :color white :ambient 0.1))))
+                                         :odd (make-instance 'phong-shader :color black)
+                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -757,15 +757,15 @@
                                            :transform (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker
                                                                   :scale 5
-                                                                  :odd (make-instance 'phong :color black)
-                                                                  :even (make-instance 'phong :color white :ambient 0.1)))
+                                                                  :odd (make-instance 'phong-shader :color black)
+                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1)))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
                                            :shader (make-instance 'checker
                                                                   :scale 5
-                                                                  :odd (make-instance 'phong :color black)
-                                                                  :even (make-instance 'phong :color white :ambient 0.1))))))
+                                                                  :odd (make-instance 'phong-shader :color black)
+                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1))))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -802,7 +802,7 @@
                                    :specular 0.1
                                    :transmit 0.9
                                    :ior 1.2)
-                    (make-instance 'phong
+                    (make-instance 'phong-shader
                                    :specular 0.5
                                    :size 40.0
                                    :diffuse 0.15
@@ -858,11 +858,11 @@
                   :shader
                   (make-instance 'checker
                                  :transform (scale* 2.0 2.0 2.0)
-                                 :odd (make-instance 'phong :color black)
+                                 :odd (make-instance 'phong-shader :color black)
                                  :even
                                  (make-instance 'checker
-                                                :odd (make-instance 'phong :color black)
-                                                :even (make-instance 'phong :color white)
+                                                :odd (make-instance 'phong-shader :color black)
+                                                :even (make-instance 'phong-shader :color white)
                                                 :transform (matrix*
                                                             (rotate* 0.0 (/ +pi+ 4) 0.0)
                                                             (let ((s (/ 1.0 (sqrt 2.0))))

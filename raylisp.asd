@@ -28,6 +28,7 @@
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "flat")
                          (:file "marble")
+                         (:file "phong")
                          (:file "raytrace")
                          (:file "solid")
                          (:file "wood")))
