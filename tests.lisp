@@ -265,15 +265,15 @@
 (defscene test-1
   (:objects
    (make-instance 'sphere
-                  :shader (make-instance 'solid :color red))
+                  :shader (make-instance 'solid-shader :color red))
    (make-instance 'sphere
                   :location (@ 0 -0.5 0)
                   :transform (scale (@ 3 0.5 0.5))
                   :shader
                   (make-instance
                    'gradient
-                   :start (make-instance 'solid :color blue)
-                   :end (make-instance 'solid :color green)
+                   :start (make-instance 'solid-shader :color blue)
+                   :end (make-instance 'solid-shader :color green)
                    :axis 0
                    :scale 3.0)))
   (:lights
@@ -329,16 +329,16 @@
                 (make-instance 'sphere
                                :location (@ -0.5 0 0)
                                :shader
-                               (make-instance 'solid :color red))
+                               (make-instance 'solid-shader :color red))
                 (make-instance 'sphere
                                :location (@ 0.5 0 0)
                                :shader
-                               (make-instance 'solid
+                               (make-instance 'solid-shader
                                               :color blue))
                 (make-instance 'sphere
                                :location (@ 0 -0.1 0)
                                :shader
-                               (make-instance 'solid
+                               (make-instance 'solid-shader
                                               :color green)))))
   (:lights
    (make-instance 'solar-light :direction y-axis))
@@ -361,11 +361,11 @@
                 (make-instance 'sphere
                                :location (@ -0.5 0 0)
                                :shader
-                               (make-instance 'solid :color red))
+                               (make-instance 'solid-shader :color red))
                 (make-instance 'sphere
                                :location (@ 0.5 0 0)
                                :shader
-                               (make-instance 'solid
+                               (make-instance 'solid-shader
                                               :color blue)))))
   (:lights
    (make-instance 'solar-light :direction y-axis))
@@ -387,16 +387,16 @@
                   (list
                    (make-instance 'sphere
                                   :shader
-                                  (make-instance 'solid :color red))
+                                  (make-instance 'solid-shader :color red))
                    (make-instance 'sphere
                                   :location (@ 0 1 0)
                                   :shader
-                                  (make-instance 'solid
+                                  (make-instance 'solid-shader
                                                  :color blue))
                    (make-instance 'sphere
                                   :location (@ 1 0 0)
                                   :shader
-                                  (make-instance 'solid
+                                  (make-instance 'solid-shader
                                                  :color green)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 0.5)))
@@ -417,24 +417,24 @@
     (make-instance 'sphere
                    :radius 1.0
                    :transform (translate (@ 1 0 0))
-                   :shader (make-instance 'solid :color red))
+                   :shader (make-instance 'solid-shader :color red))
     (make-instance 'sphere
                    :radius 1.0
                    :transform (translate (@ 0 1 0))
-                   :shader (make-instance 'solid :color green))
+                   :shader (make-instance 'solid-shader :color green))
     (make-instance 'sphere
                    :radius 1.0
                    :transform (translate (@ 0 0 1))
-                   :shader (make-instance 'solid :color blue)))
+                   :shader (make-instance 'solid-shader :color blue)))
    (make-instance 'plane
                   :normal (v -0.5 1 0)
-                  :shader (make-instance 'solid :color white))   
+                  :shader (make-instance 'solid-shader :color white))   
    #+nil
    (loop for i from -100 upto 100
          collect (make-instance 'sphere
                                 :radius 0.5
                                 :transform (translate (@ 0 0 i))
-                                :shader (make-instance 'solid :color purple)))
+                                :shader (make-instance 'solid-shader :color purple)))
    (make-instance
     'csg
     :type 'intersection
@@ -443,13 +443,13 @@
      (make-instance 'plane
                     :normal (v 0 1 0)
                     :location (@ 0 -1 0)
-                    :shader (make-instance 'solid :color yellow))
+                    :shader (make-instance 'solid-shader :color yellow))
      (make-instance 'plane
                     :normal (v 0.5 1 0)
-                    :shader (make-instance 'solid :color white))
+                    :shader (make-instance 'solid-shader :color white))
      (make-instance 'plane
                     :normal (v -0.5 1 0)
-                    :shader (make-instance 'solid :color purple)))))
+                    :shader (make-instance 'solid-shader :color purple)))))
   (:lights
    #+nil
    (make-instance 'solar-light :direction y-axis)
@@ -658,8 +658,8 @@
    (make-instance 'sphere
                   :radius 3.0
                   :shader (make-instance 'noise-shader
-                                         :start (make-instance 'solid :color (@ 0.2 0.2 1.0))
-                                         :end (make-instance 'solid :color white)
+                                         :start (make-instance 'solid-shader :color (@ 0.2 0.2 1.0))
+                                         :end (make-instance 'solid-shader :color white)
                                          :scale 0.8)))
   (:lights
    (make-instance 'solar-light :direction (v -1 1 -1)))
@@ -671,7 +671,7 @@
 
 (defscene test-x-axis-camera
   (:objects
-   (make-instance 'sphere :shader (make-instance 'solid :color red))
+   (make-instance 'sphere :shader (make-instance 'solid-shader :color red))
    (make-instance 'plane
                   :normal x-axis
                   :location (@ -1 0 0)
@@ -687,7 +687,7 @@
 
 (defscene test-y-axis-camera
   (:objects
-   (make-instance 'sphere :shader (make-instance 'solid :color green))
+   (make-instance 'sphere :shader (make-instance 'solid-shader :color green))
    (make-instance 'plane
                   :normal y-axis
                   :location (@ 0 -1 0)
@@ -703,7 +703,7 @@
 
 (defscene test-z-axis-camera
   (:objects
-   (make-instance 'sphere :shader (make-instance 'solid :color blue))
+   (make-instance 'sphere :shader (make-instance 'solid-shader :color blue))
    (make-instance 'plane
                   :normal z-axis
                   :location (@ 0 0 -1)
@@ -719,9 +719,9 @@
 
 (defscene test-transform
   (:objects
-   (make-instance 'sphere :shader (make-instance 'solid :color red))
+   (make-instance 'sphere :shader (make-instance 'solid-shader :color red))
    (make-instance 'sphere
-                  :shader (make-instance 'solid :color blue)
+                  :shader (make-instance 'solid-shader :color blue)
                   :transform (matrix* (xtranslate* 0 2 0)
                                        (rotate-around z-axis 1.5)))
    (make-instance 'plane
@@ -739,15 +739,15 @@
 (defscene test-perspective
   (:objects
    (make-instance 'sphere
-                  :location (@ 10 0 0) :shader (make-instance 'solid :color red))
+                  :location (@ 10 0 0) :shader (make-instance 'solid-shader :color red))
    (make-instance 'sphere
-                  :location (@ -10 0 0) :shader (make-instance 'solid :color green))
+                  :location (@ -10 0 0) :shader (make-instance 'solid-shader :color green))
    (make-instance 'sphere
-                  :location (@ 0 0 0) :shader (make-instance 'solid :color blue))
+                  :location (@ 0 0 0) :shader (make-instance 'solid-shader :color blue))
    (make-instance 'sphere
-                  :location (@ 0 0 10) :shader (make-instance 'solid :color (@ 1 1 0)))
+                  :location (@ 0 0 10) :shader (make-instance 'solid-shader :color (@ 1 1 0)))
    (make-instance 'sphere
-                  :location (@ 0 0 -10) :shader (make-instance 'solid :color (@ 0 1 1)))
+                  :location (@ 0 0 -10) :shader (make-instance 'solid-shader :color (@ 0 1 1)))
    (make-instance 'csg
                   :type 'difference
                   :objects (list
@@ -787,7 +787,7 @@
                                   (make-instance 'raytrace-shader
                                                  :specular 0.95
                                                  :transmit 0.0)
-                                  (make-instance 'flat
+                                  (make-instance 'flat-shader
                                                  :ambient 0.05
                                                  :color black))))
    (make-instance 'sphere
@@ -852,7 +852,7 @@
   (:objects
    (make-instance 'sphere
                   :radius 0.2
-                  :shader (make-instance 'solid :color green))
+                  :shader (make-instance 'solid-shader :color green))
    (make-instance 'plane
                   :location (v 0 0.1 0)
                   :shader

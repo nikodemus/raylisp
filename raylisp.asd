@@ -26,8 +26,10 @@
                          (:file "sphere")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "component")
-            :components ((:file "marble")
+            :components ((:file "flat")
+                         (:file "marble")
                          (:file "raytrace")
+                         (:file "solid")
                          (:file "wood")))
    (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))
