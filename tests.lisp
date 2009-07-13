@@ -53,8 +53,23 @@
   (:camera
    *view*))
 
+(defscene test-marble
+  (:objects
+   *floor*
+   (make-instance 'sphere
+                  :radius 4.0
+                  :location (v 0.0 4.0 -2.0)
+                  :shader (make-instance 'marble-shader
+                                         :transform (scale* 2.0 1.0 1.0)
+                                         :start (make-instance 'phong :color black)
+                                         :end (make-instance 'phong :color (vec 0.7 0.7 0.7)))))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -10 10 -10)))
+  (:camera
+   *view*))
+
 (defscene test-boxes-1
-  ;; Sanity check.
   (:objects
    *floor*
    (loop for i from -5 upto 10
@@ -73,7 +88,6 @@
    *view*))
 
 (defscene test-boxes-2
-  ;; Sanity check.
   (:objects
    *floor*
    (let ((box1 (make-instance 'box
@@ -103,7 +117,6 @@
    *view*))
 
 (defscene test-boxes-3
-  ;; Sanity check.
   (:objects
    (make-instance 'csg
                   :type 'difference
@@ -114,22 +127,22 @@
                                  (make-instance 'box
                                                 :min (vec -0.8 0.2 -1.1)
                                                 :max (vec 0.8 1.8 1.1)
-                                                :shader (make-instance 'phong :color white))
+                                                :shader (make-instance 'phong :color yellow))
                                  (make-instance 'box
-                                                :min (vec -1.2 0.2 -0.8)
-                                                :max (vec 1.2 1.8 0.8)
-                                                :shader (make-instance 'phong :color white))
+                                                :min (vec -1.1 0.2 -0.8)
+                                                :max (vec 1.1 1.8 0.8)
+                                                :shader (make-instance 'phong :color blue))
                                  (make-instance 'box
-                                                :min (vec -0.8 -0.2 -0.8)
-                                                :max (vec 0.8 2.2 0.8)
-                                                :shader (make-instance 'phong :color white)))))
+                                                :min (vec -0.8 -0.1 -0.8)
+                                                :max (vec 0.8 2.1 0.8)
+                                                :shader (make-instance 'phong :color red)))))
   (:lights
    (make-instance 'point-light
-                  :location (vec -10.0 30.0 -10.0)))
+                  :location (vec -10.0 30.0 -20.0)))
   (:camera
    (make-instance 'pinhole
                   :look-at +origin+
-                  :location (vec -3.5 5.0 -5.0))))
+                  :location (vec/ (vec -3.5 5.0 -5.0) 2.0))))
 
 (defun xtranslate* (x y z)
   (translate* (float x) (float y) (float z)))

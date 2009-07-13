@@ -10,6 +10,10 @@
 * TODO ARCHITECTURE
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO Sliding color scales
+*** TODO Experiment with colors using generic functions
+*** TODO Prototype-style operations on scene components
+    Cloning with alterate transforms, etc.
 *** TODO Named scene components (from master)
 *** TODO CSG differences showing the cuttee-surface
     This is kind of nice the way it now works, actually, but it should
@@ -56,7 +60,6 @@
 *** TODO Fake IOR
     Aka cheap caustics.
 *** TODO Turbulence shader
-*** TODO Marble shader
 *** TODO Variant reflection
 *** TODO Faked surface normals
 *** TODO Light groups

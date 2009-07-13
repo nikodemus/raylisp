@@ -1,0 +1,18 @@
+(in-package :raylisp)
+
+(defclass marble-shader (shader transform-mixin)
+  ((start :initarg :start :reader start-of)
+   (end :initarg :end :reader end-of)))
+
+(defmethod compute-shader-function ((shader marble-shader) object scene transform)
+  (let* ((matrix (matrix* transform (transform-of shader)))
+         (start (compile-shader (start-of shader) object scene matrix))
+         (end (compile-shader (end-of shader) object scene matrix))
+         (inverse (inverse-matrix matrix)))
+    (declare (optimize speed))
+    (lambda (obj point normal n.d ray counters)
+      (let* ((p (transform-point point inverse))
+             (noise (abs (sin (+ (aref p 0) (perlin-noise p 4 0.4)))))
+             (start-color (funcall start obj point normal n.d ray counters))
+             (end-color (funcall end obj point normal n.d ray counters)))
+        (%vec-lerp p end-color start-color (clamp noise 0.0 1.0))))))

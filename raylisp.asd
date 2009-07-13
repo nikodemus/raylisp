@@ -15,6 +15,7 @@
    (:file "protocol" :depends-on ("scene"))
    (:file "component" :depends-on ("protocol"))
    (:file "box" :depends-on ("package" "base" "protocol") :pathname "objects/box.lisp")
+   (:file "marble" :depends-on ("package" "base" "protocol") :pathname "shaders/marble.lisp")
    (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("camera"))

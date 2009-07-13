@@ -1,7 +1,9 @@
 (in-package :raylisp)
 
 (declaim (ftype (function (vec) (values float &optional)) vector-noise))
-(declaim (ftype (function (vec float float) (values float &optional)) turbulence perlin-noise))
+(declaim (ftype (function (vec float float) (values float &optional)) turbulence))
+(declaim (ftype (function (vec sb-int:index float) (values float &optional)) perlin-noise))
+
 
 (declaim (type (simple-array (unsigned-byte 8) (512)) +perlin-noise-vector+))
 (define-constant +perlin-noise-vector+
@@ -167,15 +169,21 @@ point on a unit-cube lattice."
            (recurse lo)))))
 
    (defun perlin-noise (v octaves persistence)
+     (declare (type vec v)
+              (type sb-int:index octaves)
+              (type single-float persistence))
      (with-arrays (v)
        (let ((total 0.0)
              (x (v 0))
              (y (v 1))
              (z (v 2)))
-         ;; FIXME: Check this: compare versus GRT implementation.
+         (declare (single-float total))
          (do ((n octaves (1- n))
+              ;; freq = (expt 2.0 i)
               (freq 1.0 (+ freq freq))
+              ;; ampl = (expt persistence i)
               (ampl 1.0 (* ampl persistence)))
-             ((zerop n) total)
+             ((<= n 0) total)
+           (declare (type sb-int:index n))
            (declare (float freq ampl))
            (incf total (* ampl (noise3 (* x freq) (* y freq) (* z freq))))))))))
