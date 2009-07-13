@@ -60,9 +60,25 @@
                   :radius 4.0
                   :location (v 0.0 4.0 -2.0)
                   :shader (make-instance 'marble-shader
-                                         :transform (scale* 2.0 1.0 1.0)
+                                         :transform (rotate* 0.0 0.0 1.0)
                                          :start (make-instance 'phong :color black)
                                          :end (make-instance 'phong :color (vec 0.7 0.7 0.7)))))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -10 10 -10)))
+  (:camera
+   *view*))
+
+(defscene test-wood
+  (:objects
+   *floor*
+   (make-instance 'box
+                  :transform (matrix* (translate* 0.0 3.0 -2.0)
+                                      (scale* 3.0 3.0 3.0))
+                  :shader (make-instance 'wood-shader
+                                         :transform (scale* 0.2 0.2 0.2)
+                                         :start (make-instance 'phong :color black)
+                                         :end (make-instance 'phong :color (vec 0.6 0.3 0.25)))))
   (:lights
    (make-instance 'point-light
                   :location (v -10 10 -10)))
