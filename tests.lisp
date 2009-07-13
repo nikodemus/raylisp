@@ -53,7 +53,7 @@
   (:camera
    *view*))
 
-(defscene test-boxes
+(defscene test-boxes-1
   ;; Sanity check.
   (:objects
    *floor*
@@ -71,6 +71,65 @@
                   :location (vec -10.0 30.0 -10.0)))
   (:camera
    *view*))
+
+(defscene test-boxes-2
+  ;; Sanity check.
+  (:objects
+   *floor*
+   (let ((box1 (make-instance 'box
+                              :min (vec -2.0 0.0 0.0)
+                              :max (vec -1.0 1.0 1.0)
+                              :shader *bright-red*))
+         (box2 (make-instance 'box
+                              :min (vec 1.0 0.0 0.0)
+                              :max (vec 2.0 1.0 1.0)
+                              :shader *bright-blue*)))
+     (flet ((mark (box)
+              (list (make-instance 'sphere
+                                   :radius 0.2
+                                   :location (min-of box)
+                                   :shader (make-instance 'phong :color green))
+                    (make-instance 'sphere
+                                   :radius 0.2
+                                   :location (max-of box)
+                                   :shader (make-instance 'phong :color green)))))
+       (append (list box1 box2)
+               (mark box1)
+               (mark box2)))))
+  (:lights
+   (make-instance 'point-light
+                  :location (vec -10.0 30.0 -10.0)))
+  (:camera
+   *view*))
+
+(defscene test-boxes-3
+  ;; Sanity check.
+  (:objects
+   (make-instance 'csg
+                  :type 'difference
+                  :objects (list (make-instance 'box
+                                                :min (vec -1.0 0.0 -1.0)
+                                                :max (vec 1.0 2.0 1.0)
+                                                :shader (make-instance 'phong :color white))
+                                 (make-instance 'box
+                                                :min (vec -0.8 0.2 -1.1)
+                                                :max (vec 0.8 1.8 1.1)
+                                                :shader (make-instance 'phong :color white))
+                                 (make-instance 'box
+                                                :min (vec -1.2 0.2 -0.8)
+                                                :max (vec 1.2 1.8 0.8)
+                                                :shader (make-instance 'phong :color white))
+                                 (make-instance 'box
+                                                :min (vec -0.8 -0.2 -0.8)
+                                                :max (vec 0.8 2.2 0.8)
+                                                :shader (make-instance 'phong :color white)))))
+  (:lights
+   (make-instance 'point-light
+                  :location (vec -10.0 30.0 -10.0)))
+  (:camera
+   (make-instance 'pinhole
+                  :look-at +origin+
+                  :location (vec -3.5 5.0 -5.0))))
 
 (defun xtranslate* (x y z)
   (translate* (float x) (float y) (float z)))

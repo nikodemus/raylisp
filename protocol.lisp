@@ -103,7 +103,7 @@ intersections."
   (error "CSG normal not delegated."))
 
 (defmethod compute-object-properties ((node csg-node) scene transform)
-  (let ((matrix (matrix* transform (or (transform-of node) (identity-matrix)))))
+  (let ((matrix (matrix* transform (transform-of node))))
     (list
      :intersection
      (let-plists ((((:all-intersections all-left) (:inside inside-left))

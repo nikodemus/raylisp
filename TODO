@@ -6,7 +6,7 @@
 * TODO FIXME
 *** TODO Need RAY-MIN in addition to RAY-EXTENT
     Otherwise %FIND-INTERSECTION* can find intersections closer than
-    it wants.
+    it wants. Or is RAY-ORIGIN good enough?
 * TODO ARCHITECTURE
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
@@ -61,7 +61,6 @@
 *** TODO Faked surface normals
 *** TODO Light groups
     Lights illuminating only some objects
-*** TODO Box
 *** TODO Cylinder
 *** TODO Torus
 *** TODO Height fields
