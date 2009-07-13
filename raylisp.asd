@@ -31,6 +31,7 @@
                          (:file "flat")
                          (:file "gradient")
                          (:file "marble")
+                         (:file "noise")
                          (:file "phong")
                          (:file "raytrace")
                          (:file "solid")
