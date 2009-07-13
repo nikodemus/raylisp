@@ -237,9 +237,6 @@
   (:camera
    *view*))
 
-(defun v (x y z)
-  (vec (float x) (float y) (float z)))
-
 (defscene test-plane-intersection
   (:objects
    (make-instance

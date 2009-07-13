@@ -113,6 +113,9 @@ if there are no positive real roots greater then epsilon."
   "Convenience vector constructor for interactive use."
   (vec (float x) (float y) (float z)))
 
+(defun v (x y z)
+  (vec (float x) (float y) (float z)))
+
 (declaim (inline dot-product*))
 (defun dot-product* (ax ay az bx by bz)
   (declare (type float ax ay az bx by bz))
@@ -157,7 +160,7 @@ if there are no positive real roots greater then epsilon."
 (defun inverse-and-adjunct/inverse-matrix (matrix)
   (let ((inverse (inverse-matrix matrix)))
     (values inverse
-	    (xmatrix* (transpose-matrix inverse) inverse))))
+	    (matrix* (transpose-matrix inverse) inverse))))
 
 (defun inverse-and-adjunct-matrix (matrix)
   (let ((inverse (inverse-matrix matrix)))

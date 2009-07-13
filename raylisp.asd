@@ -14,9 +14,15 @@
    (:file "scene" :depends-on ("kernel" "kd-tree"))
    (:file "protocol" :depends-on ("scene"))
    (:file "component" :depends-on ("protocol"))
-   (:file "box" :depends-on ("package" "base" "protocol") :pathname "objects/box.lisp")
-   (:file "marble" :depends-on ("package" "base" "protocol") :pathname "shaders/marble.lisp")
+   (:module "objects"
+            :depends-on ("package" "base" "math" "protocol" "component")
+            :components ((:file "box")
+                         (:file "sphere")))
+   (:module "shaders"
+            :depends-on ("package" "base" "math" "protocol" "component")
+            :components ((:file "marble")
+                         (:file "wood")))
    (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("camera"))
-   (:file "tests" :depends-on ("output" "render" "component"))))
+   (:file "tests" :depends-on ("output" "render" "component" "objects" "shaders"))))

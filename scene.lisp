@@ -143,7 +143,7 @@
 (defmethod transform-of :around ((object scene-object))
   (let ((transform (call-next-method)))
     (etypecase transform
-      (cons (apply #'xmatrix* (reverse transform)))
+      (cons (apply #'matrix* (reverse transform)))
       ((or null matrix) transform))))
 
 (defstruct (compiled-object (:conc-name object-))
