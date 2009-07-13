@@ -13,6 +13,8 @@
           (make-instance 'phong-shader :color red :diffuse 1.0 :specular 1.0 :ambient 0.5))
          (bright-blue
           (make-instance 'phong-shader :color blue :diffuse 1.0 :specular 1.0 :ambient 0.5))
+         (bright-green
+          (make-instance 'phong-shader :color green :diffuse 1.0 :specular 1.0 :ambient 0.5))
          (floor
           (make-instance 'plane :shader chessboard))
          (lamp
@@ -37,6 +39,7 @@
     (defparameter *chessboard* chessboard)
     (defparameter *bright-red* bright-red)
     (defparameter *bright-blue* bright-blue)
+    (defparameter *bright-green* bright-green)
     (defparameter *floor* floor)
     (defparameter *lamp* lamp)
     (defparameter *sun* sun)
@@ -52,6 +55,33 @@
    *lamp*)
   (:camera
    *view*))
+
+(defscene test-cylinder
+  (:objects
+   (make-instance 'cylinder
+                  :start (v 4 0 0)
+                  :end (v 4 -4 10)
+                  :radius 1.5
+                  :shader *bright-red*)
+   (make-instance 'cylinder
+                  :start (v -3 0 0)
+                  :end (v 0 -4 10)
+                  :radius 0.5
+                  :shader *bright-red*)
+   (make-instance 'sphere
+                  :radius 1.5
+                  :location (v -3 0 0)
+                  :shader *bright-green*)
+   (make-instance 'sphere
+                  :radius 1.5
+                  :location (v 0 -4 10)
+                  :shader *bright-blue*))
+  (:lights
+   *lamp*)
+  (:camera
+   (make-instance 'pinhole
+                  :location (v 5.0 5.0 -9.0)
+                  :look-at +origin+)))
 
 (defscene test-marble
   (:objects

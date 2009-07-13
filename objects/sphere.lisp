@@ -23,7 +23,7 @@
        (let* ((o2 (transform-point (ray-origin ray) inverse))
               (d2 (transform-direction (ray-direction ray) inverse)))
          (declare (dynamic-extent o2 d2))
-         (let ((s (min-pos-quad-root (+ (dot-product d2 d2))
+         (let ((s (min-pos-quad-root (dot-product d2 d2)
                                      (* 2.0 (dot-product d2 o2))
                                      (- (dot-product o2 o2) 1.0))))
            ;; FIXME: If we need to follow this pattern elsewhere, then there is no
@@ -33,7 +33,8 @@
              t))))
      :normal
      (lambda (point)
-       (normalize (transform-point point adjunct/inverse))))))
+       (let ((p (transform-point point adjunct/inverse)))
+         (%normalize p p))))))
 
 (defmethod compute-object-extents ((sphere sphere) transform)
   (transform-extents (vec -1.0 -1.0 -1.0)
