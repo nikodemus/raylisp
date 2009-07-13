@@ -53,6 +53,25 @@
   (:camera
    *view*))
 
+(defscene test-boxes
+  ;; Sanity check.
+  (:objects
+   *floor*
+   (loop for i from -5 upto 10
+         collect (make-instance 'box
+                                :min +origin+
+                                :max (vec 1.0 1.0 1.0)
+                                :shader *bright-red*
+                                :transform (matrix*
+                                            (translate* (* i 2.0) 1.0 (* i 2.0))
+                                            (rotate* 0.0 (random +pi+) 0.0)
+                                            (rotate* (- (random +pi+)) 0.0 (random +pi+))))))
+  (:lights
+   (make-instance 'point-light
+                  :location (vec -10.0 30.0 -10.0)))
+  (:camera
+   *view*))
+
 (defun xtranslate* (x y z)
   (translate* (float x) (float y) (float z)))
 (defun xscale* (x y z)

@@ -92,6 +92,11 @@ they are EQUAL."
         (t
          (equal x y))))
 
+(declaim (inline =~))
+(defun =~ (x y)
+  (declare (single-float x y))
+  (<= (- epsilon) (- x y) epsilon))
+
 (defmacro let-values (bindings &body forms)
   "MULTIPLE-VALUE-BIND equivalent for multiple bindings."
   (labels ((rec (binds)
