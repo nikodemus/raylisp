@@ -271,7 +271,7 @@
                   :transform (scale (@ 3 0.5 0.5))
                   :shader
                   (make-instance
-                   'gradient
+                   'gradient-shader
                    :start (make-instance 'solid-shader :color blue)
                    :end (make-instance 'solid-shader :color green)
                    :axis 0

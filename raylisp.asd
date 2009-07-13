@@ -27,6 +27,7 @@
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "flat")
+                         (:file "gradient")
                          (:file "marble")
                          (:file "phong")
                          (:file "raytrace")
