@@ -27,6 +27,7 @@
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "checker")
+                         (:file "composite")
                          (:file "flat")
                          (:file "gradient")
                          (:file "marble")

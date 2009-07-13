@@ -291,7 +291,7 @@
    (make-instance 'sphere
                   :shader
                   (make-instance
-                   'composite
+                   'composite-shader
                    :shaders
                    (list
                     (make-instance 'raytrace-shader
@@ -466,7 +466,7 @@
 
 (defvar *test-6-shader*
   (make-instance
-   'composite
+   'composite-shader
    :shaders
    (list
     (make-instance 'raytrace-shader
@@ -781,7 +781,7 @@
                   :normal (v -0.5 0 -1)
                   :location (v 3 0 3)
                   :shader
-                  (make-instance 'composite
+                  (make-instance 'composite-shader
                                  :shaders
                                  (list
                                   (make-instance 'raytrace-shader
@@ -795,7 +795,7 @@
                   :location (v -0.5 3 -4)
                   :shader
                   (make-instance
-                   'composite
+                   'composite-shader
                    :shaders
                    (list
                     (make-instance 'raytrace-shader

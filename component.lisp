@@ -126,23 +126,3 @@
         (declare (dynamic-extent v))
         (%vec-lerp v start-color end-color (clamp noise 0.0 1.0))))))
 
-;;;## Composite Shader
-;;;
-;;; Combines arbitrary shaders
-
-(defclass composite (shader)
-  ((shaders :initarg :shaders :accessor shaders-of)))
-
-(defmethod compute-shader-function ((shader composite) object scene transform)
-  (let* ((functions (mapcar (lambda (part)
-                              (the function (compile-shader part object scene transform)))
-			    (shaders-of shader)))
-	 (count (float (length functions))))
-    (sb-int:named-lambda shade-composite (obj point normal dot ray counters)
-      (declare (optimize speed))
-      (let ((result (alloc-vec)))
-        (dolist (fun functions)
-          (declare (function fun))
-          (%vec+ result result
-                 (funcall fun obj point normal dot ray counters)))
-        (%vec/ result result count)))))
