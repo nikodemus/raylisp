@@ -2,9 +2,9 @@
 
 (defclass sphere (scene-object)
   ((radius
-    :initform (find-default :radius 'float) :initarg :radius :reader radius-of)
+    :initform 1.0 :initarg :radius :reader radius-of)
    (location
-    :initform (find-default :location 'vec) :initarg :location
+    :initform +origin+ :initarg :location
     :reader location-of)))
 
 (defun sphere-matrix (sphere)

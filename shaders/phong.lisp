@@ -2,7 +2,7 @@
 
 (in-package :raylisp)
 
-(defclass phong-shader (shader color-mixin ambient diffuse specular)
+(defclass phong-shader (shader color-mixin ambient-shader-mixin diffuse-shader-mixin specular-shader-mixin)
   ((size :initform (find-default :size 'float) :initarg :size
 	 :accessor size-of)))
 

@@ -756,14 +756,14 @@
                                            :location (@ 0 -1 0)
                                            :transform (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker-shader
-                                                                  :scale 5
+                                                                  :transform (scale* 5.0 5.0 5.0)
                                                                   :odd (make-instance 'phong-shader :color black)
                                                                   :even (make-instance 'phong-shader :color white :ambient 0.1)))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
                                            :shader (make-instance 'checker-shader
-                                                                  :scale 5
+                                                                  :transform (scale* 5.0 5.0 5.0)
                                                                   :odd (make-instance 'phong-shader :color black)
                                                                   :even (make-instance 'phong-shader :color white :ambient 0.1))))))
   (:lights

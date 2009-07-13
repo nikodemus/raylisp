@@ -2,7 +2,7 @@
 
 (in-package :raylisp)
 
-(defclass raytrace-shader (shader specular transmit)
+(defclass raytrace-shader (shader specular-shader-mixin transmit-shader-mixin)
   ((ior :initform (find-default :ior '(float 0.0)) :initarg :ior :accessor ior-of)))
 
 (declaim (inline weak-ray-p))

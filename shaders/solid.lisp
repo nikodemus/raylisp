@@ -2,7 +2,7 @@
 
 (in-package :raylisp)
 
-(defclass solid-shader (shader color-mixin ambient diffuse)
+(defclass solid-shader (shader color-mixin ambient-shader-mixin diffuse-shader-mixin)
   ())
 
 (defmethod compute-shader-function ((shader solid-shader) object scene transform)

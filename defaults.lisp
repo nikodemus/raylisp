@@ -13,10 +13,9 @@
 	:ambient 0.3
 	:ambient-light white
 	:background-color black
-	:color white
+        :diffuse 0.9
 	:depth-limit 5
 	:ior 1.0
-	:location +origin+
 	:radius 1.0
 	:shader nil
 	:size 40.0

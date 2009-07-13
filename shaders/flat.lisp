@@ -2,7 +2,7 @@
 
 (in-package :raylisp)
 
-(defclass flat-shader (shader color-mixin ambient)
+(defclass flat-shader (shader color-mixin ambient-shader-mixin)
   ())
 
 (defmethod compute-shader-function ((shader flat-shader) object scene transform)
