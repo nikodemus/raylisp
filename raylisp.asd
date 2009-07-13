@@ -27,6 +27,7 @@
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "marble")
+                         (:file "raytrace")
                          (:file "wood")))
    (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))

@@ -294,7 +294,7 @@
                    'composite
                    :shaders
                    (list
-                    (make-instance 'raytrace
+                    (make-instance 'raytrace-shader
                                    :specular 0.1
                                    :transmit 0.9
                                    :ior 1.6)
@@ -469,7 +469,7 @@
    'composite
    :shaders
    (list
-    (make-instance 'raytrace
+    (make-instance 'raytrace-shader
                    :specular 0.1
                    :transmit 0.9
                    :ior 1.6)
@@ -784,7 +784,7 @@
                   (make-instance 'composite
                                  :shaders
                                  (list
-                                  (make-instance 'raytrace
+                                  (make-instance 'raytrace-shader
                                                  :specular 0.95
                                                  :transmit 0.0)
                                   (make-instance 'flat
@@ -798,7 +798,7 @@
                    'composite
                    :shaders
                    (list
-                    (make-instance 'raytrace
+                    (make-instance 'raytrace-shader
                                    :specular 0.1
                                    :transmit 0.9
                                    :ior 1.2)
