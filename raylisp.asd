@@ -17,6 +17,7 @@
    (:module "lights"
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "point-light")
+                         (:file "solar-light")
                          (:file "spotlight")))
    (:module "objects"
             :depends-on ("package" "base" "math" "protocol" "component")
