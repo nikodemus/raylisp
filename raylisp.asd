@@ -14,6 +14,9 @@
    (:file "scene" :depends-on ("kernel" "kd-tree"))
    (:file "protocol" :depends-on ("scene"))
    (:file "component" :depends-on ("protocol"))
+   (:module "lights"
+            :depends-on ("package" "base" "math" "protocol" "component")
+            :components ((:file "point-light")))
    (:module "objects"
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "box")
@@ -26,4 +29,4 @@
    (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("camera"))
-   (:file "tests" :depends-on ("output" "render" "component" "objects" "shaders"))))
+   (:file "tests" :depends-on ("output" "render" "component" "objects" "shaders" "lights"))))
