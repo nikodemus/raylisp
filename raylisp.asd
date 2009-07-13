@@ -22,6 +22,7 @@
    (:module "objects"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "box")
+                         (:file "csg")
                          (:file "plane")
                          (:file "sphere")))
    (:module "shaders"
