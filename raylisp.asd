@@ -26,7 +26,8 @@
                          (:file "sphere")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "component")
-            :components ((:file "flat")
+            :components ((:file "checker")
+                         (:file "flat")
                          (:file "gradient")
                          (:file "marble")
                          (:file "phong")

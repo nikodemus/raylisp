@@ -126,42 +126,6 @@
         (declare (dynamic-extent v))
         (%vec-lerp v start-color end-color (clamp noise 0.0 1.0))))))
 
-;;;## Checker Shader
-;;;
-;;; A checker pattern of two different shaders, ODD and EVEN.
-
-(defclass checker (shader)
-  ((odd :initarg :odd :accessor odd-of)
-   (even :initarg :even :accessor even-of)
-   (scale :initform 1 :initarg :scale :accessor scale-of)))
-
-(defun checkerp (point scale)
-  (declare (type vec point) (float scale)
-           (optimize speed))
-  (macrolet ((dim (n)
-               `(ifloor (+ epsilon (aref point ,n)) scale)))
-    (oddp (+ (dim 0) (dim 1) (dim 2)))))
-
-(defmethod compute-shader-function ((shader checker) object scene transform)
-  (let* ((t1 (matrix* transform (transform-of shader)))
-         (inverse (inverse-matrix (matrix* t1 (transform-of object))))
-         (odd (compile-shader (odd-of shader) object scene t1))
-         (even (compile-shader (even-of shader) object scene t1))
-         (scale (float (scale-of shader))))
-    (sb-int:named-lambda shade-checher (obj point normal dot ray counters)
-      (declare (optimize speed))
-      (let ((p2 (transform-point point inverse)))
-        (declare (dynamic-extent p2))
-        (funcall (if (checkerp p2 scale)
-                     odd
-                     even)
-                 obj
-                 point
-                 normal
-                 dot
-                 ray
-                 counters)))))
-
 ;;;## Composite Shader
 ;;;
 ;;; Combines arbitrary shaders

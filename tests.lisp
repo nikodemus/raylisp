@@ -4,7 +4,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (let* ((chessboard
-          (make-instance 'checker
+          (make-instance 'checker-shader
                          :odd
                          (make-instance 'phong-shader :color black)
                          :even
@@ -632,7 +632,7 @@
     'plane
     :location (@ 0 -1 0)
     :shader
-    (make-instance 'checker
+    (make-instance 'checker-shader
                    :odd
                    (make-instance 'phong-shader :color black)
                    :even
@@ -675,7 +675,7 @@
    (make-instance 'plane
                   :normal x-axis
                   :location (@ -1 0 0)
-                  :shader (make-instance 'checker
+                  :shader (make-instance 'checker-shader
                                          :odd (make-instance 'phong-shader :color black)
                                          :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
@@ -691,7 +691,7 @@
    (make-instance 'plane
                   :normal y-axis
                   :location (@ 0 -1 0)
-                  :shader (make-instance 'checker
+                  :shader (make-instance 'checker-shader
                                          :odd (make-instance 'phong-shader :color black)
                                          :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
@@ -707,7 +707,7 @@
    (make-instance 'plane
                   :normal z-axis
                   :location (@ 0 0 -1)
-                  :shader (make-instance 'checker
+                  :shader (make-instance 'checker-shader
                                          :odd (make-instance 'phong-shader :color black)
                                          :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
@@ -726,7 +726,7 @@
                                        (rotate-around z-axis 1.5)))
    (make-instance 'plane
                   :location (@ 0 -1 0)
-                  :shader (make-instance 'checker
+                  :shader (make-instance 'checker-shader
                                          :odd (make-instance 'phong-shader :color black)
                                          :even (make-instance 'phong-shader :color white :ambient 0.1))))
   (:lights
@@ -755,14 +755,14 @@
                                            :normal (v 0 1 0)
                                            :location (@ 0 -1 0)
                                            :transform (rotate-around z-axis (/ +pi+ -4))
-                                           :shader (make-instance 'checker
+                                           :shader (make-instance 'checker-shader
                                                                   :scale 5
                                                                   :odd (make-instance 'phong-shader :color black)
                                                                   :even (make-instance 'phong-shader :color white :ambient 0.1)))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
-                                           :shader (make-instance 'checker
+                                           :shader (make-instance 'checker-shader
                                                                   :scale 5
                                                                   :odd (make-instance 'phong-shader :color black)
                                                                   :even (make-instance 'phong-shader :color white :ambient 0.1))))))
@@ -856,11 +856,11 @@
    (make-instance 'plane
                   :location (v 0 0.1 0)
                   :shader
-                  (make-instance 'checker
+                  (make-instance 'checker-shader
                                  :transform (scale* 2.0 2.0 2.0)
                                  :odd (make-instance 'phong-shader :color black)
                                  :even
-                                 (make-instance 'checker
+                                 (make-instance 'checker-shader
                                                 :odd (make-instance 'phong-shader :color black)
                                                 :even (make-instance 'phong-shader :color white)
                                                 :transform (matrix*
