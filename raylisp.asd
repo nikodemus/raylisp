@@ -17,6 +17,7 @@
    (:module "objects"
             :depends-on ("package" "base" "math" "protocol" "component")
             :components ((:file "box")
+                         (:file "plane")
                          (:file "sphere")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "component")
