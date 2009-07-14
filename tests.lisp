@@ -99,6 +99,18 @@
 
 (defscene test-cylinder
   (:objects
+   (make-instance 'plane
+                  :location (v 0.0 -8.0 0.0)
+                  :shader *chessboard*)
+   (make-instance 'cylinder
+                  :axis x-axis
+                  :transform (translate* 0.0 -5.0 0.0)
+                  :shader (make-instance 'phong-shader :color yellow))
+   (make-instance 'cylinder
+                  :start (v 0 5 -4)
+                  :start-cap t
+                  :start-cap-shader *bright-green*
+                  :shader (make-instance 'phong-shader :color purple))
    (make-instance 'cylinder
                   :start (v 4 0 0)
                   :end (v 4 -2 10)
