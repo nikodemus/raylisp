@@ -65,3 +65,9 @@
          (let ((p (transform-point point normal-matrix)))
            (declare (optimize speed))
            (%normalize p p)))))))
+
+(defmethod compute-object-extents ((cylinder cylinder) transform)
+  (multiple-value-bind (matrix length) (cylinder-matrix-and-length cylinder)
+    (transform-extents (vec -1.0 -1.0 0.0)
+                       (vec 1.0 1.0 length)
+                       (matrix* transform matrix))))
