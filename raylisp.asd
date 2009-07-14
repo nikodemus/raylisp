@@ -11,9 +11,10 @@
    (:file "statistics" :depends-on ("base"))
    (:file "kernel" :depends-on ("defaults" "math" "statistics"))
    (:file "kd-tree" :depends-on ("kernel"))
-   (:file "scene" :depends-on ("kernel" "kd-tree"))
+   (:file "mixins" :depends-on ("defaults"))
+   (:file "scene" :depends-on ("kernel" "kd-tree" "mixins"))
    (:file "protocol" :depends-on ("scene"))
-   (:file "mixins" :depends-on ("protocol"))
+   (:file "pattern" :depends-on ("mixins"))
    (:module "cameras"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "orthogonal")
@@ -26,11 +27,14 @@
                          (:file "spotlight")))
    (:module "objects"
             :depends-on ("package" "base" "math" "protocol" "mixins")
-            :components ((:file "box")
-                         (:file "csg")
+            :components ((:file "csg")
+                         (:file "box" :depends-on ("csg"))
                          (:file "cylinder")
-                         (:file "plane")
-                         (:file "sphere")))
+                         (:file "plane" :depends-on ("csg"))
+                         (:file "sphere" :depends-on ("csg"))))
+   (:module "patterns"
+            :depends-on ("package" "base" "math" "protocol" "mixins")
+            :components ((:file "gradient")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "bump")
@@ -46,4 +50,5 @@
                          (:file "wood")))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("protocol"))
-   (:file "tests" :depends-on ("output" "render" "objects" "shaders" "lights" "cameras"))))
+   (:file "tests" :depends-on ("output" "render" "objects" "shaders" "lights" "cameras"
+                                        "patterns"))))

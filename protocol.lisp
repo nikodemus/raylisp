@@ -25,7 +25,8 @@
       (make-compiled-object
        :intersection intersection
        :normal normal
-       :shader (compile-shader (shader-of object) object scene transform)
+       :shader (compile-shader (shader-of object) object scene
+                               (matrix* transform (transform-of object)))
        :min min :max max
        :name (name-of object)))))
 
@@ -105,13 +106,9 @@
                                         &optional))
                 compile-shader))
 (defun compile-shader (shader object scene transform)
-  (compute-shader-function shader object scene transform))
-
-(defmethod compute-shader-function ((null null) object scene transform)
-  (constantly black))
-
-(defgeneric shader-weight (shader)
-  (:method-combination +))
+  (if shader
+      (compute-shader-function shader object scene (matrix* transform (transform-of shader)))
+      (constantly black)))
 
 (declaim (inline coefficient))
 (defun coefficient (value shader)
@@ -206,84 +203,3 @@
                  :right (normalize (right-of camera))
                  :direction (direction-of camera)
                  :location (location-of camera)))
-
-;;;; COLORS AND PATTERNS
-;;;;
-;;;; FIXME: Instead of MAKE-PATTERN taking a function as the first argument,
-;;;; it should take a "description":
-;;;;
-;;;; eg. (make-pattern `(gradient :transform (rotate* 0.0 ,rot 0.0))
-;;;;                   `((0.0 ,black)
-;;;;                     (1.0 ,white)))
-;;;; ...maybe.
-;;;;
-;;;; In any case, the pattern should be responsible for applying any transformations
-;;;; as well.
-;;;;
-;;;; It might also be worthwhie to have a macro
-;;;;
-;;;; (with-color-function (color pattern-or-color) ...body..)
-;;;;
-;;;; which expands into
-;;;;
-;;;; (ecase pattern-or-color
-;;;;  (vec (flet (((color (point) pattern-or-color)) ...body...)))
-;;;;  (pattern (let ((f (compute-color-function pattern-or-color))) (flet ((color (point) (funcall f))) ...body...))))
-;;;;
-;;;; so that solid colors don't pay extra.
-
-(defstruct pattern
-  (function (required-argument :function) :type (function (vec) single-float))
-  (map (required-argument :map) :type list))
-
-(defgeneric compute-color-function (color brightness transform))
-
-(defmethod compute-color-function ((color #.(class-of (alloc-vec))) bightness transform)
-  (constantly color))
-
-(defmethod compute-color-function ((pattern pattern) brightness transform)
-  (let* ((pattern-function (pattern-function pattern))
-         (inverse (inverse-matrix transform))
-         (map (pattern-map pattern))
-         (map-size (length map))
-         (colors (make-array (length map)))
-         (values (make-array (length map) :element-type 'single-float))
-         (last -1.0)
-         (p 0))
-    (unless map
-      (error "Pattern's map is empty."))
-    ;; Build the map and verify it.
-    (dolist (elt map)
-      (destructuring-bind (value color) elt
-        (cond ((and (= p 0) (/= 0.0 value))
-               (error "Pattern's map does not start at 0.0:~%  ~S" map))
-              ((and (= p (1- map-size)) (/= 1.0 value))
-               (error "Pattern's map does not end at 1.0:~%  ~S" map))
-              ((>= last value)
-               (error "Pattern's map is not strictly increasing:~%  ~S" map)))
-        (setf (aref values p) value
-              (aref colors p) (vec* color brightness)
-              last value)
-        (incf p)))
-    (sb-int:named-lambda color-function (point)
-      (declare (optimize speed))
-      (block color-function
-        (let* ((point2 (transform-point point inverse))
-               (value (funcall pattern-function point2))
-               (tmp 0.0))
-          (declare (dynamic-extent point2) (single-float value tmp))
-          ;; FIXME: Linear search is not so good with big maps!
-          (let* ((index (loop for i from 0 below map-size
-                              do (let ((this (aref values i)))
-                                   (cond ((= value this)
-                                          ;; Exact hit, no need to compute anything else.
-                                          (return-from color-function (aref colors i)))
-                                         ((< tmp value this)
-                                          (setf tmp (- 1.0 (/ (- this value) (- this tmp))))
-                                          (return i))
-                                         (t
-                                          (setf tmp this)))))))
-            (vec-lerp (aref colors (- index 1)) (aref colors index) tmp)))))))
-
-(defun gradient-pattern (point)
-  (imod (* (aref point 0) 0.3) 1.0))

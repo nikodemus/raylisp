@@ -5,10 +5,9 @@
    (end :initarg :end :reader end-of)))
 
 (defmethod compute-shader-function ((shader wood-shader) object scene transform)
-  (let* ((matrix (matrix* transform (transform-of shader)))
-         (start (compile-shader (start-of shader) object scene matrix))
-         (end (compile-shader (end-of shader) object scene matrix))
-         (inverse (inverse-matrix (matrix* transform (transform-of object) (transform-of shader)))))
+  (let ((start (compile-shader (start-of shader) object scene transform))
+        (end (compile-shader (end-of shader) object scene transform))
+        (inverse (inverse-matrix transform)))
     (declare (optimize speed))
     (lambda (obj point normal n.d ray counters)
       (let* ((p (transform-point point inverse))

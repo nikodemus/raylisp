@@ -113,11 +113,6 @@
 		  (scene-lights scene))))
   scene)
 
-(defclass transform-mixin ()
-  ((transform
-    :initform (identity-matrix) :initarg :transform
-    :accessor transform-of)))
-
 ;;;## Shaders
 ;;;
 ;;; As a convenience feature NIL is also accepted as a shader (representing
@@ -139,12 +134,6 @@
     :initarg :name
     :initform nil
     :accessor name-of)))
-
-(defmethod transform-of :around ((object scene-object))
-  (let ((transform (call-next-method)))
-    (etypecase transform
-      (cons (apply #'matrix* (reverse transform)))
-      ((or null matrix) transform))))
 
 (defstruct (compiled-object (:conc-name object-))
   (intersection (required-argument :intersection)

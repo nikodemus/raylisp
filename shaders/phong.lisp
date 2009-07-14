@@ -9,10 +9,11 @@
 (defmethod compute-shader-function ((shader phong-shader) object scene transform)
   (let* ((ambient-term (vec* (scene-ambient-light scene) (ambient-of shader)))
          (color-function
-          (compute-color-function (color-of shader) (diffuse-of shader) transform))
+          (compute-color-function (color-of shader) transform))
+         (diffuse (diffuse-of shader))
 	 (specular (specular-of shader))
 	 (size (size-of shader)))
-    (declare (type float specular)
+    (declare (type single-float specular diffuse)
              (type (single-float (0.0)) size)
              (type vec ambient-term)
              (type function color-function))
@@ -39,7 +40,8 @@
                     (macrolet
                         ((dim (n)
                            `(incf (aref result ,n)
-                                  (* (aref incident ,n) (+ (* (aref local-color ,n) l.n) s-co)))))
+                                  (* (aref incident ,n)
+                                     (+ (* (aref local-color ,n) diffuse l.n) s-co)))))
                       (dim 0)
                       (dim 1)
                       (dim 2))))))))

@@ -4,6 +4,17 @@
 ;;;
 ;;; Used by shaders, lights, and objects.
 
+(defclass transform-mixin ()
+  ((%transform
+    :initform (identity-matrix)
+    :initarg :transform)))
+
+(defmethod transform-of ((obj transform-mixin))
+  (let ((transform (slot-value obj '%transform)))
+    (etypecase transform
+      (cons (apply #'matrix* (reverse transform)))
+      (matrix transform))))
+
 (defclass color-mixin ()
   ((color
     :initform white
@@ -24,6 +35,9 @@
 ;;;## Shader Mixins
 ;;;
 ;;; Provide slots and SHADER-WEIGHT methods for the slots.
+
+(defgeneric shader-weight (shader)
+  (:method-combination +))
 
 (defclass specular-shader-mixin ()
   ((specular

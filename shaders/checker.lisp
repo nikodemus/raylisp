@@ -14,10 +14,9 @@
     (oddp (+ (dim 0) (dim 1) (dim 2)))))
 
 (defmethod compute-shader-function ((shader checker-shader) object scene transform)
-  (let* ((t1 (matrix* transform (transform-of shader)))
-         (inverse (inverse-matrix (matrix* t1 (transform-of object))))
-         (odd (compile-shader (odd-of shader) object scene t1))
-         (even (compile-shader (even-of shader) object scene t1)))
+  (let* ((inverse (inverse-matrix transform))
+         (odd (compile-shader (odd-of shader) object scene transform))
+         (even (compile-shader (even-of shader) object scene transform)))
     (sb-int:named-lambda shade-checher (obj point normal dot ray counters)
       (declare (optimize speed))
       (let ((p2 (transform-point point inverse)))
