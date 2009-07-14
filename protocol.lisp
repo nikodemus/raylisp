@@ -139,14 +139,20 @@
             (%shade n2))
           (%shade normal)))))
 
+;;;; CAMERA
+
+(defclass camera (name-mixin)
+  ((location :accessor location-of)
+   (direction :accessor direction-of)
+   (up :accessor up-of)
+   (right :accessor right-of)))
+
 (defmethod print-object ((camera camera) stream)
   (print-unreadable-object (camera stream :type t)
     (format stream "loc: ~S dir: ~S right: ~S up: ~S"
             (location-of camera) (direction-of camera)
             (right-of camera) (up-of camera)))
   camera)
-
-;;;; CAMERA
 
 (defgeneric compute-camera-function (camera))
 
@@ -192,7 +198,9 @@
         (right-of camera) right
         (up-of camera) up))
 
-(defun normalize-camera (camera width height)
+(defgeneric normalize-camera (camera width height))
+
+(defmethod normalize-camera ((camera camera) width height)
   (let ((up (normalize (up-of camera)))
         (right (normalize (right-of camera)))
         (image-ratio (float (/ width height))))

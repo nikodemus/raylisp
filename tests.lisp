@@ -68,6 +68,20 @@
                   :location (v 20 30 -40)
                   :look-at +origin+)))
 
+(defscene test-panoramic
+  (:objects
+   *floor*
+   (make-instance 'sphere
+                  :radius 2.0
+                  :location (v 0 2 0)
+                  :shader *bright-red*))
+  (:lights
+   *lamp*)
+  (:camera
+   (make-instance 'panoramic-camera
+                  :location (v 5 2 -4)
+                  :look-at (v 0 2 0))))
+
 (defscene test-bumps
   (:objects
    *floor*

@@ -61,13 +61,6 @@
     Aka cheap caustics.
 *** TODO Turbulence shader
 *** TODO Variant reflection
-*** TODO Faked surface normals
-    Needs a noise function that returns a vector for a point in space.
-    At least I can't figure out how to do this neatly without one,
-    but looking up "Bump Shading for Volume Textures" migth be worth
-    it -- though it is behind IEEE gates. :/
-    A simple way to implement this would be just to have three
-    different seeds, maybe?
 *** TODO Light groups
     Lights illuminating only some objects
 *** TODO Cylinder
@@ -83,6 +76,8 @@
 * TODO CAMERAS
 *** TODO Fisheye camera
 *** TODO Panorama camera
+***** TODO Figure out if it needs to be normalized differently
+      The sideways foreshortening of looks odd, and doesn't look right.
 *** TODO Focal blur
 * TODO MISCELLANY
 *** Shearing transformations
