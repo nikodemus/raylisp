@@ -10,7 +10,7 @@
 
 (defparameter *default-values*
   (list :adaptive-limit 0.05
-	:ambient 0.3
+	:ambient 0.05
 	:ambient-light white
 	:background-color black
         :diffuse 0.9
@@ -19,7 +19,7 @@
 	:radius 1.0
 	:shader nil
 	:size 40.0
-	:specular 0.2
+	:specular 0.05
 	:transform nil
 	:transmit 0.0
 	:type nil))

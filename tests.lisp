@@ -7,13 +7,13 @@
           (make-instance
            'checker-shader
            :odd (make-instance 'phong-shader :color black)
-           :even (make-instance 'phong-shader :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))
+           :even (make-instance 'phong-shader :color white)))
          (bright-red
-          (make-instance 'phong-shader :color red :diffuse 1.0 :specular 1.0 :ambient 0.5))
+          (make-instance 'phong-shader :color red))
          (bright-blue
-          (make-instance 'phong-shader :color blue :diffuse 1.0 :specular 1.0 :ambient 0.5))
+          (make-instance 'phong-shader :color blue))
          (bright-green
-          (make-instance 'phong-shader :color green :diffuse 1.0 :specular 1.0 :ambient 0.5))
+          (make-instance 'phong-shader :color green))
          (floor
           (make-instance 'plane :shader chessboard))
          (lamp
@@ -336,11 +336,11 @@
    *floor*
    (make-instance 'csg
                   :type 'intersection
-                  :objects (list (make-instance 'sphere 
+                  :objects (list (make-instance 'sphere
                                                 :location (@ 1.5 -0.1 0)
                                                 :radius 4.0
                                                 :shader *bright-red*)
-                                 (make-instance 'sphere 
+                                 (make-instance 'sphere
                                                 :location (@ -1.5 -0.1 0)
                                                 :radius 4.0
                                                 :shader *bright-blue*))))
