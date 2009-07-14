@@ -56,6 +56,18 @@
   (:camera
    *view*))
 
+(defscene test-orthogonal
+  (:objects
+   *floor*
+   (make-instance 'sphere
+                  :shader *bright-red*))
+  (:lights
+   *lamp*)
+  (:camera
+   (make-instance 'orthogonal-camera
+                  :location (v 20 30 -40)
+                  :look-at +origin+)))
+
 (defscene test-cylinder
   (:objects
    (make-instance 'cylinder

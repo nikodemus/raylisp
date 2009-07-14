@@ -20,3 +20,4 @@
           (declare (dynamic-extent dir))
           (with-ray (ray :origin location :direction dir)
             (funcall fun ray)))))))
+

@@ -16,7 +16,8 @@
    (:file "mixins" :depends-on ("protocol"))
    (:module "cameras"
             :depends-on ("package" "base" "math" "protocol" "mixins")
-            :components ((:file "pinhole")))
+            :components ((:file "pinhole")
+                         (:file "orthogonal")))
    (:module "lights"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "point-light")
