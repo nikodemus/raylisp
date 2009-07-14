@@ -62,9 +62,16 @@
 *** TODO Turbulence shader
 *** TODO Variant reflection
 *** TODO Faked surface normals
+    Needs a noise function that returns a vector for a point in space.
+    At least I can't figure out how to do this neatly without one,
+    but looking up "Bump Shading for Volume Textures" migth be worth
+    it -- though it is behind IEEE gates. :/
 *** TODO Light groups
     Lights illuminating only some objects
 *** TODO Cylinder
+***** TODO endcap (both or just one)
+***** TODO infinite version
+***** TODO CSG
 *** TODO Torus
 *** TODO Height fields
 *** TODO Polygons

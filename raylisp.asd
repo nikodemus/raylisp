@@ -14,6 +14,9 @@
    (:file "scene" :depends-on ("kernel" "kd-tree"))
    (:file "protocol" :depends-on ("scene"))
    (:file "mixins" :depends-on ("protocol"))
+   (:module "cameras"
+            :depends-on ("package" "base" "math" "protocol" "mixins")
+            :components ((:file "pinhole")))
    (:module "lights"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "point-light")
@@ -37,7 +40,6 @@
                          (:file "raytrace")
                          (:file "solid")
                          (:file "wood")))
-   (:file "camera" :depends-on ("protocol"))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("camera"))
    (:file "tests" :depends-on ("output" "render" "objects" "shaders" "lights"))))

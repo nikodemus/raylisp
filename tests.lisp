@@ -22,17 +22,17 @@
          (sun
           (make-instance 'solar-light :direction (@ 1 1 0) :color white))
          (view
-          (make-instance 'pinhole
+          (make-instance 'pinhole-camera
                          :location (@ 0 18 -30)
                          :look-at +origin+
                          :focal-length 4.0))
          (floor-view
-          (make-instance 'pinhole
+          (make-instance 'pinhole-camera
                          :location (@ 0 0 -30)
                          :look-at +origin+
                          :focal-length 4.0))
          (top-view
-          (make-instance 'pinhole
+          (make-instance 'pinhole-camera
                          :location (@ 0 18 0)
                          :look-at +origin+
                          :focal-length 4.0)))
@@ -79,7 +79,7 @@
   (:lights
    *lamp*)
   (:camera
-   (make-instance 'pinhole
+   (make-instance 'pinhole-camera
                   :location (v 5.0 5.0 -9.0)
                   :look-at +origin+)))
 
@@ -186,7 +186,7 @@
    (make-instance 'point-light
                   :location (vec -10.0 30.0 -20.0)))
   (:camera
-   (make-instance 'pinhole
+   (make-instance 'pinhole-camera
                   :look-at +origin+
                   :location (vec/ (vec -3.5 5.0 -5.0) 2.0))))
 
@@ -311,7 +311,7 @@
                   :location (@ 10 5 -20)))
   (:ambient-light (@ 0.1 0.1 0.1))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 3 -20)
                      :look-at +origin+
                      :focal-length 4.0)))
@@ -345,7 +345,7 @@
   (:adaptive-limit 0.01)
   (:depth-limit 12)
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 0.5 -4)
                      :look-at +origin+
                      :focal-length 3.0)))
@@ -377,7 +377,7 @@
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 1.5 -10)
                      :look-at +origin+
                      :focal-length 3.0)))
@@ -404,7 +404,7 @@
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 1.5 -10)
                      :look-at +origin+
                      :focal-length 3.0)))
@@ -435,7 +435,7 @@
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 8 6.5 -2)
                      :look-at +origin+
                      :focal-length 3.0)))
@@ -489,7 +489,7 @@
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 100 30)
                      :look-at +origin+
                      :focal-length 3.0)))
@@ -678,7 +678,7 @@
   (:adaptive-limit 0.01)
   (:depth-limit 16)
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 0.5 -4)
                      :look-at +origin+
                      :focal-length 3.0)))
@@ -695,7 +695,7 @@
    (make-instance 'solar-light :direction (v -1 1 -1)))
   (:ambient-light (@ 0.1 0.1 0.1))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 5 -5)
                      :look-at +origin+)))
 
@@ -711,7 +711,7 @@
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 10 0 0)
                      :look-at +origin+)))
 
@@ -727,7 +727,7 @@
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 10 0)
                      :look-at +origin+)))
 
@@ -743,7 +743,7 @@
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 0 10)
                      :look-at +origin+)))
 
@@ -762,7 +762,7 @@
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 1 10 -10)
                      :look-at +origin+)))
 
@@ -799,7 +799,7 @@
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
-      (make-instance 'pinhole
+      (make-instance 'pinhole-camera
                      :location (@ 0 20 30)
                      :look-at (@ 0 -1 0)
                      :focal-length 3.0)))

@@ -27,7 +27,7 @@
   (when normalize-camera
     (setf camera (normalize-camera camera width height)))
   (let* ((scene (compile-scene scene))
-	 (camera (compile-camera camera))
+	 (camera (compute-camera-function camera))
          (counters (make-counters))
          (start (get-internal-run-time))
          (result))
@@ -51,7 +51,7 @@
   (when normalize-camera
     (setf camera (normalize-camera camera width height)))
   (let* ((scene (compile-scene scene))
-	 (camera (compile-camera camera))
+	 (camera (compute-camera-function camera))
 	 (note-interval (ceiling height 80))
          (callback (cond ((functionp callback)
                           callback)
