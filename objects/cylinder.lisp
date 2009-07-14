@@ -7,6 +7,18 @@
    (end :initform (required-argument :end)
         :initarg :end
         :reader end-of)
+   (start-cap :initform nil
+              :initarg :start-cap
+              :reader start-cap-p)
+   (end-cap :initform nil
+            :initarg :end-cap
+              :reader end-cap-p)
+   (start-cap-shader :initform nil
+                     :initarg :start-cap-shader
+                     :reader start-cap-shader)
+   (end-cap-shader :initform nil
+                     :initarg :end-cap-shader
+                     :reader end-cap-shader)
    (radius :initform 1.0
            :initarg :radius
            :reader radius-of)))
@@ -33,33 +45,77 @@
            ;; into the space where the z-aligned cylinder lives. Then
            ;; we zero out the Z coordinate, which leaves us with just
            ;; the X and Y which are the normal -- the use the adjunct
-           ;; to return to real space.
+           ;; to return to real space. End caps get their normals from
+           ;; the plane-objects below.
            (normal-matrix (matrix* (transpose-matrix inverse)
                                    (scale* 1.0 1.0 0.0)
-                                   inverse)))
+                                   inverse))
+           (shader (shader-of cylinder))
+           ;; FIXME: We should make it possible to compile these without the
+           ;; need for intersection functions.
+           (start-cap (when (start-cap-p cylinder)
+                        (compile-scene-object
+                         (make-instance 'plane
+                                        :normal #.(vec 0.0 0.0 -1.0)
+                                        :location +origin+
+                                        :transform matrix
+                                        :shader (or (start-cap-shader cylinder) shader))
+                         scene transform)))
+           (end-cap (when (end-cap-p cylinder)
+                      (compile-scene-object
+                       (make-instance 'plane
+                                      :normal z-axis
+                                      :location (vec 0.0 0.0 length)
+                                      :transform matrix
+                                      :shader (or (end-cap-shader cylinder) shader))
+                       scene transform))))
       (list
        :intersection
        (sb-int:named-lambda cylinder-intersection (ray)
          (declare (optimize speed))
-         (let* ((o (transform-point (ray-origin ray) inverse))
-                (d (transform-direction (ray-direction ray) inverse))
-                (ox (aref o 0))
-                (oy (aref o 1))
-                (dx (aref d 0))
-                (dy (aref d 1)))
-           (declare (dynamic-extent o d))
-           (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
-                                                        (+ (* 2.0 ox dx) (* 2.0 oy dy))
-                                                        (+ (square ox) (square oy) -1.0))
-             (unless (= t1 -1.0)
-               (cond ((and (< t1 (ray-extent ray))
-                           (< 0.0 (+ (aref o 2) (* t1 (aref d 2))) length))
-                      (setf (ray-extent ray) t1)
-                      t)
-                     ((and (< 0.0 t2 (ray-extent ray))
-                           (< 0.0 (+ (aref o 2) (* t2 (aref d 2))) length))
-                      (setf (ray-extent ray) t2)
-                      t))))))
+         (block cylinder-intersection
+           (let* ((o (transform-point (ray-origin ray) inverse))
+                  (d (transform-direction (ray-direction ray) inverse))
+                  (ox (aref o 0))
+                  (oy (aref o 1))
+                  (dx (aref d 0))
+                  (dy (aref d 1)))
+             (declare (dynamic-extent o d))
+             (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
+                                                          (+ (* 2.0 ox dx) (* 2.0 oy dy))
+                                                          (+ (square ox) (square oy) -1.0))
+               (unless (= t1 -1.0)
+                 (let* ((ext (ray-extent ray))
+                        (oz (aref o 2))
+                        (dz (aref d 2))
+                        (z1 (+ oz (* t1 dz)))
+                        (z2 (+ oz (* t2 dz)))
+                        (t0 (cond ((and (< t1 ext) (< 0.0 z1 length))
+                                   t1)
+                                  ((and (< 0.0 t2 ext) (< 0.0 z2 length))
+                                   t2)
+                                  (t
+                                   -1.0))))
+                   (unless (= t2 -1.0)
+                     ;; May have hit a cap.
+                     (when start-cap
+                       (let ((t3 (/ (- oz) dz)))
+                         (when (and (< epsilon t3 ext) (or (< t3 t0) (= t0 -1.0))
+                                    (or (< z1 0.0 z2) (< z2 0.0 z1)))
+                           ;; Two intersections, one on both side of the start cap:
+                           ;; real intersection is on the cap.
+                           (setf (ray-extent ray) t3)
+                           (return-from cylinder-intersection (values t start-cap)))))
+                     (when end-cap
+                       (let ((t4 (/ (- length oz) dz)))
+                         (when (and (< epsilon t4 ext) (or (< t4 t0) (= t0 -1.0))
+                                    (or (< z1 0.0 z2) (< z2 0.0 z1)))
+                           ;; Ditto for the end cap.
+                           (setf (ray-extent ray) t4)
+                           (return-from cylinder-intersection (values t end-cap))))))
+                   (unless (= t0 -1.0)
+                     (setf (ray-extent ray) t0)
+                     t)))))))
        :normal
        (lambda (point)
          (let ((p (transform-point point normal-matrix)))

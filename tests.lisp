@@ -101,7 +101,16 @@
   (:objects
    (make-instance 'cylinder
                   :start (v 4 0 0)
-                  :end (v 4 -4 10)
+                  :end (v 4 -2 10)
+                  :end-cap t
+                  :end-cap-shader (make-instance 'solid-shader :color white)
+                  :radius 1.5
+                  :shader *bright-red*)
+   (make-instance 'cylinder
+                  :start (v -6 0 0)
+                  :end (v -6 -2 10)
+                  :start-cap t
+                  :start-cap-shader (make-instance 'solid-shader :color white)
                   :radius 1.5
                   :shader *bright-red*)
    (make-instance 'cylinder

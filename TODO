@@ -7,9 +7,13 @@
 *** TODO Need RAY-MIN in addition to RAY-EXTENT
     Otherwise %FIND-INTERSECTION* can find intersections closer than
     it wants. Or is RAY-ORIGIN good enough?
+*** TODO I think something is still wrong with transformations and CSG.
 * TODO ARCHITECTURE
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO Automated tests
+    In addition to functional unit tests, test-scenes and reference
+    images would be golden, along with some sort of timings.
 *** TODO Sliding color scales
 *** TODO Experiment with colors using generic functions
 *** TODO Prototype-style operations on scene components
@@ -64,7 +68,6 @@
 *** TODO Light groups
     Lights illuminating only some objects
 *** TODO Cylinder
-***** TODO endcap (both or just one)
 ***** TODO infinite version
 ***** TODO CSG
 *** TODO Torus
