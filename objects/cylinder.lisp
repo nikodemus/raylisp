@@ -29,10 +29,18 @@
   (multiple-value-bind (matrix length) (cylinder-matrix-and-length cylinder)
     (declare (single-float length))
     (let* ((inverse (inverse-matrix (matrix* transform matrix)))
-           (adjunct (transpose-matrix inverse)))
+           ;; For normal computation, we first apply the inverse to get
+           ;; into the space where the z-aligned cylinder lives. Then
+           ;; we zero out the Z coordinate, which leaves us with just
+           ;; the X and Y which are the normal -- the use the adjunct
+           ;; to return to real space.
+           (normal-matrix (matrix* (transpose-matrix inverse)
+                                   (scale* 1.0 1.0 0.0)
+                                   inverse)))
       (list
        :intersection
        (sb-int:named-lambda cylinder-intersection (ray)
+         (declare (optimize speed))
          (let* ((o (transform-point (ray-origin ray) inverse))
                 (d (transform-direction (ray-direction ray) inverse))
                 (ox (aref o 0))
@@ -54,10 +62,6 @@
                       t))))))
        :normal
        (lambda (point)
-         (let ((p (transform-point point inverse)))
-           (declare (dynamic-extent p))
-           (setf (aref p 2) 0.0)
-           (let ((n (transform-point p adjunct)))
-             (%normalize n n))))))))
-
-
+         (let ((p (transform-point point normal-matrix)))
+           (declare (optimize speed))
+           (%normalize p p)))))))
