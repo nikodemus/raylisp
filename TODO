@@ -11,6 +11,9 @@
 * TODO ARCHITECTURE
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO Make patterns usable in place of colors
+    (make-instance 'phong-shader :color (make-pattern 'checker black
+    white)) PHONG-SHADER has a proof of concept on this now.
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference
     images would be golden, along with some sort of timings.

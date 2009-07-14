@@ -69,14 +69,15 @@
   (:objects
    (make-instance 'plane
                   :shader
-                  (make-instance
-                   'pattern-shader
-                   :pattern 'gradient-pattern
-                   :map `((0.0 ,(make-instance 'phong-shader :color black))
-                          (0.2 ,(make-instance 'phong-shader :color red))
-                          (0.3 ,(make-instance 'phong-shader :color red))
-                          (0.5 ,(make-instance 'phong-shader :color blue))
-                          (1.0 ,(make-instance 'phong-shader :color white))))))
+                  (make-instance 'phong-shader
+                                 :color
+                                 (make-pattern
+                                  :function #'gradient-pattern
+                                  :map `((0.0 ,black)
+                                         (0.2 ,red)
+                                         (0.3 ,red)
+                                         (0.5 ,blue)
+                                         (1.0 ,white))))))
   (:lights
    *lamp*)
   (:camera
