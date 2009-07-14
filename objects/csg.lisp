@@ -227,3 +227,20 @@ intersections."
           (make-lambda and))
          (difference
           (make-lambda (lambda (x y) (and x (not y))))))))))
+
+(defmethod compute-object-extents ((node csg) transform)
+  (let ((objects (objects-of node)))
+    (multiple-value-bind (min max) (compute-object-extents (pop objects) transform)
+      (when (and min max)
+        (ecase (type-of node)
+          (difference)
+          (intersection
+           (setf min (vec-min min max)
+                 max (vec-max min max))
+           (dolist (obj objects)
+             (multiple-value-bind (min2 max2) (compute-object-extents obj transform)
+               (if (and min2 max2)
+                   (setf min (vec-min min min2 max2)
+                         max (vec-max max min2 max2))
+                   (return-from compute-object-extents nil)))))))
+      (values min max))))
