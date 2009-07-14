@@ -2,6 +2,12 @@
 
 (defclass orthogonal-camera (camera) ())
 
+(defmethod normalize-camera ((camera orthogonal-camera) width height)
+  (let ((ratio (coerce (/ width height) 'single-float))
+        (new (call-next-method)))
+    (setf (slot-value new 'right) (vec* (right-of new) ratio))
+    new))
+
 (defmethod compute-camera-function ((camera orthogonal-camera))
   (let ((dir (normalize (direction-of camera)))
 	(right (right-of camera))

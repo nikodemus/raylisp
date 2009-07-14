@@ -75,9 +75,6 @@
 *** TODO Metallic shaders
 * TODO CAMERAS
 *** TODO Fisheye camera
-*** TODO Panorama camera
-***** TODO Figure out if it needs to be normalized differently
-      The sideways foreshortening of looks odd, and doesn't look right.
 *** TODO Focal blur
 * TODO MISCELLANY
 *** Shearing transformations

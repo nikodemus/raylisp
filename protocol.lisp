@@ -201,11 +201,8 @@
 (defgeneric normalize-camera (camera width height))
 
 (defmethod normalize-camera ((camera camera) width height)
-  (let ((up (normalize (up-of camera)))
-        (right (normalize (right-of camera)))
-        (image-ratio (float (/ width height))))
-    (make-instance (class-of camera)
-                   :up up
-                   :right (vec* right image-ratio)
-                   :direction (direction-of camera)
-                   :location (location-of camera))))
+  (make-instance (class-of camera)
+                 :up (normalize (up-of camera))
+                 :right (normalize (right-of camera))
+                 :direction (direction-of camera)
+                 :location (location-of camera)))

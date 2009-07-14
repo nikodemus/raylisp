@@ -79,7 +79,7 @@
    *lamp*)
   (:camera
    (make-instance 'panoramic-camera
-                  :location (v 5 2 -4)
+                  :location (v 5 3 -4)
                   :look-at (v 0 2 0))))
 
 (defscene test-bumps
