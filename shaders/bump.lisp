@@ -2,10 +2,10 @@
 
 (in-package :raylisp)
 
-(defclass solid-shader (shader color-mixin ambient-shader-mixin diffuse-shader-mixin)
+(defclass bump-shader (shader color-mixin ambient-shader-mixin diffuse-shader-mixin)
   ())
 
-(defmethod compute-shader-function ((shader solid-shader) object scene transform)
+(defmethod compute-shader-function ((shader bump-shader) object scene transform)
   (let* ((color (color-of shader))
          (ambient-color (hadamard-product
                          (vec* (scene-ambient-light scene)
@@ -19,7 +19,10 @@
       (sb-int:named-lambda shade-solid (obj point normal dot ray counters)
         (declare (optimize speed))
         (declare (ignore obj ray))
-	(let ((color ambient-color))
+	(let ((color ambient-color)
+              (noise (vector-dnoise (vec* point 5.0))))
+          (%vec* noise noise 0.2)
+          (setf normal (normalize (vec+ normal noise)))
           ;; FIXME: Is there a way to store the list of lights directly here,
           ;; without going though 2 indirections each time?
 	  (dolist (light (compiled-scene-lights (scene-compiled-scene scene)))
@@ -39,4 +42,3 @@
                                       (* (diffuse-color ,n) l.n)))))
 			  (setf color (vec (dim 0) (dim 1) (dim 2)))))))))))
           color)))))
-

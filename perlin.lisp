@@ -1,12 +1,35 @@
 (in-package :raylisp)
 
 (declaim (ftype (function (vec) (values float &optional)) vector-noise))
+(declaim (ftype (function (vec) (values vec &optional)) vector-dnoise))
 (declaim (ftype (function (vec float float) (values float &optional)) turbulence))
 (declaim (ftype (function (vec sb-int:index float) (values float &optional)) perlin-noise))
 
+(deftype noise-vector ()
+  `(simple-array (unsigned-byte 8) (512)))
 
-(declaim (type (simple-array (unsigned-byte 8) (512)) +perlin-noise-vector+))
-(define-constant +perlin-noise-vector+
+;;; Generate a noise vector from a given seed: the noise vector repeats all values
+;;; from 0 to 255 twice in random order.
+(eval-when (:compile-toplevel :load-toplevel)
+  (defun generate-noise-vector (seed)
+    (let ((*random-state* (sb-kernel::%make-random-state
+                           :state (sb-kernel::init-random-state seed)))
+          (vector (make-array 512 :element-type '(unsigned-byte 8))))
+      ;; Fill the vector with numbers 0-255 twice
+      (dotimes (i 256)
+        (setf (aref vector i) i
+              (aref vector (+ i 256)) i))
+      vector
+      ;; Shuffle it
+      (shuffle vector))))
+
+(declaim (type noise-vector
+               +perlin-noise-vector-0+
+               +perlin-noise-vector-1+
+               +perlin-noise-vector-2+))
+;;; This is the same noise vector Mr. Perlin uses -- generating a random one
+;;; to use instead would be rank heresy!
+(define-constant +perlin-noise-vector-0+
     (coerce '(151 160 137 91 90 15 131 13 201 95 96 53 194 233 7 225
               140 36 103 30 69 142 8 99 37 240 21 10 23 190 6 148 247
               120 234 75 0 26 197 62 94 252 219 203 117 35 11 32 57
@@ -44,6 +67,11 @@
             '(simple-array (unsigned-byte 8) (*)))
   :test #'equalp)
 
+(define-constant +perlin-noise-vector-1+ (generate-noise-vector 1124211)
+  :test #'equalp)
+(define-constant +perlin-noise-vector-2+ (generate-noise-vector 9082143)
+  :test #'equalp)
+
 (locally (declare (optimize speed))
   (labels
      ((lerp (v a b)
@@ -65,10 +93,12 @@
           (if (and (not (zerop rem)) (minusp f))
               (values (1- tru) (1+ rem))
               (values tru rem))))
-      (noise1 (i)
-        (declare (type (integer 0 512) i) (optimize (safety 0)))
-        (aref +perlin-noise-vector+ i))
-      (noise3 (x y z)
+      (noise1 (i noise)
+        (declare (type (integer 0 512) i)
+                 (type (simple-array (unsigned-byte 8) (512)) noise)
+                 (optimize (safety 0)))
+        (aref noise i))
+      (noise3 (x y z noise)
         (declare (float x y z))
         (let-values
             ;; Compute unit cube: CX, CY, CZ, and the relative point
@@ -106,12 +136,12 @@
                     (v (fade y))        ; for each main axis
                     (w (fade z)))
                 (declare (type float u v w))
-                (let* ((A  (+ (noise1 cx) cy))   ; Hash coordinates
-                       (AA (+ (noise1 A) cz))    ; for cube corners
-                       (AB (+ (noise1 (1+ A)) cz))
-                       (B  (+ (noise1 (1+ cx)) cy))
-                       (BA (+ (noise1 B) cz))
-                       (BB (+ (noise1 (1+ B)) cz)))
+                (let* ((A  (+ (noise1 cx noise) cy))   ; Hash coordinates
+                       (AA (+ (noise1 A noise) cz))    ; for cube corners
+                       (AB (+ (noise1 (1+ A) noise) cz))
+                       (B  (+ (noise1 (1+ cx) noise) cy))
+                       (BA (+ (noise1 B noise) cz))
+                       (BB (+ (noise1 (1+ B) noise) cz)))
                   ;; Blend and add results from corners
                   (lerp
                    w
@@ -119,23 +149,23 @@
                     v
                     (lerp
                      u
-                     (grad (noise1 AA) x y z)
-                     (grad (noise1 BA) (- x 1) y z))
+                     (grad (noise1 AA noise) x y z)
+                     (grad (noise1 BA noise) (- x 1) y z))
                     (lerp
                      u
-                     (grad (noise1 AB) x (- y 1) z)
-                     (grad (noise1 BB) (- x 1) (- y 1) z)))
+                     (grad (noise1 AB noise) x (- y 1) z)
+                     (grad (noise1 BB noise) (- x 1) (- y 1) z)))
                    (lerp
                     v
                     (lerp
                      u
-                     (grad (noise1 (1+ AA)) x y (- z 1))
-                     (grad (noise1 (1+ BA)) (- x 1) y (- z 1)))
+                     (grad (noise1 (1+ AA) noise) x y (- z 1))
+                     (grad (noise1 (1+ BA) noise) (- x 1) y (- z 1)))
                     (lerp
                      u
-                     (grad (noise1 (1+ AB)) x (- y 1) (- z 1))
-                     (grad (noise1 (1+ BB)) (- x 1) (- y 1) (- z 1))))))))))))
-   (declare (ftype (function (float float float) (values float &optional)) noise3))
+                     (grad (noise1 (1+ AB) noise) x (- y 1) (- z 1))
+                     (grad (noise1 (1+ BB) noise) (- x 1) (- y 1) (- z 1))))))))))))
+   (declare (ftype (function (float float float noise-vector) (values float &optional)) noise3))
    (declare (inline %floor %truncate))
 
    (defun vector-noise (v)
@@ -145,7 +175,13 @@ implementation (http://mrl.nyu.edu/~perlin/noise). An interesting property --
 not a bug -- of this implementation is that noise *seems* to be 0.0 at each
 point on a unit-cube lattice."
      (with-arrays (v)
-       (noise3 (v 0) (v 1) (v 2))))
+       (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-0+)))
+
+   (defun vector-dnoise (v)
+     (with-arrays (v)
+       (vec (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-0+)
+            (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-1+)
+            (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-2+))))
 
    (defun turbulence (v lo hi)
      "Turbulance function. Based on Ken Perlin's SIGGRAPH 92 course notes."
@@ -159,7 +195,7 @@ point on a unit-cube lattice."
          (labels ((recurse (freq)
                     (declare (type float freq))
                     (cond ((< freq hi)
-                           (setf r (+ r (/ (abs (noise3 x y z)) freq))
+                           (setf r (+ r (/ (abs (noise3 x y z +perlin-noise-vector-0+)) freq))
                                  x (+ x x)
                                  y (+ y y)
                                  z (+ z z))
@@ -186,4 +222,5 @@ point on a unit-cube lattice."
              ((<= n 0) total)
            (declare (type sb-int:index n))
            (declare (float freq ampl))
-           (incf total (* ampl (noise3 (* x freq) (* y freq) (* z freq))))))))))
+           (incf total (* ampl (noise3 (* x freq) (* y freq) (* z freq)
+                                       +perlin-noise-vector-0+)))))))))

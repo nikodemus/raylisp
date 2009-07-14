@@ -66,6 +66,8 @@
     At least I can't figure out how to do this neatly without one,
     but looking up "Bump Shading for Volume Textures" migth be worth
     it -- though it is behind IEEE gates. :/
+    A simple way to implement this would be just to have three
+    different seeds, maybe?
 *** TODO Light groups
     Lights illuminating only some objects
 *** TODO Cylinder

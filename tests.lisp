@@ -68,6 +68,21 @@
                   :location (v 20 30 -40)
                   :look-at +origin+)))
 
+(defscene test-bumps
+  (:objects
+   *floor*
+   (make-instance 'sphere
+                  :location (v 0.0 1.0 0.0)
+                  :shader (make-instance 'bump-shader
+                                         :color red)))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -10 10 -20)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :location (v 3 5 -5)
+                  :focal-length 2.0)))
+
 (defscene test-cylinder
   (:objects
    (make-instance 'cylinder
