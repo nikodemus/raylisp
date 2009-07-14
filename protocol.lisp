@@ -10,31 +10,36 @@
 ;;; bounding protocol if possible.
 ;;;
 
-(defgeneric compute-object-properties (scene-object scene transform))
+(defgeneric compute-object-properties (scene-object scene transform &key shade-only))
 
 (defgeneric compute-object-extents (scene-object transform))
 
 (defmethod compute-object-extents ((object scene-object) transform)
   nil)
 
-(defun compile-scene-object (object scene transform)
+(defun compile-scene-object (object scene transform &key shade-only)
   (destructuring-bind (&key intersection normal)
-      (compute-object-properties object scene transform)
-    (assert (and intersection normal))
-    (multiple-value-bind (min max) (compute-object-extents object transform)
-      (make-compiled-object
-       :intersection intersection
-       :normal normal
-       :shader (compile-shader (shader-of object) object scene
-                               (matrix* transform (transform-of object)))
-       :min min :max max
-       :name (name-of object)))))
+      (compute-object-properties object scene transform :shade-only shade-only)
+    (assert normal)
+    (let ((shader (compile-shader (shader-of object) (or shade-only object) scene
+                                  (matrix* transform (transform-of object)))))
+      (if shade-only
+          (make-shading-object
+           :normal normal
+           :shader shader)
+          (multiple-value-bind (min max) (compute-object-extents object transform)
+            (assert intersection)
+            (make-intersection-object
+             :intersection intersection
+             :normal normal
+             :shader shader
+             :min min :max max
+             :scene-object object))))))
 
 (declaim (inline intersect))
 (defun intersect (object ray counters shadow)
   (multiple-value-bind (hitp x)
       (funcall (object-intersection object) ray)
-    (declare (type boolean hitp) (type (or null compiled-object) x))
     (note-intersection counters shadow hitp)
     (when hitp
       (if shadow
@@ -77,7 +82,6 @@
   (with-arrays (location)
     (let (;; No real light buffers yet: just a single shadow object cache.
 	  (last nil))
-      (declare (type (or null compiled-object) last))
       (lambda (point nlv len counters)
 	(declare (type vec point nlv) (type float len)
 		 (optimize speed))
@@ -101,11 +105,12 @@
 
 (defgeneric compute-shader-function (shader object scene transform))
 
-(declaim (ftype (function (t t t t) (values (function (compiled-object vec vec float ray t)
-                                                  (values vec &optional))
+(declaim (ftype (function (t t t t) (values (function (shader scene-object vec vec float ray t)
+                                                      (values vec &optional))
                                         &optional))
                 compile-shader))
 (defun compile-shader (shader object scene transform)
+  (declare (type scene-object object))
   (if shader
       (compute-shader-function shader object scene (matrix* transform (transform-of shader)))
       (constantly black)))
@@ -124,7 +129,6 @@
 	 (n.d (dot-product normal (ray-direction ray))))
     (flet ((%shade (n)
              (funcall (object-shader object)
-                      object
                       point
                       n
                       n.d

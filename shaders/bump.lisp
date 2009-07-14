@@ -16,9 +16,9 @@
     (declare (type vec color ambient-color diffuse-color))
     (with-arrays (diffuse-color)
       ;; DOT as argument is ignores -- is this correct?
-      (sb-int:named-lambda shade-solid (obj point normal dot ray counters)
+      (sb-int:named-lambda shade-solid (point normal dot ray counters)
         (declare (optimize speed))
-        (declare (ignore obj ray))
+        (declare (ignore ray))
 	(let ((color ambient-color)
               (noise (vector-dnoise (vec* point 5.0))))
           (%vec* noise noise 0.2)

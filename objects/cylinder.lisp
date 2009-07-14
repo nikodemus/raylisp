@@ -66,7 +66,7 @@
                 nil
                 nil))))
 
-(defmethod compute-object-properties ((cylinder cylinder) scene transform)
+(defmethod compute-object-properties ((cylinder cylinder) scene transform &key shade-only)
   (multiple-value-bind (matrix length startp) (cylinder-values cylinder)
     (declare (type (or null single-float) length))
     (let* ((inverse (inverse-matrix (matrix* transform matrix)))
@@ -80,142 +80,141 @@
                                    (scale* 1.0 1.0 0.0)
                                    inverse))
            (shader (shader-of cylinder))
-           ;; FIXME: We should make it possible to compile these without the
-           ;; need for intersection functions.
-           (start-cap (when (and startp (start-cap-p cylinder))
+           (start-cap (when (and (not shade-only) startp (start-cap-p cylinder))
                         (compile-scene-object
                          (make-instance 'plane
                                         :normal #.(vec 0.0 0.0 -1.0)
                                         :location +origin+
                                         :transform matrix
                                         :shader (or (start-cap-shader cylinder) shader))
-                         scene transform)))
-           (end-cap (when (and length (end-cap-p cylinder))
+                         scene transform :shade-only cylinder)))
+           (end-cap (when (and (not shade-only) length (end-cap-p cylinder))
                       (compile-scene-object
                        (make-instance 'plane
                                       :normal z-axis
                                       :location (vec 0.0 0.0 length)
                                       :transform matrix
                                       :shader (or (end-cap-shader cylinder) shader))
-                       scene transform))))
+                       scene transform :shade-only cylinder))))
       (list
        :intersection
        ;; FIXME: We have three versions here that are virtually identical -- not
        ;; good. Either pay the runtime hit and manage with a single version,
        ;; or macroize this.
-       (cond (length
-              ;; Bounded at both ends
-              (sb-int:named-lambda cylinder-intersection (ray)
-                (declare (optimize speed))
-                (block cylinder-intersection
-                  (let* ((o (transform-point (ray-origin ray) inverse))
-                         (d (transform-direction (ray-direction ray) inverse))
-                         (ox (aref o 0))
-                         (oy (aref o 1))
-                         (dx (aref d 0))
-                         (dy (aref d 1)))
-                    (declare (dynamic-extent o d))
-                    (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
-                                                                 (+ (* 2.0 ox dx) (* 2.0 oy dy))
-                                                                 (+ (square ox) (square oy) -1.0))
-                      (unless (= t1 -1.0)
-                        (let* ((ext (ray-extent ray))
-                               (oz (aref o 2))
-                               (dz (aref d 2))
-                               (z1 (+ oz (* t1 dz)))
-                               (z2 (+ oz (* t2 dz)))
-                               (t0 (cond ((and (< t1 ext) (< 0.0 z1 length))
-                                          t1)
-                                         ((and (< 0.0 t2 ext) (< 0.0 z2 length))
-                                          t2)
-                                         (t
-                                          -1.0))))
-                          (unless (= t2 -1.0)
-                            ;; May have hit a cap.
-                            (when start-cap
-                              (let ((t3 (/ (- oz) dz)))
-                                (when (and (< epsilon t3 ext) (or (< t3 t0) (= t0 -1.0))
-                                           (or (< z1 0.0 z2) (< z2 0.0 z1)))
-                                  ;; Two intersections, one on both side of the start cap:
-                                  ;; real intersection is on the cap.
-                                  (setf (ray-extent ray) t3)
-                                  (return-from cylinder-intersection (values t start-cap)))))
-                            (when end-cap
-                              (let ((t4 (/ (- length oz) dz)))
-                                (when (and (< epsilon t4 ext) (or (< t4 t0) (= t0 -1.0))
-                                           (or (< z1 0.0 z2) (< z2 0.0 z1)))
-                                  ;; Ditto for the end cap.
-                                  (setf (ray-extent ray) t4)
-                                  (return-from cylinder-intersection (values t end-cap))))))
-                          (unless (= t0 -1.0)
-                            (setf (ray-extent ray) t0)
-                            t))))))))
-             (startp
-              ;; Bounded at one end
-              (sb-int:named-lambda cylinder-intersection (ray)
-                (declare (optimize speed))
-                (block cylinder-intersection
-                  (let* ((o (transform-point (ray-origin ray) inverse))
-                         (d (transform-direction (ray-direction ray) inverse))
-                         (ox (aref o 0))
-                         (oy (aref o 1))
-                         (dx (aref d 0))
-                         (dy (aref d 1)))
-                    (declare (dynamic-extent o d))
-                    (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
-                                                                 (+ (* 2.0 ox dx) (* 2.0 oy dy))
-                                                                 (+ (square ox) (square oy) -1.0))
-                      (unless (= t1 -1.0)
-                        (let* ((ext (ray-extent ray))
-                               (oz (aref o 2))
-                               (dz (aref d 2))
-                               (z1 (+ oz (* t1 dz)))
-                               (z2 (+ oz (* t2 dz)))
-                               (t0 (cond ((and (< t1 ext) (< 0.0 z1))
-                                          t1)
-                                         ((and (< 0.0 t2 ext) (< 0.0 z2))
-                                          t2)
-                                         (t
-                                          -1.0))))
-                          (unless (= t2 -1.0)
-                            ;; May have hit a cap.
-                            (when start-cap
-                              (let ((t3 (/ (- oz) dz)))
-                                (when (and (< epsilon t3 ext) (or (< t3 t0) (= t0 -1.0))
-                                           (or (< z1 0.0 z2) (< z2 0.0 z1)))
-                                  ;; Two intersections, one on both side of the start cap:
-                                  ;; real intersection is on the cap.
-                                  (setf (ray-extent ray) t3)
-                                  (return-from cylinder-intersection (values t start-cap))))))
-                          (unless (= t0 -1.0)
-                            (setf (ray-extent ray) t0)
-                            t))))))))
-             (t
-              ;; Unbounded at both ends
-              (sb-int:named-lambda unbounded-cylinder-intersection (ray)
-                (declare (optimize speed))
-                (block cylinder-intersection
-                  (let* ((o (transform-point (ray-origin ray) inverse))
-                         (d (transform-direction (ray-direction ray) inverse))
-                         (ox (aref o 0))
-                         (oy (aref o 1))
-                         (dx (aref d 0))
-                         (dy (aref d 1)))
-                    (declare (dynamic-extent o d))
-                    (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
-                                                                 (+ (* 2.0 ox dx) (* 2.0 oy dy))
-                                                                 (+ (square ox) (square oy) -1.0))
-                      (unless (= t1 -1.0)
-                        (let* ((ext (ray-extent ray))
-                               (t0 (cond ((and (< t1 ext))
-                                          t1)
-                                         ((and (< 0.0 t2 ext))
-                                          t2)
-                                         (t
-                                          -1.0))))
-                          (unless (= t0 -1.0)
-                            (setf (ray-extent ray) t0)
-                            t)))))))))
+       (unless shade-only
+         (cond (length
+                ;; Bounded at both ends
+                (sb-int:named-lambda cylinder-intersection (ray)
+                  (declare (optimize speed))
+                  (block cylinder-intersection
+                    (let* ((o (transform-point (ray-origin ray) inverse))
+                           (d (transform-direction (ray-direction ray) inverse))
+                           (ox (aref o 0))
+                           (oy (aref o 1))
+                           (dx (aref d 0))
+                           (dy (aref d 1)))
+                      (declare (dynamic-extent o d))
+                      (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
+                                                                   (+ (* 2.0 ox dx) (* 2.0 oy dy))
+                                                                   (+ (square ox) (square oy) -1.0))
+                        (unless (= t1 -1.0)
+                          (let* ((ext (ray-extent ray))
+                                 (oz (aref o 2))
+                                 (dz (aref d 2))
+                                 (z1 (+ oz (* t1 dz)))
+                                 (z2 (+ oz (* t2 dz)))
+                                 (t0 (cond ((and (< t1 ext) (< 0.0 z1 length))
+                                            t1)
+                                           ((and (< 0.0 t2 ext) (< 0.0 z2 length))
+                                            t2)
+                                           (t
+                                            -1.0))))
+                            (unless (= t2 -1.0)
+                              ;; May have hit a cap.
+                              (when start-cap
+                                (let ((t3 (/ (- oz) dz)))
+                                  (when (and (< epsilon t3 ext) (or (< t3 t0) (= t0 -1.0))
+                                             (or (< z1 0.0 z2) (< z2 0.0 z1)))
+                                    ;; Two intersections, one on both side of the start cap:
+                                    ;; real intersection is on the cap.
+                                    (setf (ray-extent ray) t3)
+                                    (return-from cylinder-intersection (values t start-cap)))))
+                              (when end-cap
+                                (let ((t4 (/ (- length oz) dz)))
+                                  (when (and (< epsilon t4 ext) (or (< t4 t0) (= t0 -1.0))
+                                             (or (< z1 0.0 z2) (< z2 0.0 z1)))
+                                    ;; Ditto for the end cap.
+                                    (setf (ray-extent ray) t4)
+                                    (return-from cylinder-intersection (values t end-cap))))))
+                            (unless (= t0 -1.0)
+                              (setf (ray-extent ray) t0)
+                              t))))))))
+               (startp
+                ;; Bounded at one end
+                (sb-int:named-lambda cylinder-intersection (ray)
+                  (declare (optimize speed))
+                  (block cylinder-intersection
+                    (let* ((o (transform-point (ray-origin ray) inverse))
+                           (d (transform-direction (ray-direction ray) inverse))
+                           (ox (aref o 0))
+                           (oy (aref o 1))
+                           (dx (aref d 0))
+                           (dy (aref d 1)))
+                      (declare (dynamic-extent o d))
+                      (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
+                                                                   (+ (* 2.0 ox dx) (* 2.0 oy dy))
+                                                                   (+ (square ox) (square oy) -1.0))
+                        (unless (= t1 -1.0)
+                          (let* ((ext (ray-extent ray))
+                                 (oz (aref o 2))
+                                 (dz (aref d 2))
+                                 (z1 (+ oz (* t1 dz)))
+                                 (z2 (+ oz (* t2 dz)))
+                                 (t0 (cond ((and (< t1 ext) (< 0.0 z1))
+                                            t1)
+                                           ((and (< 0.0 t2 ext) (< 0.0 z2))
+                                            t2)
+                                           (t
+                                            -1.0))))
+                            (unless (= t2 -1.0)
+                              ;; May have hit a cap.
+                              (when start-cap
+                                (let ((t3 (/ (- oz) dz)))
+                                  (when (and (< epsilon t3 ext) (or (< t3 t0) (= t0 -1.0))
+                                             (or (< z1 0.0 z2) (< z2 0.0 z1)))
+                                    ;; Two intersections, one on both side of the start cap:
+                                    ;; real intersection is on the cap.
+                                    (setf (ray-extent ray) t3)
+                                    (return-from cylinder-intersection (values t start-cap))))))
+                            (unless (= t0 -1.0)
+                              (setf (ray-extent ray) t0)
+                              t))))))))
+               (t
+                ;; Unbounded at both ends
+                (sb-int:named-lambda unbounded-cylinder-intersection (ray)
+                  (declare (optimize speed))
+                  (block cylinder-intersection
+                    (let* ((o (transform-point (ray-origin ray) inverse))
+                           (d (transform-direction (ray-direction ray) inverse))
+                           (ox (aref o 0))
+                           (oy (aref o 1))
+                           (dx (aref d 0))
+                           (dy (aref d 1)))
+                      (declare (dynamic-extent o d))
+                      (multiple-value-bind (t1 t2) (pos-quad-roots (+ (square dx) (square dy))
+                                                                   (+ (* 2.0 ox dx) (* 2.0 oy dy))
+                                                                   (+ (square ox) (square oy) -1.0))
+                        (unless (= t1 -1.0)
+                          (let* ((ext (ray-extent ray))
+                                 (t0 (cond ((and (< t1 ext))
+                                            t1)
+                                           ((and (< 0.0 t2 ext))
+                                            t2)
+                                           (t
+                                            -1.0))))
+                            (unless (= t0 -1.0)
+                              (setf (ray-extent ray) t0)
+                              t))))))))))
        :normal
        (lambda (point)
          (let ((p (transform-point point normal-matrix)))

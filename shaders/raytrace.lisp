@@ -18,9 +18,8 @@
 	 (ior (ior-of shader)))
     (declare (float specular transmit ior))
     (cond ((plusp transmit)
-           (lambda (obj point normal n.d ray counters)
-             (declare (optimize speed) (float n.d) (type vec point normal) (ray ray)
-                      (ignore obj))
+           (lambda (point normal n.d ray counters)
+             (declare (optimize speed) (float n.d) (type vec point normal) (ray ray))
              (if (weak-ray-p ray scene)
                  black
                  (with-spawned-rays ((reflected refracted)
@@ -30,9 +29,8 @@
                    (vec+ (raytrace reflected scene counters)
                          (raytrace refracted scene counters))))))
           ((plusp specular)
-           (lambda (obj point normal n.d ray counters)
-             (declare (optimize speed)
-                      (ignore obj))
+           (lambda (point normal n.d ray counters)
+             (declare (optimize speed))
              (if (weak-ray-p ray scene)
                  black
                  (with-reflected-ray (ray :point point :normal normal :dot-product n.d

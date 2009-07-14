@@ -17,14 +17,13 @@
   (let* ((inverse (inverse-matrix transform))
          (odd (compile-shader (odd-of shader) object scene transform))
          (even (compile-shader (even-of shader) object scene transform)))
-    (sb-int:named-lambda shade-checher (obj point normal dot ray counters)
+    (sb-int:named-lambda shade-checher (point normal dot ray counters)
       (declare (optimize speed))
       (let ((p2 (transform-point point inverse)))
         (declare (dynamic-extent p2))
         (funcall (if (odd-checkerp p2)
                      odd
                      even)
-                 obj
                  point
                  normal
                  dot

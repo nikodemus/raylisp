@@ -135,14 +135,17 @@
     :initform nil
     :accessor name-of)))
 
-(defstruct (compiled-object (:conc-name object-))
-  (intersection (required-argument :intersection)
-                :type (function (ray) (values boolean &optional compiled-object)))
+(defstruct (shading-object (:conc-name object-))
   (normal (required-argument :normal) :type (function (vec) vec))
-  (shader (required-argument :shader) :type compiled-shader)
+  (shader (required-argument :shader) :type compiled-shader))
+
+(defstruct (intersection-object (:conc-name object-)
+                                (:include shading-object))
+  (intersection (required-argument :intersection)
+                :type (function (ray) (values boolean &optional shading-object)))
   (min nil :type (or null vec))
   (max nil :type (or null vec))
-  (name nil))
+  (scene-object (required-argument :scene-object)))
 
 ;;;## Lights
 
