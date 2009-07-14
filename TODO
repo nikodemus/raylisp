@@ -14,7 +14,6 @@
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference
     images would be golden, along with some sort of timings.
-*** TODO Sliding color scales
 *** TODO Experiment with colors using generic functions
 *** TODO Prototype-style operations on scene components
     Cloning with alterate transforms, etc.
@@ -73,6 +72,10 @@
 *** TODO Height fields
 *** TODO Polygons
 *** TODO Meshes
+    Representation: Index Array: a vector of single floats (each
+    triplet specifying one vertex), another vector with indexes into
+    the first (each triplet specifying one triangle).
+    Rendering: build a KD tree for the triangles.
 *** TODO Radiosity shader
 *** TODO Metallic shaders
 * TODO CAMERAS

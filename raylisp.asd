@@ -40,6 +40,7 @@
                          (:file "gradient")
                          (:file "marble")
                          (:file "noise")
+                         (:file "pattern")
                          (:file "phong")
                          (:file "raytrace")
                          (:file "solid")

@@ -4,11 +4,18 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (let* ((chessboard
-          (make-instance 'checker-shader
-                         :odd
-                         (make-instance 'phong-shader :color black)
-                         :even
-                         (make-instance 'phong-shader :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))
+          (make-instance
+           'pattern-shader
+           :pattern 'checker-pattern
+           :map `((0.0 ,(make-instance 'phong-shader :color black))
+                  (1.0 ,(make-instance 'phong-shader :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))))
+         (cloth
+          (make-instance
+           'pattern-shader
+           :pattern 'square-pattern
+           :map `((0.0 ,(make-instance 'phong-shader :color black))
+                  (0.2 ,(make-instance 'phong-shader :color red))
+                  (1.0 ,(make-instance 'phong-shader :color white :diffuse 1.0 :specular 1.0 :ambient 0.5)))))
          (bright-red
           (make-instance 'phong-shader :color red :diffuse 1.0 :specular 1.0 :ambient 0.5))
          (bright-blue
@@ -36,6 +43,7 @@
                          :location (@ 0 18 0)
                          :look-at +origin+
                          :focal-length 4.0)))
+    (defparameter *cloth* cloth)
     (defparameter *chessboard* chessboard)
     (defparameter *bright-red* bright-red)
     (defparameter *bright-blue* bright-blue)
@@ -51,6 +59,24 @@
   ;; Sanity check.
   (:objects
    *floor*)
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-pattern-shader
+  ;; Sanity check.
+  (:objects
+   (make-instance 'plane
+                  :shader
+                  (make-instance
+                   'pattern-shader
+                   :pattern 'gradient-pattern
+                   :map `((0.0 ,(make-instance 'phong-shader :color black))
+                          (0.2 ,(make-instance 'phong-shader :color red))
+                          (0.3 ,(make-instance 'phong-shader :color red))
+                          (0.5 ,(make-instance 'phong-shader :color blue))
+                          (1.0 ,(make-instance 'phong-shader :color white))))))
   (:lights
    *lamp*)
   (:camera
