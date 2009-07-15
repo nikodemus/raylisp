@@ -32,7 +32,8 @@
                          (:file "box" :depends-on ("csg"))
                          (:file "cylinder")
                          (:file "plane" :depends-on ("csg"))
-                         (:file "sphere" :depends-on ("csg"))))
+                         (:file "sphere" :depends-on ("csg"))
+                         (:file "triangle")))
    (:module "patterns"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "gradient")

@@ -55,6 +55,61 @@
   (:camera
    *view*))
 
+(defun triangle-box (min max &rest initargs)
+  (let (triangles)
+    (flet ((tri (&rest vertices)
+             (push (apply #'make-instance 'triangle
+                          :vertices vertices
+                          initargs)
+                   triangles)))
+      (let* ((min (vec-min min max))
+             (max (vec-max min max))
+             ;; Low corners clockwise from MIN: c1, c2, c3, c4
+             (c1 (vec (aref min 0) (aref min 1) (aref min 2)))
+             (c2 (vec (aref min 0) (aref min 1) (aref max 2)))
+             (c3 (vec (aref max 0) (aref min 1) (aref max 2)))
+             (c4 (vec (aref max 0) (aref min 1) (aref min 2)))
+             ;; High corners clockwise from corner above MIN: c5, c6, c7, c8
+             (c5 (vec (aref min 0) (aref max 1) (aref min 2)))
+             (c6 (vec (aref min 0) (aref max 1) (aref max 2)))
+             (c7 (vec (aref max 0) (aref max 1) (aref max 2)))
+             (c8 (vec (aref max 0) (aref max 1) (aref min 2))))
+        ;; bottom
+        (tri c1 c2 c3)
+        (tri c3 c4 c1)
+        ;; front
+        (tri c1 c5 c8)
+        (tri c8 c4 c1)
+        ;; left
+        (tri c1 c5 c6)
+        (tri c6 c2 c1)
+        ;; right
+        (tri c3 c7 c8)
+        (tri c8 c4 c3)
+        ;; back
+        (tri c2 c6 c7)
+        (tri c7 c3 c2)
+        ;; top
+        (tri c5 c6 c7)
+        (tri c7 c8 c5)))
+    triangles))
+
+(defscene test-triangle
+  (:objects
+   (triangle-box (v 1 0 0) (v 2 1 1) :shader *bright-red*
+                 :transform (rotate* 0.0 1.0 0.0))
+   (make-instance 'box
+                  :min (v -2 0 0)
+                  :max (v -1 1 1)
+                  :shader *bright-blue*
+                  :transform (rotate* 0.0 1.0 0.0)))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -10 10 -10)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :location (v 2 2 -5))))
+
 (defscene test-pattern-shader
   (:objects
    (make-instance 'plane
