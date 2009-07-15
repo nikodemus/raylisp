@@ -22,7 +22,8 @@
                          (:file "pinhole")))
    (:module "lights"
             :depends-on ("package" "base" "math" "protocol" "mixins")
-            :components ((:file "point-light")
+            :components ((:file "line-light")
+                         (:file "point-light")
                          (:file "solar-light")
                          (:file "spotlight")))
    (:module "objects"

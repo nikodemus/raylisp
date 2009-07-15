@@ -177,7 +177,8 @@
                                                                :map `((0.0 ,black)
                                                                       (1.0 ,(vec 0.7 0.7 0.7)))))))
   (:lights
-   (make-instance 'point-light
+   (make-instance 'line-light
+                  :samples 30
                   :location (v -10 10 -10)))
   (:camera
    *view*))
