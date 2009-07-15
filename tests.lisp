@@ -56,7 +56,6 @@
    *view*))
 
 (defscene test-pattern-shader
-  ;; Sanity check.
   (:objects
    (make-instance 'plane
                   :transform (rotate* 0.0 (/ +pi+ 8) 0.0)
@@ -71,6 +70,19 @@
                                                        (0.3 ,red)
                                                        (0.5 ,blue)
                                                        (1.0 ,white))))))
+  (:lights
+   *lamp*)
+  (:camera
+   *view*))
+
+(defscene test-pattern-shader-2
+  (:objects
+   (make-instance 'plane
+                  :transform (rotate* 0.0 (/ +pi+ 8) 0.0)
+                  :shader
+                  (make-instance 'gradient-pattern
+                                 :map `((0.0 ,(make-instance 'phong-shader :color white))
+                                        (1.0 ,(make-instance 'flat-shader :color white))))))
   (:lights
    *lamp*)
   (:camera

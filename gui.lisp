@@ -127,11 +127,14 @@
 (define-raylisp-frame-command (com-render-scene :name t)
     ()
   (loop
+    (fresh-line)
     (let* ((name (accept 'string :prompt "Scene Name"))
            (scene (gethash (setf *last-scene-name* (intern (string-upcase name) :raylisp))
                            raylisp::*scenes*)))
       (if scene
-          (return (render-scene scene (find-pane-named *application-frame* 'canvas)))
+          (loop (with-simple-restart (retry "Try rendering ~A again." name)
+                  (return-from com-render-scene
+                    (render-scene scene (find-pane-named *application-frame* 'canvas)))))
           (format t "No scene named ~S found." name)))))
 
 (define-raylisp-frame-command (com-render-all :name t)

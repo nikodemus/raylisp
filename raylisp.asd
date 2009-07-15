@@ -14,7 +14,7 @@
    (:file "mixins" :depends-on ("defaults"))
    (:file "scene" :depends-on ("kernel" "kd-tree" "mixins"))
    (:file "protocol" :depends-on ("scene"))
-   (:file "pattern" :depends-on ("mixins"))
+   (:file "pattern" :depends-on ("mixins" "protocol"))
    (:module "cameras"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "orthogonal")

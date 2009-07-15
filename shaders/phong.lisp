@@ -8,11 +8,10 @@
 
 (defmethod compute-shader-function ((shader phong-shader) object scene transform)
   (let* ((ambient-term (vec* (scene-ambient-light scene) (ambient-of shader)))
-         (color-function
-          (compute-color-function (color-of shader) transform))
+         (color-function (pattern-function (color-of shader) transform))
          (diffuse (diffuse-of shader))
-	 (specular (specular-of shader))
-	 (size (size-of shader))
+         (specular (specular-of shader))
+         (size (size-of shader))
          (light-group (compute-light-group object scene)))
     (declare (type single-float specular diffuse)
              (type (single-float (0.0)) size)

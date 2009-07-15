@@ -3,7 +3,7 @@
 (defclass wood-pattern (pattern axis-mixin)
   ())
 
-(defmethod compute-pattern-function ((pattern wood-pattern) transform)
+(defmethod compute-pattern-key-function ((pattern wood-pattern) transform)
   (let ((inverse (inverse-matrix (matrix* transform (reorient (axis-of pattern) z-axis)))))
     (lambda (point)
       (declare (optimize speed))

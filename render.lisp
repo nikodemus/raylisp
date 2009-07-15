@@ -51,8 +51,8 @@
   (when normalize-camera
     (setf camera (normalize-camera camera width height)))
   (let* ((scene (compile-scene scene))
-	 (camera (compute-camera-function camera))
-	 (note-interval (ceiling height 80))
+         (camera (compute-camera-function camera))
+         (note-interval (ceiling height 80))
          (callback (cond ((functionp callback)
                           callback)
                          ((and (symbolp callback) (fboundp callback))

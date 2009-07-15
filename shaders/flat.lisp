@@ -11,3 +11,4 @@
                               (coefficient (ambient-of shader) shader))
                         (color-of shader))))
     (constantly ambient-color)))
+

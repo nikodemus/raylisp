@@ -14,13 +14,13 @@
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
 *** TODO Patterns
-***** TODO Nested patterns
-      Maps should be able to contain other patterns.
+***** TODO Generalized pattern robustness
+      Do some sort of checking to make sure the pattern looks sane for
+      the context: the current pattern->shader-function stuff feels a
+      bit too ad-hoc.
 ***** TODO Transform rest of pattern-like shaders into patterns
-***** TODO Stepped maps
-      So that CHECKER generalizes into a patter.
-***** TODO Generalized patterns
-      So that a pattern can replace a shader as well as a color.
+***** TODO Indexed pattern maps
+      So that CHECKER generalizes
 *** TODO Integrate pertubated normals into general shader framework
     As a subprotocol, maybe: shaders inheriting from NORMAL-SHADER
     could have extra magic applied to them -- or at least the normal
@@ -87,12 +87,15 @@
 ***** TODO CSG
 *** TODO Torus
 *** TODO Height fields
-*** TODO Polygons
 *** TODO Meshes
-    Representation: Index Array: a vector of single floats (each
-    triplet specifying one vertex), another vector with indexes into
-    the first (each triplet specifying one triangle).
-    Rendering: build a KD tree for the triangles.
+***** TODO single triangles.
+***** TODO mesh representation
+      Index Array: a vector of single floats (each triplet specifying
+      one vertex), another vector with indexes into the first (each
+      triplet specifying one triangle).
+***** TODO mesh rendering
+      build a KD tree for the triangles, intersection function
+      traverses it.
 *** TODO Radiosity shader
 *** TODO Metallic shaders
 * TODO CAMERAS

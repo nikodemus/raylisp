@@ -6,7 +6,7 @@
     :initarg :smooth
     :reader smoothp)))
 
-(defmethod compute-pattern-function ((pattern gradient-pattern) transform)
+(defmethod compute-pattern-key-function ((pattern gradient-pattern) transform)
   (let ((inverse (inverse-matrix
                   (matrix* transform (reorient (axis-of pattern) z-axis)))))
     (if (smoothp pattern)
