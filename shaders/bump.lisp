@@ -12,7 +12,8 @@
                                (coefficient (ambient-of shader) shader))
                          color))
          (diffuse-color (vec* color
-                              (coefficient (diffuse-of shader) shader))))
+                              (coefficient (diffuse-of shader) shader)))
+         (light-group (compute-light-group object scene)))
     (declare (type vec color ambient-color diffuse-color))
     (with-arrays (diffuse-color)
       ;; DOT as argument is ignores -- is this correct?
@@ -23,9 +24,7 @@
               (noise (vector-dnoise (vec* point 5.0))))
           (%vec* noise noise 0.2)
           (setf normal (normalize (vec+ normal noise)))
-          ;; FIXME: Is there a way to store the list of lights directly here,
-          ;; without going though 2 indirections each time?
-	  (dolist (light (compiled-scene-lights (scene-compiled-scene scene)))
+	  (dolist (light (light-group-lights light-group))
 	    (let* ((lv (light-vector light point))
 		   (dot (dot-product lv normal)))
 	      (when (plusp dot)

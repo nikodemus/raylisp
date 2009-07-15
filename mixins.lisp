@@ -21,6 +21,12 @@
     :initarg :axis
     :reader axis-of)))
 
+(defclass light-group-mixin ()
+  ((light-group
+    :initform :global
+    :initarg :light-group
+    :reader light-group-of)))
+
 (defclass color-mixin ()
   ((color
     :initform white

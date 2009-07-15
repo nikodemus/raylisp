@@ -165,6 +165,33 @@
                   :location (v 5.0 5.0 -9.0)
                   :look-at +origin+)))
 
+(defscene test-light-groups
+  (:objects
+   (make-instance 'plane
+                  :light-group '(:left)
+                  :shader (make-instance 'phong-shader :color white))
+   (make-instance 'sphere
+                  :light-group :left
+                  :location (v -3.0 1.0 0.0)
+                  :shader *bright-red*)
+   (make-instance 'sphere
+                  :light-group '(:left :right)
+                  :location (v 0.0 1.0 0.0)
+                  :shader *bright-red*)
+   (make-instance 'sphere
+                  :light-group :right
+                  :location (v 3.0 1.0 0.0)
+                  :shader *bright-red*))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -30 10 10)
+                  :light-group :left)
+   (make-instance 'point-light
+                  :location (v 30 10 10)
+                  :light-group :right))
+  (:camera
+   *view*))
+
 (defscene test-marble
   (:objects
    *floor*

@@ -8,6 +8,8 @@
     Otherwise %FIND-INTERSECTION* can find intersections closer than
     it wants. Or is RAY-ORIGIN good enough?
 *** TODO I think something is still wrong with transformations and CSG.
+*** TODO Now that light groups are in place there is no need for SCENE to be a defstruct
+    Previously SCENE-COMPILED-SCENE needed to be fast.
 * TODO ARCHITECTURE
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
@@ -79,8 +81,6 @@
     Aka cheap caustics.
 *** TODO Turbulence shader
 *** TODO Variant reflection
-*** TODO Light groups
-    Lights illuminating only some objects
 *** TODO Fill lights
 ***** TODO Make filling selective: shadowed by some objects, not all.
 *** TODO Cylinder

@@ -92,7 +92,13 @@
 (defstruct compiled-scene
   (objects nil :type list)
   (lights nil :type list)
-  (tree nil :type (or null kd-node)))
+  (tree nil :type (or null kd-node))
+  (light-groups (make-hash-table :test #'equal)))
+
+(defun scene-light-groups (scene)
+  (let ((c (scene-compiled-scene scene)))
+    (assert c)
+    (compiled-scene-light-groups c)))
 
 (defparameter *use-kd-tree* t)
 
@@ -100,17 +106,29 @@
   (let ((c-scene (make-compiled-scene)))
     (setf (scene-compiled-scene scene) c-scene)
     (let ((c-objs (mapcar (lambda (obj)
-                                  (compile-scene-object obj scene (identity-matrix)))
-                                (scene-objects scene))))
-            (if *use-kd-tree*
-                (multiple-value-bind (kd unbounded) (make-kd-tree c-objs)
-                  (setf (compiled-scene-objects c-scene) unbounded
-                        (compiled-scene-tree c-scene) kd))
-                (setf (compiled-scene-objects c-scene) c-objs)))
-    (setf (compiled-scene-lights c-scene)
-	  (mapcar (lambda (light)
-		    (compile-scene-light light scene))
-		  (scene-lights scene))))
+                            (compile-scene-object obj scene (identity-matrix)))
+                          (scene-objects scene))))
+      (if *use-kd-tree*
+          (multiple-value-bind (kd unbounded) (make-kd-tree c-objs)
+            (setf (compiled-scene-objects c-scene) unbounded
+                  (compiled-scene-tree c-scene) kd))
+          (setf (compiled-scene-objects c-scene) c-objs)))
+    (let ((lightmap (make-hash-table)))
+      (setf (compiled-scene-lights c-scene)
+            (mapcar (lambda (light)
+                     (let ((c (compile-scene-light light scene)))
+                       (setf (gethash light lightmap) c)))
+                    (scene-lights scene)))
+      (maphash (lambda (name group)
+                 (check-type group cons)
+                 (unless (equal name (car group))
+                   (error "Light group under wrong name ~S: ~S" name group))
+                 (setf (cdr group)
+                       (mapcar (lambda (light)
+                                 (or (gethash light lightmap)
+                                     (error "Uncompiled light in lightgroup ~S: ~S" light group)))
+                               (cdr group))))
+               (compiled-scene-light-groups c-scene))))
   scene)
 
 ;;;## Shaders
@@ -126,7 +144,7 @@
 
 ;;;## Objects
 
-(defclass scene-object (transform-mixin)
+(defclass scene-object (transform-mixin light-group-mixin)
   ((shader
     :initform (find-default :shader '(or null shader)) :initarg :shader
     :accessor shader-of)
@@ -149,11 +167,53 @@
 
 ;;;## Lights
 
-(defclass scene-light (name-mixin)
+(defclass scene-light (name-mixin light-group-mixin)
   ((fill-light
     :initform nil
     :initarg :fill-light
     :reader fill-light-p)))
+
+(defvar *light-groups*)
+
+(declaim (inline light-group-name light-group-lights))
+(defun light-group-name (group)
+  (car group))
+(defun light-group-lights (group)
+  (cdr group))
+
+(defgeneric compute-light-group (thing scene))
+
+(defmethod compute-light-group :around (thing scene)
+  ;; Cache by name in the scene.
+  (if (typep thing '(or symbol cons))
+      (let ((cache (scene-light-groups scene)))
+        (or (gethash thing cache)
+            (setf (gethash thing cache) (call-next-method))))
+      (call-next-method)))
+
+(defmethod compute-light-group ((thing light-group-mixin) scene)
+  ;; Compute by name.
+  (compute-light-group (light-group-of thing) scene))
+
+(defmethod compute-light-group ((name cons) scene)
+  ;; Light group named by a list of symbols. Build a union of subgroups.
+  (let (lights)
+    (dolist (subname name)
+      (let ((subgroup (compute-light-group subname scene)))
+        (setf lights (union lights (light-group-lights subgroup) :test #'eq))))
+    (cons name lights)))
+
+(defmethod compute-light-group ((name symbol) scene)
+  ;; Base-case: light group named by a symbol. Collect Lights which declare
+  ;; this as (one of) their groups from the scene.
+  (when name
+    (let (lights)
+      (dolist (light (scene-lights scene))
+        (let ((name2 (light-group-of light)))
+          (when (or (eq name name2)
+                    (and (consp name2) (member name name2 :test #'eq)))
+            (push light lights))))
+      (cons name lights))))
 
 (defstruct (compiled-light (:conc-name light-))
   (direction (required-argument :illumination) :type (function (vec) vec))
