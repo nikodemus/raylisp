@@ -9,8 +9,7 @@
          (co2 (max-of box))
          (min (vec-min co1 co2))
          (max (vec-max co1 co2)))
-    (matrix* (transform-of box)
-             (translate (vec/ (vec+ max min) 2.0))
+    (matrix* (translate (vec/ (vec+ max min) 2.0))
              (scale (vec/ (vec- max min) 2.0)))))
 
 (defmethod compute-object-properties ((box box) scene matrix &key shade-only)

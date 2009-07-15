@@ -17,7 +17,7 @@
 
 (defmethod compute-object-properties ((triangle triangle) scene transform &key shade-only)
   (let* ((vertices (vertices-of triangle))
-         (m (matrix* transform (transform-of triangle)))
+         (m transform)
          (a (transform-point (elt vertices 0) m))
          (b (transform-point (elt vertices 1) m))
          (c (transform-point (elt vertices 2) m)))
@@ -59,7 +59,7 @@
 
 (defmethod compute-object-extents ((triangle triangle) transform)
   (let* ((vertices (vertices-of triangle))
-         (m (matrix* transform (transform-of triangle)))
+         (m transform)
          (a (transform-point (elt vertices 0) m))
          (b (transform-point (elt vertices 1) m))
          (c (transform-point (elt vertices 2) m)))

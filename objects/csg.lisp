@@ -18,8 +18,8 @@ tree of CSG-NODE instances."))
   "Return a tree of CSG-NODEs for a CSG instance."
   (with-defaults (:type (type-of csg) :transform (transform-of csg))
     (reduce (lambda (x y)
-	      (make-instance 'csg-node :left x :right y))
-	    (objects-of csg))))
+              (make-instance 'csg-node :left x :right y))
+            (objects-of csg))))
 
 (defmethod compute-object-properties ((csg csg) scene transform &key shade-only)
   (compute-object-properties (csg-nodes csg) scene transform :shade-only shade-only))
@@ -58,42 +58,43 @@ intersections."
   (error "CSG normal not delegated."))
 
 (defmethod compute-object-properties ((node csg-node) scene transform &key shade-only)
-  (let ((matrix (matrix* transform (transform-of node))))
+  (let ((m (matrix* transform (transform-of node))))
     (list
      :intersection
      (unless shade-only
-       (let-plists ((((:all-intersections all-left) (:inside inside-left))
-                     (compute-csg-properties (left-of node) scene matrix))
-                    (((:all-intersections all-right) (:inside inside-right))
-                     (compute-csg-properties (right-of node) scene matrix)))
-         (declare (type (function (vec vec) (simple-array csg-intersection (*)))
-                        all-left all-right)
-                  (type (function (vec) t) inside-left inside-right))
-         (macrolet
-             ((make-lambda (name find-left find-right)
-                `(sb-int:named-lambda ,name (ray)
-                   (declare (type ray ray) (optimize speed))
-                   (let* ((o (ray-origin ray))
-                          (d (ray-direction ray))
-                          (sx (,find-left (csg-lambda inside-right o d)
-                                          (funcall all-left o d)))
-                          (sy (,find-right (csg-lambda inside-left o d)
-                                           (funcall all-right o d))))
-                     (declare (dynamic-extent o d))
-                     (let ((s (if (and sx sy)
-                                  (if (< (csg-intersection-distance sx)
-                                         (csg-intersection-distance sy))
-                                      sx
-                                      sy)
-                                  (or sx sy))))
-                       (when (and s (< epsilon (csg-intersection-distance s) (ray-extent ray)))
-                         (setf (ray-extent ray) (csg-intersection-distance s))
-                         (values t (csg-intersection-object s))))))))
-           (ecase (type-of node)
-             (intersection
-              (make-lambda csg-intersection-lambda find-if find-if))
-             (difference
-              (make-lambda csg-difference-lambda find-if-not find-if))))))
+       (let ((left-obj (left-of node))
+             (right-obj (right-of node)))
+         (let-plists ((((:all-intersections all-left) (:inside inside-left))
+                       (compute-csg-properties left-obj scene (matrix* m (transform-of left-obj))))
+                      (((:all-intersections all-right) (:inside inside-right))
+                       (compute-csg-properties right-obj scene (matrix* m (transform-of right-obj)))))
+          (declare (type (function (vec vec) (simple-array csg-intersection (*)))
+                         all-left all-right)
+                   (type (function (vec) t) inside-left inside-right))
+          (macrolet
+              ((make-lambda (name find-left find-right)
+                 `(sb-int:named-lambda ,name (ray)
+                    (declare (type ray ray) (optimize speed))
+                    (let* ((o (ray-origin ray))
+                           (d (ray-direction ray))
+                           (sx (,find-left (csg-lambda inside-right o d)
+                                           (funcall all-left o d)))
+                           (sy (,find-right (csg-lambda inside-left o d)
+                                            (funcall all-right o d))))
+                      (let ((s (if (and sx sy)
+                                   (if (< (csg-intersection-distance sx)
+                                          (csg-intersection-distance sy))
+                                       sx
+                                       sy)
+                                   (or sx sy))))
+                        (when (and s (< epsilon (csg-intersection-distance s) (ray-extent ray)))
+                          (setf (ray-extent ray) (csg-intersection-distance s))
+                          (values t (csg-intersection-object s))))))))
+            (ecase (type-of node)
+              (intersection
+               (make-lambda csg-intersection-lambda find-if find-if))
+              (difference
+               (make-lambda csg-difference-lambda find-if-not find-if)))))))
      :normal
      #'undelegated-csg-normal)))
 

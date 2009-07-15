@@ -18,23 +18,23 @@
   nil)
 
 (defun compile-scene-object (object scene transform &key shade-only)
-  (destructuring-bind (&key intersection normal)
-      (compute-object-properties object scene transform :shade-only shade-only)
-    (assert normal)
-    (let ((shader (compile-shader (shader-of object) (or shade-only object) scene
-                                  (matrix* transform (transform-of object)))))
-      (if shade-only
-          (make-shading-object
-           :normal normal
-           :shader shader)
-          (multiple-value-bind (min max) (compute-object-extents object transform)
-            (assert intersection)
-            (make-intersection-object
-             :intersection intersection
-             :normal normal
-             :shader shader
-             :min min :max max
-             :scene-object object))))))
+  (let ((m (matrix* transform (transform-of object))))
+    (destructuring-bind (&key intersection normal)
+        (compute-object-properties object scene m :shade-only shade-only)
+     (assert normal)
+     (let ((shader (compile-shader (shader-of object) (or shade-only object) scene m)))
+       (if shade-only
+           (make-shading-object
+            :normal normal
+            :shader shader)
+           (multiple-value-bind (min max) (compute-object-extents object m)
+             (assert intersection)
+             (make-intersection-object
+              :intersection intersection
+              :normal normal
+              :shader shader
+              :min min :max max
+              :scene-object object)))))))
 
 (declaim (inline intersect))
 (defun intersect (object ray counters shadow)
@@ -130,12 +130,13 @@
 	 (normal (funcall (object-normal object) point))
 	 (n.d (dot-product normal (ray-direction ray))))
     (flet ((%shade (n)
-             (funcall (object-shader object)
-                      point
-                      n
-                      n.d
-                      ray
-                      counters)))
+             (with-debug ((format nil "shade1 ~S" object))
+               (funcall (object-shader object)
+                       point
+                       n
+                       n.d
+                       ray
+                       counters))))
       (if (plusp n.d)
           (let ((n2 (vec* normal -1.0)))
             (declare (dynamic-extent n2))

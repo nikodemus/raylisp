@@ -46,11 +46,9 @@
   (let* ((start (start-of cylinder))
          (end (end-of cylinder))
          (r (radius-of cylinder))
-         (transform (transform-of cylinder))
          (axis (axis-of cylinder)))
     (if start
-        (values (matrix* transform
-                         ;; translate start from origin
+        (values (matrix* ;; translate start from origin
                          (translate start)
                          ;; align with desired axis
                          (reorient z-axis axis)
@@ -58,8 +56,7 @@
                          (scale* r r 1.0))
                 (when end (vec-length axis))
                 t)
-        (values (matrix* transform
-                         ;; align with desired axis
+        (values (matrix* ;; align with desired axis
                          (reorient z-axis axis)
                          ;; scale for radius
                          (scale* r r 1.0))
