@@ -6,6 +6,15 @@
     :initarg :vertices
     :reader vertices-of)))
 
+;;; Intersection method from "Fast, minimum storage ray-triangle intersection."
+;;; by Tomas Möller and Ben Trumbore. Journal of Graphics Tools, 2(1):21--28, 1997.
+;;;
+;;; Currently this is not really as smart as it should be, since we waste space
+;;; closing over the normal. Perhaps this points to a lack of flexibility in
+;;; system: for a triangle mesh we could like to really call a single non-closed
+;;; over normal function always, giving it the edge vectors computed by the
+;;; intersection...
+
 (defmethod compute-object-properties ((triangle triangle) scene transform &key shade-only)
   (let* ((vertices (vertices-of triangle))
          (m (matrix* transform (transform-of triangle)))
