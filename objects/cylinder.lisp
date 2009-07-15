@@ -63,10 +63,11 @@
                 nil
                 nil))))
 
-(defmethod compute-object-properties ((cylinder cylinder) scene transform &key shade-only)
+(defmethod compute-object-properties ((cylinder cylinder) scene transform &key shading-object)
   (multiple-value-bind (matrix length startp) (cylinder-values cylinder)
     (declare (type (or null single-float) length))
-    (let* ((inverse (inverse-matrix (matrix* transform matrix)))
+    (let* ((m (matrix* transform matrix))
+           (inverse (inverse-matrix m))
            ;; For normal computation, we first apply the inverse to get
            ;; into the space where the z-aligned cylinder lives. Then
            ;; we zero out the Z coordinate, which leaves us with just
@@ -77,28 +78,26 @@
                                    (scale* 1.0 1.0 0.0)
                                    inverse))
            (shader (shader-of cylinder))
-           (start-cap (when (and (not shade-only) startp (start-cap-p cylinder))
+           (start-cap (when (and (not shading-object) startp (start-cap-p cylinder))
                         (compile-scene-object
                          (make-instance 'plane
                                         :normal #.(vec 0.0 0.0 -1.0)
                                         :location +origin+
-                                        :transform matrix
                                         :shader (or (start-cap-shader cylinder) shader))
-                         scene transform :shade-only cylinder)))
-           (end-cap (when (and (not shade-only) length (end-cap-p cylinder))
+                         scene m :shading-object cylinder)))
+           (end-cap (when (and (not shading-object) length (end-cap-p cylinder))
                       (compile-scene-object
                        (make-instance 'plane
                                       :normal z-axis
                                       :location (vec 0.0 0.0 length)
-                                      :transform matrix
                                       :shader (or (end-cap-shader cylinder) shader))
-                       scene transform :shade-only cylinder))))
+                       scene m :shading-object cylinder))))
       (list
        :intersection
        ;; FIXME: We have three versions here that are virtually identical -- not
        ;; good. Either pay the runtime hit and manage with a single version,
        ;; or macroize this.
-       (unless shade-only
+       (unless shading-object
          (cond (length
                 ;; Bounded at both ends
                 (sb-int:named-lambda cylinder-intersection (ray)

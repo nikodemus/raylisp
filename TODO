@@ -7,7 +7,6 @@
 *** TODO Need RAY-MIN in addition to RAY-EXTENT
     Otherwise %FIND-INTERSECTION* can find intersections closer than
     it wants. Or is RAY-ORIGIN good enough?
-*** TODO I think something is still wrong with transformations and CSG.
 *** TODO Now that light groups are in place there is no need for SCENE to be a defstruct
     Previously SCENE-COMPILED-SCENE needed to be fast.
 * TODO ARCHITECTURE

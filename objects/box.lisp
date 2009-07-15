@@ -12,12 +12,12 @@
     (matrix* (translate (vec/ (vec+ max min) 2.0))
              (scale (vec/ (vec- max min) 2.0)))))
 
-(defmethod compute-object-properties ((box box) scene matrix &key shade-only)
+(defmethod compute-object-properties ((box box) scene matrix &key shading-object)
   (let* ((inverse (inverse-matrix (matrix* matrix (box-matrix box))))
          (adjunct (transpose-matrix inverse)))
     (list
      :intersection
-     (unless shade-only
+     (unless shading-object
        (sb-int:named-lambda box-intersection (ray)
         (let ((o (transform-point (ray-origin ray) inverse))
               (d (transform-direction (ray-direction ray) inverse)))
@@ -80,7 +80,7 @@
 
 (defmethod compute-csg-properties ((box box) scene matrix)
   (let ((inverse (inverse-matrix (matrix* matrix (box-matrix box))))
-        (compiled (compile-scene-object box scene matrix :shade-only box)))
+        (compiled (compile-scene-object box scene matrix :shading-object box)))
     (list
      :all-intersections
      (sb-int:named-lambda box-all-intersections (origin direction)

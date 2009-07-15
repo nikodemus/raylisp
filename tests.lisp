@@ -226,7 +226,9 @@
                   :location (v 0 -4 10)
                   :shader *bright-blue*))
   (:lights
-   *lamp*)
+   *lamp*
+   (make-instance 'point-light
+                  :location (v -5 10 -10)))
   (:camera
    (make-instance 'pinhole-camera
                   :location (v 5.0 5.0 -9.0)
@@ -997,6 +999,48 @@
                      :location (@ 0 20 30)
                      :look-at (@ 0 -1 0)
                      :focal-length 3.0)))
+
+(defscene test-csg-transforms
+  (:objects
+   (make-instance 'csg
+                  :type 'difference
+                  :objects (list
+                            (make-instance 'plane
+                                           :normal (v 0 1 0)
+                                           :location (@ 0 -1 0)
+                                           :transform (rotate-around z-axis (/ +pi+ -4))
+                                           :shader (make-instance 'checker-shader
+                                                                  :transform (scale* 5.0 5.0 5.0)
+                                                                  :odd (make-instance 'phong-shader :color black)
+                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1)))
+                            (make-instance 'plane
+                                           :normal (v 0 0 -1)
+                                           :location (@ 0 0 -0.01)
+                                           :shader (make-instance 'checker-shader
+                                                                  :transform (scale* 5.0 5.0 5.0)
+                                                                  :odd (make-instance 'phong-shader :color black)
+                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1)))))
+   (make-instance 'csg
+                  :type 'difference
+                  :transform (rotate-around x-axis (/ pi 4))
+                  :objects (list
+                            (make-instance 'sphere
+                                           :radius 4.0
+                                           :location (@ 0 3 0)
+                                           :transform (scale* 1.1 1.1 1.1)
+                                           :shader *bright-red*
+                                           :name "source")
+                            (make-instance 'plane
+                                           :location (@ 0 -10 0)
+                                           :shader *bright-blue*
+                                           :name "cut"))))
+  (:lights
+   (make-instance 'solar-light :direction (v 1 1 1)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :location (@ 0 20 30)
+                  :look-at (@ 0 -1 0)
+                  :focal-length 3.0)))
 
 (defscene test-mirror
   (:objects

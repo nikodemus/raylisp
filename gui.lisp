@@ -56,6 +56,7 @@
     (declare (type (simple-array (unsigned-byte 32) (*)) row-data))
     (declare (fixnum end width height))
     (format t "~&Rendering ~S @ ~S x ~S~%" (raylisp::scene-name scene) width height)
+    (finish-output t)
     (raylisp::render scene (raylisp::scene-default-camera scene)
                      width height
                      (lambda (color x y)

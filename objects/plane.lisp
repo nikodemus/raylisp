@@ -8,12 +8,12 @@
   (matrix* (translate (location-of plane))
            (reorient y-axis (normal-of plane))))
 
-(defmethod compute-object-properties ((plane plane) scene transform &key shade-only)
+(defmethod compute-object-properties ((plane plane) scene transform &key shading-object)
   (multiple-value-bind (inverse adjunct)
       (inverse-and-adjunct-matrix (matrix* transform (plane-matrix plane)))
     (list
      :intersection
-     (unless shade-only
+     (unless shading-object
        (sb-int:named-lambda plane-intersection (ray)
          (let* ((d (transform-direction (ray-direction ray) inverse))
                 (dy (aref d 1))
@@ -34,8 +34,7 @@
 
 (defmethod compute-csg-properties ((plane plane) scene transform)
   (let ((inverse (inverse-matrix (matrix* transform (plane-matrix plane))))
-        ;; FIXME... the CSG transformations are a mess
-	(c-object (compile-scene-object plane scene (identity-matrix) :shade-only plane)))
+	(c-object (compile-scene-object plane scene transform :shading-object plane)))
     (list
      :all-intersections
      (sb-int:named-lambda plane-all-intersections (origin direction)

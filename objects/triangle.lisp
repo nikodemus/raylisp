@@ -15,7 +15,7 @@
 ;;; over normal function always, giving it the edge vectors computed by the
 ;;; intersection...
 
-(defmethod compute-object-properties ((triangle triangle) scene transform &key shade-only)
+(defmethod compute-object-properties ((triangle triangle) scene transform &key shading-object)
   (let* ((vertices (vertices-of triangle))
          (m transform)
          (a (transform-point (elt vertices 0) m))
@@ -23,7 +23,7 @@
          (c (transform-point (elt vertices 2) m)))
     (list
     :intersection
-    (unless shade-only
+    (unless shading-object
       (sb-int:named-lambda triangle-intersection (ray)
         (block triangle-intersection
           (let* ((dir (ray-direction ray))

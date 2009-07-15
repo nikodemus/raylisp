@@ -12,12 +12,12 @@
     (matrix* (translate (location-of sphere))
              (scale* r r r))))
 
-(defmethod compute-object-properties ((sphere sphere) scene transform &key shade-only)
+(defmethod compute-object-properties ((sphere sphere) scene transform &key shading-object)
   (multiple-value-bind (inverse adjunct/inverse)
       (inverse-and-adjunct/inverse-matrix (matrix* transform (sphere-matrix sphere)))
     (list
      :intersection
-     (unless shade-only
+     (unless shading-object
        (sb-int:named-lambda sphere-intersection (ray)
          (declare (optimize speed))
          (let* ((o2 (transform-point (ray-origin ray) inverse))
@@ -43,7 +43,7 @@
 
 (defmethod compute-csg-properties ((sphere sphere) scene transform)
   (let* ((inverse (inverse-matrix (matrix* transform (sphere-matrix sphere))))
-	 (compiled (compile-scene-object sphere scene transform :shade-only sphere)))
+	 (compiled (compile-scene-object sphere scene transform :shading-object sphere)))
     (list
      ;; FIXME: To reduce consing even further: stack allocate
      ;; the csg-interactions and pass a continuation in here.

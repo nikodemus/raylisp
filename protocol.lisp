@@ -10,20 +10,22 @@
 ;;; bounding protocol if possible.
 ;;;
 
-(defgeneric compute-object-properties (scene-object scene transform &key shade-only))
+(defgeneric compute-object-properties (scene-object scene transform &key shading-object))
 
 (defgeneric compute-object-extents (scene-object transform))
 
 (defmethod compute-object-extents ((object scene-object) transform)
   nil)
 
-(defun compile-scene-object (object scene transform &key shade-only)
-  (let ((m (matrix* transform (transform-of object))))
+(defun compile-scene-object (object scene transform &key shading-object)
+  (let ((m (if shading-object
+               transform
+               (matrix* transform (transform-of object)))))
     (destructuring-bind (&key intersection normal)
-        (compute-object-properties object scene m :shade-only shade-only)
+        (compute-object-properties object scene m :shading-object shading-object)
      (assert normal)
-     (let ((shader (compile-shader (shader-of object) (or shade-only object) scene m)))
-       (if shade-only
+     (let ((shader (compile-shader (shader-of object) (or shading-object object) scene m)))
+       (if shading-object
            (make-shading-object
             :normal normal
             :shader shader)
@@ -130,13 +132,12 @@
 	 (normal (funcall (object-normal object) point))
 	 (n.d (dot-product normal (ray-direction ray))))
     (flet ((%shade (n)
-             (with-debug ((format nil "shade1 ~S" object))
-               (funcall (object-shader object)
-                       point
-                       n
-                       n.d
-                       ray
-                       counters))))
+             (funcall (object-shader object)
+                      point
+                      n
+                      n.d
+                      ray
+                      counters)))
       (if (plusp n.d)
           (let ((n2 (vec* normal -1.0)))
             (declare (dynamic-extent n2))

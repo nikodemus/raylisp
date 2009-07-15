@@ -16,13 +16,13 @@ tree of CSG-NODE instances."))
 
 (defun csg-nodes (csg)
   "Return a tree of CSG-NODEs for a CSG instance."
-  (with-defaults (:type (type-of csg) :transform (transform-of csg))
+  (let ((type (type-of csg)))
     (reduce (lambda (x y)
-              (make-instance 'csg-node :left x :right y))
+              (make-instance 'csg-node :left x :right y :type type))
             (objects-of csg))))
 
-(defmethod compute-object-properties ((csg csg) scene transform &key shade-only)
-  (compute-object-properties (csg-nodes csg) scene transform :shade-only shade-only))
+(defmethod compute-object-properties ((csg csg) scene transform &key shading-object)
+  (compute-object-properties (csg-nodes csg) scene transform :shading-object shading-object))
 
 (defmethod compute-csg-properties ((csg csg) scene transform)
   (compute-csg-properties (csg-nodes csg) scene transform))
@@ -57,46 +57,45 @@ intersections."
   (declare (ignore point))
   (error "CSG normal not delegated."))
 
-(defmethod compute-object-properties ((node csg-node) scene transform &key shade-only)
-  (let ((m (matrix* transform (transform-of node))))
-    (list
-     :intersection
-     (unless shade-only
-       (let ((left-obj (left-of node))
-             (right-obj (right-of node)))
-         (let-plists ((((:all-intersections all-left) (:inside inside-left))
-                       (compute-csg-properties left-obj scene (matrix* m (transform-of left-obj))))
-                      (((:all-intersections all-right) (:inside inside-right))
-                       (compute-csg-properties right-obj scene (matrix* m (transform-of right-obj)))))
-          (declare (type (function (vec vec) (simple-array csg-intersection (*)))
-                         all-left all-right)
-                   (type (function (vec) t) inside-left inside-right))
-          (macrolet
-              ((make-lambda (name find-left find-right)
-                 `(sb-int:named-lambda ,name (ray)
-                    (declare (type ray ray) (optimize speed))
-                    (let* ((o (ray-origin ray))
-                           (d (ray-direction ray))
-                           (sx (,find-left (csg-lambda inside-right o d)
-                                           (funcall all-left o d)))
-                           (sy (,find-right (csg-lambda inside-left o d)
-                                            (funcall all-right o d))))
-                      (let ((s (if (and sx sy)
-                                   (if (< (csg-intersection-distance sx)
-                                          (csg-intersection-distance sy))
-                                       sx
-                                       sy)
-                                   (or sx sy))))
-                        (when (and s (< epsilon (csg-intersection-distance s) (ray-extent ray)))
-                          (setf (ray-extent ray) (csg-intersection-distance s))
-                          (values t (csg-intersection-object s))))))))
-            (ecase (type-of node)
-              (intersection
-               (make-lambda csg-intersection-lambda find-if find-if))
-              (difference
-               (make-lambda csg-difference-lambda find-if-not find-if)))))))
-     :normal
-     #'undelegated-csg-normal)))
+(defmethod compute-object-properties ((node csg-node) scene transform &key shading-object)
+  (list
+   :intersection
+   (unless shading-object
+     (let ((left-obj (left-of node))
+           (right-obj (right-of node)))
+       (let-plists ((((:all-intersections all-left) (:inside inside-left))
+                     (compute-csg-properties left-obj scene (matrix* transform (transform-of left-obj))))
+                    (((:all-intersections all-right) (:inside inside-right))
+                     (compute-csg-properties right-obj scene (matrix* transform (transform-of right-obj)))))
+                   (declare (type (function (vec vec) (simple-array csg-intersection (*)))
+                                  all-left all-right)
+                            (type (function (vec) t) inside-left inside-right))
+                   (macrolet
+                       ((make-lambda (name find-left find-right)
+                          `(sb-int:named-lambda ,name (ray)
+                             (declare (type ray ray) (optimize speed))
+                             (let* ((o (ray-origin ray))
+                                    (d (ray-direction ray))
+                                    (sx (,find-left (csg-lambda inside-right o d)
+                                                    (funcall all-left o d)))
+                                    (sy (,find-right (csg-lambda inside-left o d)
+                                                     (funcall all-right o d))))
+                               (let ((s (if (and sx sy)
+                                            (if (< (csg-intersection-distance sx)
+                                                   (csg-intersection-distance sy))
+                                                sx
+                                                sy)
+                                            (or sx sy))))
+                                 (when (and s (< epsilon (csg-intersection-distance s) (ray-extent ray)))
+                                   (setf (ray-extent ray) (csg-intersection-distance s))
+                                   (values t (csg-intersection-object s))))))))
+                     (ecase (type-of node)
+                       (intersection
+                        (make-lambda csg-intersection-lambda find-if find-if))
+                       (difference
+                        (make-lambda csg-difference-lambda find-if-not find-if)))))))
+   :normal
+   #'undelegated-csg-normal))
 
 ;;; KLUDGE: SBCL's built-in MERGE is slow.
 ;;;
@@ -197,38 +196,40 @@ intersections."
     result))
 
 (defmethod compute-csg-properties ((node csg-node) scene transform)
-  (let-plists ((((:all-intersections all-left) (:inside inside-left))
-                (compute-csg-properties (left-of node) scene transform))
-               (((:all-intersections all-right) (:inside inside-right))
-                (compute-csg-properties (right-of node) scene transform)))
-    (declare (type (function (vec vec) simple-vector) all-left all-right)
-	     (type (function (vec) t) inside-left inside-right))
-    (list
-     :all-intersections
-     (macrolet
-         ((make-lambda (name remove-left remove-right)
-            `(sb-int:named-lambda ,name (origin direction)
-               (declare (type vec origin direction) (optimize speed))
-               (merge-csg-intersections
-                (,remove-left (csg-lambda inside-right origin direction)
-                              (funcall all-left origin direction))
-                (,remove-right (csg-lambda inside-left origin direction)
-                               (funcall all-right origin direction))))))
-       (ecase (type-of node)
-         (intersection
-          (make-lambda csg-intersection-merge fast-remove-if-not fast-remove-if-not))
-         (difference
-          (make-lambda csg-difference-merge fast-remove-if fast-remove-if-not))))
-     :inside
-     (macrolet ((make-lambda (combine)
-                  `(lambda (point)
-                     (,combine (funcall inside-left point)
-                               (funcall inside-right point)))))
-       (ecase (type-of node)
-         (intersection
-          (make-lambda and))
-         (difference
-          (make-lambda (lambda (x y) (and x (not y))))))))))
+  (let ((left-obj (left-of node))
+        (right-obj (right-of node)))
+    (let-plists ((((:all-intersections all-left) (:inside inside-left))
+                  (compute-csg-properties left-obj scene (matrix* transform (transform-of left-obj))))
+                 (((:all-intersections all-right) (:inside inside-right))
+                  (compute-csg-properties right-obj scene (matrix* transform (transform-of right-obj)))))
+      (declare (type (function (vec vec) simple-vector) all-left all-right)
+               (type (function (vec) t) inside-left inside-right))
+      (list
+       :all-intersections
+       (macrolet
+           ((make-lambda (name remove-left remove-right)
+              `(sb-int:named-lambda ,name (origin direction)
+                 (declare (type vec origin direction) (optimize speed))
+                 (merge-csg-intersections
+                  (,remove-left (csg-lambda inside-right origin direction)
+                                (funcall all-left origin direction))
+                  (,remove-right (csg-lambda inside-left origin direction)
+                                 (funcall all-right origin direction))))))
+         (ecase (type-of node)
+           (intersection
+            (make-lambda csg-intersection-merge fast-remove-if-not fast-remove-if-not))
+           (difference
+            (make-lambda csg-difference-merge fast-remove-if fast-remove-if-not))))
+       :inside
+       (macrolet ((make-lambda (combine)
+                    `(lambda (point)
+                       (,combine (funcall inside-left point)
+                                 (funcall inside-right point)))))
+         (ecase (type-of node)
+           (intersection
+            (make-lambda and))
+           (difference
+            (make-lambda (lambda (x y) (and x (not y)))))))))))
 
 (defmethod compute-object-extents ((node csg) transform)
   (let ((objects (objects-of node)))
