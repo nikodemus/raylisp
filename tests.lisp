@@ -171,10 +171,11 @@
    (make-instance 'sphere
                   :radius 4.0
                   :location (v 0.0 4.0 -2.0)
-                  :shader (make-instance 'marble-shader
+                  :shader (make-instance 'phong-shader
                                          :transform (rotate* 0.0 0.0 1.0)
-                                         :start (make-instance 'phong-shader :color black)
-                                         :end (make-instance 'phong-shader :color (vec 0.7 0.7 0.7)))))
+                                         :color (make-instance 'marble-pattern
+                                                               :map `((0.0 ,black)
+                                                                      (1.0 ,(vec 0.7 0.7 0.7)))))))
   (:lights
    (make-instance 'point-light
                   :location (v -10 10 -10)))
@@ -378,17 +379,32 @@
 (defscene test-1
   (:objects
    (make-instance 'sphere
-                  :shader (make-instance 'solid-shader :color red))
-   (make-instance 'sphere
-                  :location (@ 0 -0.5 0)
+                  :location (@ 0 -1 0)
                   :transform (scale (@ 3 0.5 0.5))
                   :shader
-                  (make-instance
-                   'gradient-shader
-                   :start (make-instance 'solid-shader :color blue)
-                   :end (make-instance 'solid-shader :color green)
-                   :axis 0
-                   :scale 3.0)))
+                  (make-instance 'phong-shader
+                                 :color (make-instance 'gradient-pattern
+                                                       :axis x-axis
+                                                       :map `((0.0 ,blue)
+                                                              (1.0 ,green)))))
+   (make-instance 'sphere
+                  :location (@ 0 0 0)
+                  :transform (scale (@ 3 0.5 0.5))
+                  :shader
+                  (make-instance 'phong-shader
+                                 :color (make-instance 'gradient-pattern
+                                                       :smooth t
+                                                       :transform (rotate* 0.0 (/ +pi+ 2) 0.0)
+                                                       :map `((0.0 ,black)
+                                                              (1.0 ,white)))))
+   (make-instance 'sphere
+                  :location (@ 0 1 0)
+                  :transform (scale (@ 3 0.5 0.5))
+                  :shader
+                  (make-instance 'phong-shader
+                                 :color (make-instance 'gradient-pattern
+                                                       :map `((0.0 ,red)
+                                                              (1.0 ,yellow))))))
   (:lights
    (make-instance 'point-light
                   :location (@ 10 5 -20)))

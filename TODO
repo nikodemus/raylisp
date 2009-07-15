@@ -11,6 +11,8 @@
 * TODO ARCHITECTURE
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO Nested patterns
+    Maps should be able to contain other patterns.
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference
     images would be golden, along with some sort of timings.

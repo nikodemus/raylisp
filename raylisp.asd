@@ -35,6 +35,7 @@
    (:module "patterns"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "gradient")
+                         (:file "marble")
                          (:file "wood")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "mixins")
@@ -42,8 +43,6 @@
                          (:file "checker")
                          (:file "composite")
                          (:file "flat")
-                         (:file "gradient")
-                         (:file "marble")
                          (:file "noise")
                          (:file "phong")
                          (:file "raytrace")
