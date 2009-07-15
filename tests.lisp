@@ -178,7 +178,7 @@
                                                                       (1.0 ,(vec 0.7 0.7 0.7)))))))
   (:lights
    (make-instance 'line-light
-                  :samples 30
+                  :samples 28
                   :location (v -10 10 -10)))
   (:camera
    *view*))

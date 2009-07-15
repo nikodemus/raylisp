@@ -76,21 +76,23 @@
 ;;; point from location, and place the shadowing object first in the
 ;;; group.
 
-(defun shadow-function (location scene)
+(defun shadow-function (light location scene)
   (declare (ignore location))
   (check-type scene scene)
-  (with-arrays (location)
-    (let (;; No real light buffers yet: just a single shadow object cache.
-	  (last nil))
-      (lambda (point nlv len counters)
-	(declare (type vec point nlv) (type float len)
-		 (optimize speed))
-	(with-ray (ray :origin point :direction nlv :extent len)
-	  (when (or (and last (intersect last ray counters t))
-                    (let ((int (find-scene-intersection ray scene counters t)))
-                      (when int
-                        (setf last int))))
-            t))))))
+  (if (fill-light-p light)
+      (constantly nil)
+      (with-arrays (location)
+        (let ( ;; No real light buffers yet: just a single shadow object cache.
+              (last nil))
+          (lambda (point nlv len counters)
+            (declare (type vec point nlv) (type float len)
+                     (optimize speed))
+            (with-ray (ray :origin point :direction nlv :extent len)
+              (when (or (and last (intersect last ray counters t))
+                        (let ((int (find-scene-intersection ray scene counters t)))
+                          (when int
+                            (setf last int))))
+                t)))))))
 
 ;;;## Shader protocol
 ;;;

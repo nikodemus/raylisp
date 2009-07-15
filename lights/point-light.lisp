@@ -8,7 +8,7 @@
 (defmethod compute-light-properties ((light point-light) scene)
   (let* ((location (location-of light))
 	 (color (color-of light))
-	 (shadow-fun (shadow-function location scene)))
+	 (shadow-fun (shadow-function light location scene)))
     (declare (function shadow-fun))
     (list
      :incident-light

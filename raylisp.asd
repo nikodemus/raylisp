@@ -21,7 +21,7 @@
                          (:file "panoramic")
                          (:file "pinhole")))
    (:module "lights"
-            :depends-on ("package" "base" "math" "protocol" "mixins")
+            :depends-on ("package" "base" "math" "protocol" "mixins" "scene")
             :components ((:file "line-light")
                          (:file "point-light")
                          (:file "solar-light")

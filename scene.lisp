@@ -149,7 +149,11 @@
 
 ;;;## Lights
 
-(defclass scene-light (name-mixin) ())
+(defclass scene-light (name-mixin)
+  ((fill-light
+    :initform nil
+    :initarg :fill-light
+    :reader fill-light-p)))
 
 (defstruct (compiled-light (:conc-name light-))
   (direction (required-argument :illumination) :type (function (vec) vec))

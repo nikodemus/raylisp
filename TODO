@@ -81,6 +81,8 @@
 *** TODO Variant reflection
 *** TODO Light groups
     Lights illuminating only some objects
+*** TODO Fill lights
+***** TODO Make filling selective: shadowed by some objects, not all.
 *** TODO Cylinder
 ***** TODO CSG
 *** TODO Torus
