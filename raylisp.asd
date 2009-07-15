@@ -34,7 +34,8 @@
                          (:file "sphere" :depends-on ("csg"))))
    (:module "patterns"
             :depends-on ("package" "base" "math" "protocol" "mixins")
-            :components ((:file "gradient")))
+            :components ((:file "gradient")
+                         (:file "wood")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "bump")
@@ -46,8 +47,7 @@
                          (:file "noise")
                          (:file "phong")
                          (:file "raytrace")
-                         (:file "solid")
-                         (:file "wood")))
+                         (:file "solid")))
    (:file "output" :depends-on ("base"))
    (:file "render" :depends-on ("protocol"))
    (:file "tests" :depends-on ("output" "render" "objects" "shaders" "lights" "cameras"

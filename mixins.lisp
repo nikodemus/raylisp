@@ -2,7 +2,7 @@
 
 ;;;## General Purpose Mixins
 ;;;
-;;; Used by shaders, lights, and objects.
+;;; Used by shaders, patterns, lights, and objects.
 
 (defclass transform-mixin ()
   ((%transform
@@ -14,6 +14,12 @@
     (etypecase transform
       (cons (apply #'matrix* (reverse transform)))
       (matrix transform))))
+
+(defclass axis-mixin ()
+  ((axis
+    :initform z-axis
+    :initarg :axis
+    :reader axis-of)))
 
 (defclass color-mixin ()
   ((color

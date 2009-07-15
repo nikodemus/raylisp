@@ -187,10 +187,11 @@
    (make-instance 'box
                   :transform (matrix* (translate* 0.0 3.0 -2.0)
                                       (scale* 3.0 3.0 3.0))
-                  :shader (make-instance 'wood-shader
+                  :shader (make-instance 'phong-shader
                                          :transform (scale* 0.2 0.2 0.2)
-                                         :start (make-instance 'phong-shader :color black)
-                                         :end (make-instance 'phong-shader :color (vec 0.6 0.3 0.25)))))
+                                         :color (make-instance 'wood-pattern
+                                                               :map `((0.0 ,black)
+                                                                      (1.0 ,(vec 0.6 0.3 0.25)))))))
   (:lights
    (make-instance 'point-light
                   :location (v -10 10 -10)))

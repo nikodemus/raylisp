@@ -1,14 +1,11 @@
 (in-package :raylisp)
 
-(defclass gradient-pattern (pattern)
-  ((axis
-    :initform x-axis
-    :initarg :axis
-    :reader axis-of)))
+(defclass gradient-pattern (pattern axis-mixin)
+  ())
 
 (defmethod compute-pattern-function ((pattern gradient-pattern) transform)
   (let ((inverse (inverse-matrix
-                  (matrix* transform (reorient (axis-of pattern) x-axis)))))
+                  (matrix* transform (reorient (axis-of pattern) z-axis)))))
     (lambda (point)
       (let ((p (transform-point point inverse)))
         (declare (dynamic-extent p))
