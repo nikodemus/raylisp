@@ -1,6 +1,6 @@
 (in-package :raylisp)
 
-(defclass gradient-pattern (pattern axis-mixin)
+(defclass gradient-pattern (interpolated-pattern axis-mixin)
   ((smooth
     :initform nil
     :initarg :smooth

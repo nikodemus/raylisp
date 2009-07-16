@@ -1,6 +1,6 @@
 (in-package :raylisp)
 
-(defclass marble-pattern (pattern axis-mixin)
+(defclass marble-pattern (interpolated-pattern axis-mixin)
   ())
 
 (defmethod compute-pattern-key-function ((pattern marble-pattern) transform)

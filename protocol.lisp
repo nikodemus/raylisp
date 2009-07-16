@@ -109,6 +109,14 @@
 
 (defgeneric compute-shader-function (shader object scene transform))
 
+(defmethod compute-shader-function :around ((shader shader) object scene transform)
+  (call-next-method shader object scene (matrix* transform (transform-of shader))))
+
+(defmethod compute-shader-function ((pattern pattern) object scene transform)
+  ;; Patterns can act as shaders -- but PATTERN-FUNCTION will apply the pattern
+  ;; transform, so don't do it here!
+  (pattern-function pattern transform object scene))
+
 (declaim (ftype (function (t t t t) (values (function (shader scene-object vec vec float ray t)
                                                       (values vec &optional))
                                         &optional))
@@ -116,7 +124,7 @@
 (defun compile-shader (shader object scene transform)
   (declare (type scene-object object))
   (if shader
-      (compute-shader-function shader object scene (matrix* transform (transform-of shader)))
+      (compute-shader-function shader object scene transform)
       (constantly black)))
 
 (declaim (inline coefficient))

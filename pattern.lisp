@@ -19,7 +19,18 @@
     :initarg :map
     :initform (required-argument :map))))
 
-(defun pattern-map (pattern transform &rest args)
+(defgeneric compute-pattern-key-function (pattern transform))
+(defgeneric pattern-map-values (pattern transform &rest args))
+(defgeneric pattern-function (pattern transform &rest args))
+
+(defmethod pattern-function ((pattern #.(class-of (alloc-vec))) transform &rest args)
+  (declare (ignore args))
+  (constantly pattern))
+
+(defclass interpolated-pattern (pattern)
+  ())
+
+(defmethod pattern-map-values ((pattern interpolated-pattern) transform &rest args)
   (let* ((map (slot-value pattern 'map))
          (map-size (length map))
          (keys (make-array (length map) :element-type 'single-float))
@@ -45,20 +56,12 @@
         (incf p)))
     (values keys values)))
 
-(defgeneric compute-pattern-key-function (pattern transform))
-
-(defgeneric pattern-function (pattern matrix &rest args))
-
-(defmethod pattern-function (pattern transform &rest args)
-  (declare (ignore args))
-  (constantly pattern))
-
-(defmethod pattern-function ((pattern pattern) transform &rest args)
+(defmethod pattern-function ((pattern interpolated-pattern) transform &rest args)
   (let* ((matrix (matrix* transform (transform-of pattern)))
          (key-function
           (the function
             (compute-pattern-key-function pattern matrix))))
-    (multiple-value-bind (keys values) (apply #'pattern-map pattern matrix args)
+    (multiple-value-bind (keys values) (apply #'pattern-map-values pattern matrix args)
       (declare (type (simple-array single-float (*)) keys)
                (type (simple-array t (*)) values))
       (let ((map-size (length keys)))
@@ -86,6 +89,38 @@
                 (vec-lerp (apply (the function (aref values (- index 1))) point args)
                           (apply (the function (aref values index)) point args)
                           tmp)))))))))
+
+(defclass indexed-pattern (pattern)
+  ())
+
+(defgeneric pattern-map-size (pattern))
+
+(defmethod pattern-map-values ((pattern indexed-pattern) transform &rest args)
+  (let* ((map (slot-value pattern 'map))
+         (map-size (length map))
+         (correct-size (pattern-map-size pattern))
+         (values (make-array map-size))
+         (p 0))
+    (unless (= map-size correct-size)
+      (error "Map of ~S has the wrong size: ~S elements expected, got ~S.~%  ~S"
+             pattern correct-size map-size map))
+    (dolist (elt map)
+      (setf (aref values p) (apply #'pattern-function elt transform args))
+      (incf p))
+    values))
+
+(defmethod pattern-function ((pattern indexed-pattern) transform &rest args)
+  (let* ((matrix (matrix* transform (transform-of pattern)))
+         (key-function
+          (the function
+            (compute-pattern-key-function pattern matrix)))
+         (values (apply #'pattern-map-values pattern matrix args)))
+    (declare (type (simple-array t (*)) values))
+    (sb-int:named-lambda pattern-at-point (point &rest args)
+      (declare (optimize speed) (dynamic-extent args))
+      (apply (the function (aref values (funcall key-function point))) point args))))
+
+;;; Interaction with shaders...
 
 (defmethod compute-shader-function ((pattern pattern) object scene transform)
   (pattern-function pattern transform object scene))

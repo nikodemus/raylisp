@@ -1,6 +1,6 @@
 (in-package :raylisp)
 
-(defclass wood-pattern (pattern axis-mixin)
+(defclass wood-pattern (interpolated-pattern axis-mixin)
   ())
 
 (defmethod compute-pattern-key-function ((pattern wood-pattern) transform)

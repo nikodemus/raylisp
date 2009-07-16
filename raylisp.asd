@@ -36,14 +36,14 @@
                          (:file "sphere" :depends-on ("csg"))
                          (:file "triangle")))
    (:module "patterns"
-            :depends-on ("package" "base" "math" "protocol" "mixins")
-            :components ((:file "gradient")
+            :depends-on ("package" "base" "math" "protocol" "mixins" "pattern")
+            :components ((:file "checker")
+                         (:file "gradient")
                          (:file "marble")
                          (:file "wood")))
    (:module "shaders"
             :depends-on ("package" "base" "math" "protocol" "mixins")
             :components ((:file "bump")
-                         (:file "checker")
                          (:file "composite")
                          (:file "flat")
                          (:file "noise")

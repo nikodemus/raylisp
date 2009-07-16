@@ -4,10 +4,9 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (let* ((chessboard
-          (make-instance
-           'checker-shader
-           :odd (make-instance 'phong-shader :color black)
-           :even (make-instance 'phong-shader :color white)))
+          (make-instance 'phong-shader
+                         :color (make-instance 'checker-pattern
+                                               :map `(,black ,white))))
          (bright-red
           (make-instance 'phong-shader :color red))
          (bright-blue
@@ -891,12 +890,9 @@
     'plane
     :location (@ 0 -1 0)
     :shader
-    (make-instance 'checker-shader
-                   :odd
-                   (make-instance 'phong-shader :color black)
-                   :even
-                   (make-instance 'phong-shader :color white
-                                         :ambient 0.1))))
+    (make-instance 'checker-pattern
+                   :map (list (make-instance 'phong-shader :color black)
+                              (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
    (make-instance 'spotlight
                   :location (@ -30 30 -30)
@@ -934,9 +930,9 @@
    (make-instance 'plane
                   :normal x-axis
                   :location (@ -1 0 0)
-                  :shader (make-instance 'checker-shader
-                                         :odd (make-instance 'phong-shader :color black)
-                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
+                  :shader (make-instance 'checker-pattern
+                                         :map (list (make-instance 'phong-shader :color black)
+                                                    (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (@ 1 1 1)))
   (:camera
@@ -950,9 +946,9 @@
    (make-instance 'plane
                   :normal y-axis
                   :location (@ 0 -1 0)
-                  :shader (make-instance 'checker-shader
-                                         :odd (make-instance 'phong-shader :color black)
-                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
+                  :shader (make-instance 'checker-pattern
+                                         :map (list (make-instance 'phong-shader :color black)
+                                                    (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -966,9 +962,9 @@
    (make-instance 'plane
                   :normal z-axis
                   :location (@ 0 0 -1)
-                  :shader (make-instance 'checker-shader
-                                         :odd (make-instance 'phong-shader :color black)
-                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
+                  :shader (make-instance 'checker-pattern
+                                         :map (list (make-instance 'phong-shader :color black)
+                                                    (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -985,9 +981,9 @@
                                        (rotate-around z-axis 1.5)))
    (make-instance 'plane
                   :location (@ 0 -1 0)
-                  :shader (make-instance 'checker-shader
-                                         :odd (make-instance 'phong-shader :color black)
-                                         :even (make-instance 'phong-shader :color white :ambient 0.1))))
+                  :shader (make-instance 'checker-pattern
+                                         :map (list (make-instance 'phong-shader :color black)
+                                                    (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1014,17 +1010,16 @@
                                            :normal (v 0 1 0)
                                            :location (@ 0 -1 0)
                                            :transform (rotate-around z-axis (/ +pi+ -4))
-                                           :shader (make-instance 'checker-shader
-                                                                  :transform (scale* 5.0 5.0 5.0)
-                                                                  :odd (make-instance 'phong-shader :color black)
-                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1)))
+                                           :shader (make-instance 'checker-pattern
+                                                                  :map (list (make-instance 'phong-shader :color black)
+                                                                             (make-instance 'phong-shader :color white :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
-                                           :shader (make-instance 'checker-shader
-                                                                  :transform (scale* 5.0 5.0 5.0)
-                                                                  :odd (make-instance 'phong-shader :color black)
-                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1))))))
+                                           :shader (make-instance 'checker-pattern
+                                                                  :transform (scale* 2.0 2.0 2.0)
+                                                                  :map (list (make-instance 'phong-shader :color black)
+                                                                             (make-instance 'phong-shader :color white :ambient 0.1)))))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1042,17 +1037,17 @@
                                            :normal (v 0 1 0)
                                            :location (@ 0 -1 0)
                                            :transform (rotate-around z-axis (/ +pi+ -4))
-                                           :shader (make-instance 'checker-shader
+                                           :shader (make-instance 'checker-pattern
                                                                   :transform (scale* 5.0 5.0 5.0)
-                                                                  :odd (make-instance 'phong-shader :color black)
-                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1)))
+                                                                  :map (list (make-instance 'phong-shader :color black)
+                                                                             (make-instance 'phong-shader :color white :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
-                                           :shader (make-instance 'checker-shader
+                                           :shader (make-instance 'checker-pattern
                                                                   :transform (scale* 5.0 5.0 5.0)
-                                                                  :odd (make-instance 'phong-shader :color black)
-                                                                  :even (make-instance 'phong-shader :color white :ambient 0.1)))))
+                                                                  :map (list (make-instance 'phong-shader :color black)
+                                                                             (make-instance 'phong-shader :color white :ambient 0.1))))))
    (make-instance 'csg
                   :type 'difference
                   :transform (rotate-around x-axis (/ pi 4))
@@ -1157,18 +1152,17 @@
    (make-instance 'plane
                   :location (v 0 0.1 0)
                   :shader
-                  (make-instance 'checker-shader
+                  (make-instance 'checker-pattern
                                  :transform (scale* 2.0 2.0 2.0)
-                                 :odd (make-instance 'phong-shader :color black)
-                                 :even
-                                 (make-instance 'checker-shader
-                                                :odd (make-instance 'phong-shader :color black)
-                                                :even (make-instance 'phong-shader :color white)
-                                                :transform (matrix*
-                                                            (rotate* 0.0 (/ +pi+ 4) 0.0)
-                                                            (let ((s (/ 1.0 (sqrt 2.0))))
-                                                              (scale* s s s))
-                                                            (translate* 0.5 0.0 0.5))))))
+                                 :map (list (make-instance 'phong-shader :color black)
+                                            (make-instance 'checker-pattern
+                                                           :map (list (make-instance 'phong-shader :color black)
+                                                                      (make-instance 'phong-shader :color white))
+                                                           :transform (matrix*
+                                                                       (rotate* 0.0 (/ +pi+ 4) 0.0)
+                                                                       (let ((s (/ 1.0 (sqrt 2.0))))
+                                                                         (scale* s s s))
+                                                                       (translate* 0.5 0.0 0.5)))))))
   (:lights
    *lamp*)
   (:camera

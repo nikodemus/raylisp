@@ -26,8 +26,6 @@
       the context: the current pattern->shader-function stuff feels a
       bit too ad-hoc.
 ***** TODO Transform rest of pattern-like shaders into patterns
-***** TODO Indexed pattern maps
-      So that CHECKER and others can be patterns nicely.
 *** TODO Integrate pertubated normals into general shader framework
     As a subprotocol, maybe: shaders inheriting from NORMAL-SHADER
     could have extra magic applied to them -- or at least the normal
