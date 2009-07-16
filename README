@@ -1,0 +1,40 @@
+Raylisp is a Common Lisp raytracing system.
+
+It is a toy, and a fun way to explore some aspects of graphics
+programming -- not a serious project. The author Nikodemus Siivola
+<nikodemus@random-state.net> works on it only sporadically, when the
+mood strikes.
+
+That said, the architecture -- while neither polished nor stable --
+has some interesting design features:
+
+ * Protocol oriented: Raylisp tries to work by building clean and
+   flexible protocols. Eg. adding new geometric primitives requires
+   just subclassing SCENE-OBJECT and defining a method on
+   COMPUTE-OBJECT-PROPERTIES. Enabling CSG is a matter of defining a
+   method on COMPUTE-CSG-PROPERTIES.
+
+   Exploring directories objects/, patterns/, shaders/, cameras/, and
+   lights/ will give a good idea of how things work.
+
+ * Layered, sort of: This is closely related to the protocol
+   orientation. There are conceptually two main layers: the scene
+   layer and the rendering layer. The scene layer uses CLOS and
+   generic functions for flexibility, whereas the rendering layer is
+   very performance oriented. The chief role of protocols is to
+   mediate transformations from the scene layer to the rendering
+   layer.
+
+ * Shader based: Nothing new in this day and age, but you can shade
+   points on objects using arbitrary functions, etc. Again, this
+   is closely related to the protocol orientation.
+
+Finally, a caveat: Raylisp is SBCL only software. While it can
+certainly be ported to pretty much any working Common Lisp (there are
+no deep incompatibilities), the performance depends on some SBCL
+specific features, and the author has little motivation to maintain
+it for other platforms -- it's not like he's maintaining it properly
+in the first place.
+
+Oh, and Raylisp is open source, under an MIT style licence. See LICENCE
+for more information.
