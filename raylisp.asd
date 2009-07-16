@@ -54,5 +54,7 @@
                          (:file "phong")
                          (:file "raytrace")
                          (:file "solid")))
+   (:module "models"
+            :components ((:static-file "teapot.obj")))
    (:file "tests" :depends-on
           ("kernel"  "cameras" "lights" "objects" "patterns" "shaders"))))
