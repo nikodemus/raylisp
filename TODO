@@ -57,6 +57,9 @@
     Sometimes humans are better.
 *** TODO Path tracing
 *** TODO Multithreading
+    One worker-thread per core (configurable.)
+    KD tree can be built in parallel.
+    Raytracing itself is ridiculously parallel.
 *** TODO Ray attenuation in transparent objects
     Simple homogenous mediums to start with.
 *** TODO Volumetric rendering

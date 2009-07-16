@@ -1,6 +1,6 @@
 (in-package :raylisp)
 
-(declaim (optimize debug))
+(declaim (optimize (debug 2)))
 
 (deftype axis ()
   '(member 0 1 2))
@@ -54,7 +54,7 @@
              (if (kd-interior-node-p node)
                  (1+ (max (rec (kd-interior-node-left node))
                           (rec (kd-interior-node-right node))))
-                 0)))
+                 1)))
     (rec kd-node)))
 
 (defstruct (kd-leaf-node (:include kd-node) (:predicate kd-leaf-p))
@@ -111,9 +111,15 @@
   (declare (simple-vector stack) (fixnum pointer))
   (setf (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-prev-index+)) prev))
 
+(defun find-intersection-in-kd-tree (ray root counters shadowp)
+  (flet ((kd-intersect (objects min max)
+           (%find-intersection ray objects min max counters shadowp)))
+    (kd-traverse #'kd-intersect ray root)))
+
 ;;; RayTravAlgRECB from Appendix C.
-(defun kd-traverse (root ray counters shadowp)
+(defun kd-traverse (function ray root)
   (declare (kd-node root)
+           (function function)
            (ray ray)
            (optimize speed))
   (multiple-value-bind (entry-distance exit-distance)
@@ -122,7 +128,7 @@
              (float exit-distance))
     (when entry-distance
       (unless (kd-interior-node-p root)
-        (return-from kd-traverse (%find-intersection ray (kd-objects root) counters shadowp)))
+        (return-from kd-traverse (funcall function (kd-objects root) nil nil)))
       (let ((stack (make-kd-stack root))
             (current-node root)
             (entry-pointer 0)
@@ -191,14 +197,12 @@
                                            point))))
                              :cont))
                 (when current-node
-                  (let ((intersection (%find-intersection* ray
-                                                           (kd-objects current-node)
-                                                           (kd-stack-distance stack entry-pointer)
-                                                           (kd-stack-distance stack exit-pointer)
-                                                           counters
-                                                           shadowp)))
-                    (when intersection
-                      (return-from kd-traverse intersection))))
+                  (multiple-value-bind (result info)
+                      (funcall function (kd-objects current-node)
+                               (kd-stack-distance stack entry-pointer)
+                               (kd-stack-distance stack exit-pointer))
+                    (when result
+                      (return-from kd-traverse (values result info)))))
                 (setf entry-pointer exit-pointer
                       current-node (kd-stack-node stack exit-pointer)
                       exit-pointer (kd-stack-prev stack entry-pointer))))))))
@@ -241,12 +245,33 @@
 ;;;; See: papers/ingo06rtKdtree.pdf
 ;;;;
 ;;;; This is essentially what the paper says, except we don't do perfect splits.
+;;;;
+;;;; The interface is somewhat generic: define appropriate methods on
+;;;;
+;;;;   KD-SET-SIZE set
+;;;;   MAP-KD-SET function set
+;;;;   MAKE-KD-SUBSET subset set
+;;;;   KD-OBJECT-MIN object set
+;;;;   KD-OBJECT-MAX object set
+;;;;
+;;;; and you can hand your own data to the implemntation and cast rays at it
+;;;; using KD-TRAVERSE. See Eg. objects/mesh.lisp for what this is good for.
+;;;;
+;;;; Ideally you should always dispatch on SET -- and the two first ones you
+;;;; really have no option.
 
-(defstruct (event (:constructor event (type object e k)))
-  (object (required-argument))
-  (type (required-argument) :type (integer 0 2))
-  (e (required-argument) :type single-float)
-  (k (required-argument) :type (integer 0 2)))
+(defgeneric kd-set-size (set))
+(defgeneric map-kd-set (function set))
+(defgeneric make-kd-subset (subset set))
+(defgeneric kd-object-min (object set))
+(defgeneric kd-object-max (object set))
+
+(defstruct event
+  (object (required-argument :object))
+  (type (required-argument :type) :type (integer 0 2))
+  (id (required-argument :id) :type (and unsigned-byte fixnum))
+  (e (required-argument :e) :type single-float)
+  (k (required-argument :k) :type (integer 0 2)))
 
 ;;; Start, parellel, and end events.
 (defconstant .e+ 0)
@@ -260,67 +285,77 @@
         (and (= ae be)
              (< (event-type a) (event-type b))))))
 
-(defun events->objects (events)
-  (let ((tag (list :tag))
-        (objects nil))
+(defun events->subset (events set)
+  (declare (simple-vector events))
+  (let (objects)
     (dotimes (i (length events))
       (let ((obj (event-object (aref events i))))
-        (unless (eq tag (object-info obj))
-          (setf (object-info obj) tag)
-          (push obj objects))))
-    objects))
-
-(defun make-kd-tree (objects)
-  (let (bounded unbounded min max)
-    (dolist (object objects)
-      (let ((this-min (object-min object))
-            (this-max (object-max object)))
-        (cond (this-min
-               (push object bounded)
-               (if min
-                   (setf min (vec-min min this-min this-max)
-                         max (vec-max max this-min this-max))
-                   (setf min (vec-min this-min this-max)
-                         max (vec-max this-min this-max))))
-              (t
-               (push object unbounded)))))
-    (let ((tree (when bounded
-                  (build-kd-tree bounded min max))))
-      (values tree unbounded))))
+        (push obj objects)))
+    (make-kd-subset (delete-duplicates objects) set)))
 
 (defparameter *kd-traversal-cost* 0.2)
 (defparameter *intersection-cost* 0.05)
 
-(defun build-kd-tree (objects min max)
-  (labels ((rec (n events min max)
-             (multiple-value-bind (e k side cost) (find-plane n events min max)
-               (if (> cost (* *intersection-cost* n))
-                   (make-kd-leaf-node :min min :max max
-                                      :objects (when (plusp (length events))
-                                                 (events->objects events)))
-                   (multiple-value-bind (left-events right-events nl nr)
-                       (split-events events e k side)
-                     (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
-                       (values (make-kd-interior-node
-                                :plane-position e
-                                :axis k
-                                :min min
-                                :max max
-                                :left (rec nl left-events lmin lmax)
-                                :right (rec nr right-events rmin rmax)))))))))
-    (rec (length objects) (build-events objects) min max)))
+(defun build-kd-tree (set min max)
+  (let ((size (kd-set-size set)))
+    (labels ((rec (n events min max)
+               (multiple-value-bind (e k side cost) (find-plane n events min max)
+                 (if (> cost (* *intersection-cost* n))
+                     (make-kd-leaf-node :min min :max max
+                                        :objects (when (plusp (length events))
+                                                   (events->subset events set)))
+                     (multiple-value-bind (left-events right-events nl nr)
+                         (split-events size events e k side)
+                       (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
+                         (values (make-kd-interior-node
+                                  :plane-position e
+                                  :axis k
+                                  :min min
+                                  :max max
+                                  :left (rec nl left-events lmin lmax)
+                                  :right (rec nr right-events rmin rmax)))))))))
+      (rec size (build-events size set) min max))))
 
-(defun split-events (events e k side)
-  (declare (simple-vector events))
-  ;; A few unique markers
-  (let ((left-only (list :left-only))
-        (right-only (list :right-only))
-        (both (list :both)))
+(defun build-events (size set)
+  ;; 3 dimensions, max 2 events per object
+  (let ((events (make-array (* 6 size)))
+        (id 0)
+        (p 0))
+    (declare (fixnum p))
+    (map-kd-set (lambda (obj)
+                  (dotimes (k 3)
+                    (let ((min (kd-object-min obj set))
+                          (max (kd-object-max obj set)))
+                      (flet ((make (type)
+                               (setf (aref events p)
+                                     (make-event
+                                      :object obj
+                                      :id id
+                                      :type type
+                                      :e (if (= .e- type)
+                                             (aref max k)
+                                             (aref min k))
+                                      :k k))
+                               (incf p)))
+                        (cond ((= (aref min k) (aref max k))
+                               (make .e!))
+                              (t
+                               (make .e+)
+                               (make .e-))))))
+                  (incf id))
+                set)
+    (sort (sb-kernel:%shrink-vector events p) #'event<)))
+
+(defconstant +left-only+  #b001)
+(defconstant +right-only+ #b010)
+(defconstant +counted+    #b100)
+
+(defun split-events (size events e k side)
+  (declare (simple-vector events)
+           (fixnum size))
+  (let ((info (make-array size :element-type '(unsigned-byte 3))))
     (flet ((classify (event class)
-             (setf (object-info (event-object event)) (cons class nil)))
-           (assert-event<= (a b)
-             (unless (or (event< a b) (not (event< b a)))
-               (break "~S not less than ~S" a b))))
+             (setf (aref info (event-id event)) class)))
       ;; Sweep 1: Classify along K
       (dotimes (i (length events))
         (let ((event (aref events i)))
@@ -328,81 +363,40 @@
             (let ((type (event-type event))
                   (ee (event-e event)))
               (cond ((= .e- type)
-                     (when (<= ee e) (classify event left-only)))
+                     (when (<= ee e) (classify event +left-only+)))
                     ((= .e+ type)
-                     (when (>= ee e) (classify event right-only)))
+                     (when (>= ee e) (classify event +right-only+)))
                     ;; The rest are for .e! types.
                     ((or (< ee e) (and (= ee e) (eq :left side)))
-                     (classify event left-only))
+                     (classify event +left-only+))
                     ((or (> ee e) (and (= ee e) (eq :right side)))
-                     (classify event right-only)))))))
+                     (classify event +right-only+)))))))
       ;; Sweep 2: split into left and right -- including other Ks
       (let ((left-list (make-array (length events)))
-            (pl 0)
-            (left 0)
             (right-list (make-array (length events)))
-            (pr 0)
-            (right 0))
+            (left 0) (right 0) (pl 0) (pr 0))
         (dotimes (i (length events))
           (let* ((event (aref events i))
-                 (info (object-info (event-object event)))
-                 (class (car info))
-                 (counted (cdr info)))
-            (cond ((eq left-only class)
-                   (when (plusp pl)
-                     (assert-event<= (aref left-list (1- pl)) event))
-                   (setf (aref left-list pl) event)
-                   (incf pl)
-                   (unless counted
-                     (incf left)
-                     (setf (cdr info) t)))
-                  ((eq right-only class)
-                   (when (plusp pr)
-                     (assert-event<= (aref right-list (1- pr)) event))
-                   (setf (aref right-list pr) event)
-                   (incf pr)
-                   (unless counted
-                     (incf right)
-                     (setf (cdr info) t)))
-                  (t
-                   (when (plusp pl)
-                     (assert-event<= (aref left-list (1- pl)) event))
-                   (when (plusp pr)
-                     (assert-event<= (aref right-list (1- pr)) event))
-                   (setf (aref left-list pl) event
-                         (aref right-list pr) event)
-                   (incf pl)
-                   (incf pr)
-                   (unless (eq both class)
-                     (incf left)
-                     (incf right)
-                     (classify event both))))))
+                 (mask (aref info (event-id event))))
+            (macrolet ((handle-event (&key left-side right-side)
+                         `(progn
+                            ,@(when left-side
+                                    `((setf (aref left-list (1- (incf pl))) event)))
+                            ,@(when right-side
+                                    `((setf (aref right-list (1- (incf pr))) event)))
+                            (unless (logtest mask +counted+)
+                              ,@(when left-side `((incf left)))
+                              ,@(when right-side `((incf right)))
+                              (classify event (logior +counted+ mask))))))
+              (cond ((logtest mask +left-only+)
+                     (handle-event :left-side t))
+                    ((logtest mask +right-only+)
+                     (handle-event :right-side t))
+                    (t
+                     (handle-event :left-side t :right-side t))))))
         (sb-kernel:%shrink-vector left-list pl)
         (sb-kernel:%shrink-vector right-list pr)
         (values left-list right-list left right)))))
-
-(defun build-events (objects)
-  ;; 3 dimensions, max 2 events per object
-  (let ((events (make-array (* 6 (length objects))))
-        (p 0))
-    (declare (fixnum p))
-    (dotimes (k 3)
-      (dolist (obj objects)
-        (let ((min (object-min obj))
-              (max (object-max obj)))
-          (flet ((make (type)
-                   (setf (aref events p)
-                         (event type obj (if (= .e- type)
-                                             (aref max k)
-                                             (aref min k))
-                                k))
-                   (incf p)))
-            (cond ((= (aref min k) (aref max k))
-                   (make .e!))
-                  (t
-                   (make .e+)
-                   (make .e-)))))))
-    (sort (sb-kernel:%shrink-vector events p) #'event<)))
 
 (defun find-plane (n events min max)
   (let* ((nl (make-array 3 :element-type 'fixnum))
@@ -434,13 +428,13 @@
                              (= type (event-type (aref events i))))))
                  (loop while (event-ok i .e-)
                        do (incf p-)
-                       (incf i))
+                          (incf i))
                  (loop while (event-ok i .e!)
                        do (incf p!)
-                       (incf i))
+                          (incf i))
                  (loop while (event-ok i .e+)
                        do (incf p+)
-                       (incf i)))
+                          (incf i)))
                (setf (aref np k) p!)
                (decf (aref nr k) p!)
                (decf (aref nr k) p-)

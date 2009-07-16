@@ -104,21 +104,7 @@
                     (scene-background-color scene))))
     (vec* color (ray-weight ray))))
 
-(defun %find-intersection (ray all-objects counters &optional shadow)
-  (declare (optimize speed))
-  (labels ((recurse (objects x)
-             (if (not objects)
-                 x
-                 (let ((hit (intersect (car objects) ray counters shadow)))
-                   (if hit
-                       (if shadow
-                           hit
-                           (recurse (cdr objects) hit))
-                       (recurse (cdr objects) x))))))
-    (recurse all-objects nil)))
-
-(defun %find-intersection* (ray all-objects min max counters shadowp)
-  (declare (float min max))
+(defun %find-intersection (ray all-objects min max counters shadowp)
   (declare (optimize speed))
   (let ((old (ray-extent ray))
         (hit nil))
@@ -136,7 +122,8 @@
                          (recurse (cdr objects) x))))))
       (unwind-protect
            (progn
-             (minf (ray-extent ray) max)
+             (when max
+               (minf (ray-extent ray) max))
              (setf hit (recurse all-objects nil)))
         (cond (hit
                ;; FIXME: Just EPSILON here doesn't seem to be good enough --
@@ -160,8 +147,8 @@
          (unbounded (compiled-scene-objects compiled-scene))
          (tree (compiled-scene-tree compiled-scene))
          (hit (when unbounded
-                (%find-intersection ray unbounded counters shadow))))
+                (%find-intersection ray unbounded nil nil counters shadow))))
     (if tree
-        (or (kd-traverse tree ray counters shadow)
+        (or (find-intersection-in-kd-tree ray tree counters shadow)
             hit)
         hit)))
