@@ -356,7 +356,8 @@
 
 (defun split-events (size events e k side)
   (declare (simple-vector events)
-           (fixnum size))
+           (fixnum size k)
+           (single-float e))
   (let ((info (make-array size :element-type '(unsigned-byte 3))))
     (flet ((classify (event class)
              (setf (aref info (event-id event)) class)))
@@ -379,6 +380,7 @@
       (let ((left-list (make-array (length events)))
             (right-list (make-array (length events)))
             (left 0) (right 0) (pl 0) (pr 0))
+        (declare (fixnum left right pl pr))
         (dotimes (i (length events))
           (let* ((event (aref events i))
                  (mask (aref info (event-id event))))
@@ -403,6 +405,7 @@
         (values left-list right-list left right)))))
 
 (defun find-plane (n events min max)
+  (declare (simple-vector events))
   (let* ((nl (make-array 3 :element-type 'fixnum))
          (np (make-array 3 :element-type 'fixnum))
          (nr (make-array 3 :element-type 'fixnum :initial-contents (list n n n)))
@@ -416,7 +419,7 @@
     (declare (dynamic-extent nl nr np)
              (single-float best-cost best-e)
              (type (integer 0 2) best-k))
-    (loop with i = 0
+    (loop with i fixnum = 0
           while (< i n-events)
           do (let* ((event (aref events i))
                     (e (event-e event))
@@ -444,6 +447,7 @@
                (decf (aref nr k) p-)
                (multiple-value-bind (cost side lc rc)
                    (surface-area-heuristic min max e k (aref nl k) (aref nr k) (aref np k))
+                 (declare (single-float cost))
                  (when (< cost best-cost)
                    (setf best-cost cost
                          best-e e
