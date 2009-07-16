@@ -31,6 +31,7 @@
             :components ((:file "csg")
                          (:file "box" :depends-on ("csg"))
                          (:file "cylinder")
+                         (:file "mesh")
                          (:file "plane" :depends-on ("csg"))
                          (:file "sphere" :depends-on ("csg"))
                          (:file "triangle")))

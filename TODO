@@ -97,14 +97,6 @@
 ***** TODO CSG
 *** TODO Torus
 *** TODO Height fields
-*** TODO Meshes
-***** TODO mesh representation
-      Index Array: a vector of single floats (each triplet specifying
-      one vertex), another vector with indexes into the first (each
-      triplet specifying one triangle).
-***** TODO mesh rendering
-      build a KD tree for the triangles, intersection function
-      traverses it.
 *** TODO Radiosity shader
 *** TODO Metallic shaders
 * TODO CAMERAS

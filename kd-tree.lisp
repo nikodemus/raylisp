@@ -128,7 +128,9 @@
              (float exit-distance))
     (when entry-distance
       (unless (kd-interior-node-p root)
-        (return-from kd-traverse (funcall function (kd-objects root) nil nil)))
+        (let ((objects (kd-objects root)))
+          (return-from kd-traverse
+            (when objects (funcall function objects nil nil)))))
       (let ((stack (make-kd-stack root))
             (current-node root)
             (entry-pointer 0)
@@ -197,12 +199,14 @@
                                            point))))
                              :cont))
                 (when current-node
-                  (multiple-value-bind (result info)
-                      (funcall function (kd-objects current-node)
-                               (kd-stack-distance stack entry-pointer)
-                               (kd-stack-distance stack exit-pointer))
-                    (when result
-                      (return-from kd-traverse (values result info)))))
+                  (let ((objects (kd-objects current-node)))
+                    (when objects
+                      (multiple-value-bind (result info)
+                          (funcall function objects
+                                   (kd-stack-distance stack entry-pointer)
+                                   (kd-stack-distance stack exit-pointer))
+                        (when result
+                          (return-from kd-traverse (values result info)))))))
                 (setf entry-pointer exit-pointer
                       current-node (kd-stack-node stack exit-pointer)
                       exit-pointer (kd-stack-prev stack entry-pointer))))))))

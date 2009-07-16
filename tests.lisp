@@ -107,6 +107,26 @@
                   :look-at (v -250 0 100)
                   :location (v -10 150 0))))
 
+(defscene test-teapot-2
+  (:objects
+   (load-obj "models/teapot.obj"
+             :shader (make-instance 'phong-shader :color white)
+             :transform (rotate* (/ +pi+ -2) 0.0 0.0))
+   (build-mesh
+    (mapcar #'vertices-of
+            (load-obj "models/teapot.obj"))
+    :shader (make-instance 'phong-shader :color white)
+    :transform (list (rotate* (/ +pi+ -2) 0.0 0.0)
+                     (translate* 100.0 0.0 100.0))))
+
+  (:lights
+   (make-instance 'solar-light
+                  :direction (v 2 8 -1)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :look-at (v -250 0 100)
+                  :location (v -10 150 0))))
+
 (defscene test-triangle
   (:objects
    (triangle-box (v 1 0 0) (v 2 1 1) :shader *bright-red*

@@ -9,11 +9,13 @@
     :initform (identity-matrix)
     :initarg :transform)))
 
+(defun ensure-transform (spec)
+  (etypecase spec
+    (cons (apply #'matrix* (reverse spec)))
+    (matrix spec)))
+
 (defmethod transform-of ((obj transform-mixin))
-  (let ((transform (slot-value obj '%transform)))
-    (etypecase transform
-      (cons (apply #'matrix* (reverse transform)))
-      (matrix transform))))
+  (ensure-transform (slot-value obj '%transform)))
 
 (defclass axis-mixin ()
   ((axis

@@ -6,52 +6,6 @@
 (defmethod name-of ((name symbol))
   name)
 
-;;;; INTERFACE TO KD-TREE IMPLEMENTATION
-;;;;
-;;;; Right now we use lists to pass INTERSECTION-OBJECTS to the KD-tree --
-;;;; this is what tells the tree building code how to deal with them.
-
-(defmethod kd-set-size ((list list))
-  (length list))
-
-(defmethod map-kd-set (function (list list))
-  (dolist (elt list)
-    (funcall function elt)))
-
-(defmethod make-kd-subset (subset (list list))
-  subset)
-
-(defmethod kd-object-min ((obj intersection-object) list)
-  (object-min obj))
-
-(defmethod kd-object-max ((obj intersection-object) list)
-  (object-max obj))
-
-(defmethod kd-object-info ((obj intersection-object) list)
-  (object-info obj))
-
-(defmethod (setf kd-object-info) (value (obj intersection-object) list)
-  (setf (object-info obj) value))
-
-(defun make-scene-tree (objects)
-  (let (bounded unbounded min max)
-    (dolist (object objects)
-      (let ((this-min (object-min object))
-            (this-max (object-max object)))
-        (cond (this-min
-               (push object bounded)
-               (if min
-                   (setf min (vec-min min this-min this-max)
-                         max (vec-max max this-min this-max))
-                   (setf min (vec-min this-min this-max)
-                         max (vec-max this-min this-max))))
-              (t
-               (push object unbounded)))))
-    (let ((tree (when bounded
-                  (build-kd-tree bounded min max))))
-      (values tree unbounded))))
-
-
 ;;;# Scene Representation
 ;;;
 ;;; Prior to rendering scene is composed of freely mutable instances:
@@ -267,3 +221,47 @@
    (required-argument :illumination)
    :type (function (vec vec counter-vector) (values vec float &optional))))
 
+;;;; INTERFACE TO KD-TREE IMPLEMENTATION
+;;;;
+;;;; Right now we use lists to pass INTERSECTION-OBJECTS to the KD-tree --
+;;;; this is what tells the tree building code how to deal with them.
+
+(defmethod kd-set-size ((list list))
+  (length list))
+
+(defmethod map-kd-set (function (list list))
+  (dolist (elt list)
+    (funcall function elt)))
+
+(defmethod make-kd-subset (subset (list list))
+  subset)
+
+(defmethod kd-object-min ((obj intersection-object) list)
+  (object-min obj))
+
+(defmethod kd-object-max ((obj intersection-object) list)
+  (object-max obj))
+
+(defmethod kd-object-info ((obj intersection-object) list)
+  (object-info obj))
+
+(defmethod (setf kd-object-info) (value (obj intersection-object) list)
+  (setf (object-info obj) value))
+
+(defun make-scene-tree (objects)
+  (let (bounded unbounded min max)
+    (dolist (object objects)
+      (let ((this-min (object-min object))
+            (this-max (object-max object)))
+        (cond (this-min
+               (push object bounded)
+               (if min
+                   (setf min (vec-min min this-min this-max)
+                         max (vec-max max this-min this-max))
+                   (setf min (vec-min this-min this-max)
+                         max (vec-max this-min this-max))))
+              (t
+               (push object unbounded)))))
+    (let ((tree (when bounded
+                  (build-kd-tree bounded min max))))
+      (values tree unbounded))))
