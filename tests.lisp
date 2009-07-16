@@ -94,6 +94,25 @@
         (tri c7 c8 c5)))
     triangles))
 
+;;;; FIXME: This shows how slow our KD tree building is!
+#+nil
+(defscene test-teapot
+  (:objects
+   #+nil
+   (make-instance 'sphere
+                  :radius 300.0
+                  :shader (make-instance 'phong-shader :color white))
+   (load-obj "models/teapot.obj"
+             :shader (make-instance 'phong-shader :color white)
+             :transform (rotate* (/ +pi+ -2) 0.0 0.0)))
+  (:lights
+   (make-instance 'solar-light
+                  :direction (v 2 8 -1)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :look-at (v -250 0 100)
+                  :location (v -10 150 0))))
+
 (defscene test-triangle
   (:objects
    (triangle-box (v 1 0 0) (v 2 1 1) :shader *bright-red*
