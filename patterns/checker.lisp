@@ -5,7 +5,7 @@
 (defclass checker-pattern (indexed-pattern)
   ())
 
-(defmethod pattern-map-size ((pattern checker-pattern))
+(defmethod indexed-pattern-size ((pattern checker-pattern))
   2)
 
 (defmethod compute-pattern-key-function ((pattern checker-pattern) transform)

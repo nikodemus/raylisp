@@ -6,6 +6,7 @@
   (let* ((chessboard
           (make-instance 'phong-shader
                          :color (make-instance 'checker-pattern
+                                               :type :color
                                                :map `(,black ,white))))
          (bright-red
           (make-instance 'phong-shader :color red))
@@ -117,7 +118,6 @@
     :shader (make-instance 'phong-shader :color white)
     :transform (list (rotate* (/ +pi+ -2) 0.0 0.0)
                      (translate* 100.0 0.0 100.0))))
-
   (:lights
    (make-instance 'solar-light
                   :direction (v 2 8 -1)))
@@ -150,6 +150,7 @@
                   (make-instance 'phong-shader
                                  :color
                                  (make-instance 'gradient-pattern
+                                                :type :color
                                                 :axis (vec 1.0 0.0 2.0)
                                                 :transform (scale* 4.0 4.0 4.0)
                                                 :map `((0.0 ,black)
@@ -168,6 +169,7 @@
                   :transform (rotate* 0.0 (/ +pi+ 8) 0.0)
                   :shader
                   (make-instance 'gradient-pattern
+                                 :type :shader
                                  :map `((0.0 ,(make-instance 'phong-shader :color white))
                                         (1.0 ,(make-instance 'flat-shader :color white))))))
   (:lights
@@ -302,6 +304,7 @@
                   :shader (make-instance 'phong-shader
                                          :transform (rotate* 0.0 0.0 1.0)
                                          :color (make-instance 'marble-pattern
+                                                               :type :color
                                                                :map `((0.0 ,black)
                                                                       (1.0 ,(vec 0.7 0.7 0.7)))))))
   (:lights
@@ -320,6 +323,7 @@
                   :shader (make-instance 'phong-shader
                                          :transform (scale* 0.2 0.2 0.2)
                                          :color (make-instance 'wood-pattern
+                                                               :type :color
                                                                :map `((0.0 ,black)
                                                                       (1.0 ,(vec 0.6 0.3 0.25)))))))
   (:lights
@@ -513,6 +517,7 @@
                   :shader
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
+                                                       :type :color
                                                        :axis x-axis
                                                        :map `((0.0 ,blue)
                                                               (1.0 ,green)))))
@@ -522,6 +527,7 @@
                   :shader
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
+                                                       :type :color
                                                        :smooth t
                                                        :transform (rotate* 0.0 (/ +pi+ 2) 0.0)
                                                        :map `((0.0 ,black)
@@ -532,6 +538,7 @@
                   :shader
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
+                                                       :type :color
                                                        :map `((0.0 ,red)
                                                               (1.0 ,yellow))))))
   (:lights
@@ -891,6 +898,7 @@
     :location (@ 0 -1 0)
     :shader
     (make-instance 'checker-pattern
+                   :type :shader
                    :map (list (make-instance 'phong-shader :color black)
                               (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
@@ -931,6 +939,7 @@
                   :normal x-axis
                   :location (@ -1 0 0)
                   :shader (make-instance 'checker-pattern
+                                         :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
                                                     (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
@@ -947,6 +956,7 @@
                   :normal y-axis
                   :location (@ 0 -1 0)
                   :shader (make-instance 'checker-pattern
+                                         :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
                                                     (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
@@ -963,6 +973,7 @@
                   :normal z-axis
                   :location (@ 0 0 -1)
                   :shader (make-instance 'checker-pattern
+                                         :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
                                                     (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
@@ -982,6 +993,7 @@
    (make-instance 'plane
                   :location (@ 0 -1 0)
                   :shader (make-instance 'checker-pattern
+                                         :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
                                                     (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
@@ -1011,12 +1023,14 @@
                                            :location (@ 0 -1 0)
                                            :transform (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
+                                                                  :type :shader
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
                                            :shader (make-instance 'checker-pattern
+                                                                  :type :shader
                                                                   :transform (scale* 2.0 2.0 2.0)
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1)))))))
@@ -1038,6 +1052,7 @@
                                            :location (@ 0 -1 0)
                                            :transform (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
+                                                                  :type :shader
                                                                   :transform (scale* 5.0 5.0 5.0)
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))
@@ -1045,6 +1060,7 @@
                                            :normal (v 0 0 -1)
                                            :location (@ 0 0 -0.01)
                                            :shader (make-instance 'checker-pattern
+                                                                  :type :shader
                                                                   :transform (scale* 5.0 5.0 5.0)
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))))
@@ -1153,9 +1169,11 @@
                   :location (v 0 0.1 0)
                   :shader
                   (make-instance 'checker-pattern
+                                 :type :shader
                                  :transform (scale* 2.0 2.0 2.0)
                                  :map (list (make-instance 'phong-shader :color black)
                                             (make-instance 'checker-pattern
+                                                           :type :shader
                                                            :map (list (make-instance 'phong-shader :color black)
                                                                       (make-instance 'phong-shader :color white))
                                                            :transform (matrix*

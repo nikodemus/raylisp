@@ -21,10 +21,6 @@
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
 *** TODO Patterns
-***** TODO Generalized pattern robustness
-      Do some sort of checking to make sure the pattern looks sane for
-      the context: the current pattern->shader-function stuff feels a
-      bit too ad-hoc.
 ***** TODO Transform rest of pattern-like shaders into patterns
 *** TODO Integrate pertubated normals into general shader framework
     As a subprotocol, maybe: shaders inheriting from NORMAL-SHADER
