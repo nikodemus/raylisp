@@ -19,13 +19,12 @@
                (function fun)
                (optimize speed))
       (note-camera-ray counters)
-      (with-debug ("camera")
-        (macrolet ((dim (n)
-                     `(+ (aref dir ,n)
-                         (* rx (aref right ,n)) (* ry (aref up ,n)))))
-          ;; FIXME: if DIR is a direct argument we lost DXness.
-          (let ((dir (normalized-vec (dim 0) (dim 1) (dim 2))))
-            (declare (dynamic-extent dir))
-            (with-ray (ray :origin location :direction dir)
-              (funcall fun ray))))))))
+      (macrolet ((dim (n)
+                   `(+ (aref dir ,n)
+                       (* rx (aref right ,n)) (* ry (aref up ,n)))))
+        ;; FIXME: if DIR is a direct argument we lost DXness.
+        (let ((dir (normalized-vec (dim 0) (dim 1) (dim 2))))
+          (declare (dynamic-extent dir))
+          (with-ray (ray :origin location :direction dir)
+            (funcall fun ray)))))))
 

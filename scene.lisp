@@ -163,7 +163,8 @@
                 :type (function (ray) (values boolean &optional shading-object)))
   (min nil :type (or null vec))
   (max nil :type (or null vec))
-  (scene-object (required-argument :scene-object)))
+  (scene-object (required-argument :scene-object))
+  (info nil))
 
 ;;;## Lights
 

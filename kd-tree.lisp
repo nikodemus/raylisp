@@ -1,6 +1,6 @@
 (in-package :raylisp)
 
-(declaim (optimize speed))
+(declaim (optimize debug))
 
 (deftype axis ()
   '(member 0 1 2))
@@ -32,7 +32,6 @@
 (defstruct (kd-interior-node (:include kd-node))
   (left (required-argument :left) :type kd-node)
   (right (required-argument :right) :type kd-node)
-  (depth (required-argument :depth) :type fixnum)
   (axis (required-argument :axis) :type axis)
   (plane-position (required-argument :plane-position) :type single-float))
 
@@ -51,7 +50,12 @@
   (kd-interior-node-plane-position kd-node))
 
 (defun kd-depth (kd-node)
-  (kd-interior-node-depth kd-node))
+  (labels ((rec (node)
+             (if (kd-interior-node-p node)
+                 (1+ (max (rec (kd-interior-node-left node))
+                          (rec (kd-interior-node-right node))))
+                 0)))
+    (rec kd-node)))
 
 (defstruct (kd-leaf-node (:include kd-node) (:predicate kd-leaf-p))
   objects)
@@ -229,6 +233,43 @@
                  (values nil 0.0)
                  (values t1 t2)))))))))
 
+;;;; KD TREE BUILDING in O(N log N)
+;;;;
+;;;; From "On building fast kd-Trees for Ray Tracing, and on doing that in O(N
+;;;; log N)" by Ingo Wald and Vlastimil Havran, 2006
+;;;;
+;;;; See: papers/ingo06rtKdtree.pdf
+;;;;
+;;;; This is essentially what the paper says, except we don't do perfect splits.
+
+(defstruct (event (:constructor event (type object e k)))
+  (object (required-argument))
+  (type (required-argument) :type (integer 0 2))
+  (e (required-argument) :type single-float)
+  (k (required-argument) :type (integer 0 2)))
+
+;;; Start, parellel, and end events.
+(defconstant .e+ 0)
+(defconstant .e! 1)
+(defconstant .e- 2)
+
+(defun event< (a b)
+  (let ((ae (event-e a))
+        (be (event-e b)))
+    (or (< ae be)
+        (and (= ae be)
+             (< (event-type a) (event-type b))))))
+
+(defun events->objects (events)
+  (let ((tag (list :tag))
+        (objects nil))
+    (dotimes (i (length events))
+      (let ((obj (event-object (aref events i))))
+        (unless (eq tag (object-info obj))
+          (setf (object-info obj) tag)
+          (push obj objects))))
+    objects))
+
 (defun make-kd-tree (objects)
   (let (bounded unbounded min max)
     (dolist (object objects)
@@ -243,105 +284,218 @@
                          max (vec-max this-min this-max))))
               (t
                (push object unbounded)))))
-    (values (when bounded
-              (subdivide bounded min max))
-            unbounded)))
+    (let ((tree (when bounded
+                  (build-kd-tree bounded min max))))
+      (values tree unbounded))))
 
-(defun new-corner (point axis old)
-  (with-arrays (old)
-    (ecase axis
-     (0
-      (vec point (old 1) (old 2)))
-     (1
-      (vec (old 0) point (old 2)))
-     (2
-      (vec (old 0) (old 1) point)))))
+(defparameter *kd-traversal-cost* 0.2)
+(defparameter *intersection-cost* 0.05)
 
-(defun subdivide (objects min max)
-  (if objects
-      (multiple-value-bind (point axis left right) (divide objects min max)
-        (if point
-            (let ((new-max (new-corner point axis max))
-                  (new-min (new-corner point axis min)))
-              (let-values (((left-kd left-depth) (subdivide left min new-max))
-                           ((right-kd right-depth) (subdivide right new-min max)))
-                (let ((depth (max left-depth right-depth)))
-                  (values (make-kd-interior-node
-                           :plane-position point
-                           :axis axis
-                           :min min
-                           :max max
-                           :depth depth
-                           :left left-kd
-                           :right right-kd)
-                          (1+ depth)))))
-            (values (make-kd-leaf-node :min min :max max :objects objects) 1)))
-      (values (make-kd-leaf-node :min min :max max :objects nil) 1)))
+(defun build-kd-tree (objects min max)
+  (labels ((rec (n events min max)
+             (multiple-value-bind (e k side cost) (find-plane n events min max)
+               (if (> cost (* *intersection-cost* n))
+                   (make-kd-leaf-node :min min :max max
+                                      :objects (when (plusp (length events))
+                                                 (events->objects events)))
+                   (multiple-value-bind (left-events right-events nl nr)
+                       (split-events events e k side)
+                     (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
+                       (values (make-kd-interior-node
+                                :plane-position e
+                                :axis k
+                                :min min
+                                :max max
+                                :left (rec nl left-events lmin lmax)
+                                :right (rec nr right-events rmin rmax)))))))))
+    (rec (length objects) (build-events objects) min max)))
 
-(defun divide (objects min max)
-  (assert objects)
-  (let ((parent-area (surface-area* min max))
-        (best-cost nil)
-        (best-point nil)
-        (best-axis nil)
-        (best-left nil)
-        (best-right nil))
-    (dolist (object objects)
-      (dolist (axis '(0 1 2))
-        (dolist (p (list (aref (object-min object) axis) (aref (object-max object) axis)))
-          (multiple-value-bind (left right) (split-objects objects p axis)
-            (let ((cost (split-cost left right parent-area)))
-              (when (or (not best-cost) (< cost best-cost))
-                (setf best-cost cost
-                      best-point p
-                      best-axis axis
-                      best-left left
-                      best-right right)))))))
-    (unless (or (= best-point (aref min best-axis))
-                (= best-point (aref max best-axis))
-                (>= best-cost (whole-cost objects parent-area)))
-      (values best-point best-axis best-left best-right))))
+(defun split-events (events e k side)
+  (declare (simple-vector events))
+  ;; A few unique markers
+  (let ((left-only (list :left-only))
+        (right-only (list :right-only))
+        (both (list :both)))
+    (flet ((classify (event class)
+             (setf (object-info (event-object event)) (cons class nil)))
+           (assert-event<= (a b)
+             (unless (or (event< a b) (not (event< b a)))
+               (break "~S not less than ~S" a b))))
+      ;; Sweep 1: Classify along K
+      (dotimes (i (length events))
+        (let ((event (aref events i)))
+          (when (= k (event-k event))
+            (let ((type (event-type event))
+                  (ee (event-e event)))
+              (cond ((= .e- type)
+                     (when (<= ee e) (classify event left-only)))
+                    ((= .e+ type)
+                     (when (>= ee e) (classify event right-only)))
+                    ;; The rest are for .e! types.
+                    ((or (< ee e) (and (= ee e) (eq :left side)))
+                     (classify event left-only))
+                    ((or (> ee e) (and (= ee e) (eq :right side)))
+                     (classify event right-only)))))))
+      ;; Sweep 2: split into left and right -- including other Ks
+      (let ((left-list (make-array (length events)))
+            (pl 0)
+            (left 0)
+            (right-list (make-array (length events)))
+            (pr 0)
+            (right 0))
+        (dotimes (i (length events))
+          (let* ((event (aref events i))
+                 (info (object-info (event-object event)))
+                 (class (car info))
+                 (counted (cdr info)))
+            (cond ((eq left-only class)
+                   (when (plusp pl)
+                     (assert-event<= (aref left-list (1- pl)) event))
+                   (setf (aref left-list pl) event)
+                   (incf pl)
+                   (unless counted
+                     (incf left)
+                     (setf (cdr info) t)))
+                  ((eq right-only class)
+                   (when (plusp pr)
+                     (assert-event<= (aref right-list (1- pr)) event))
+                   (setf (aref right-list pr) event)
+                   (incf pr)
+                   (unless counted
+                     (incf right)
+                     (setf (cdr info) t)))
+                  (t
+                   (when (plusp pl)
+                     (assert-event<= (aref left-list (1- pl)) event))
+                   (when (plusp pr)
+                     (assert-event<= (aref right-list (1- pr)) event))
+                   (setf (aref left-list pl) event
+                         (aref right-list pr) event)
+                   (incf pl)
+                   (incf pr)
+                   (unless (eq both class)
+                     (incf left)
+                     (incf right)
+                     (classify event both))))))
+        (sb-kernel:%shrink-vector left-list pl)
+        (sb-kernel:%shrink-vector right-list pr)
+        (values left-list right-list left right)))))
 
-(defun split-objects (objects point axis)
-  (let (left right)
-    (dolist (object objects)
-      (when (< (aref (object-min object) axis) point)
-        (push object left))
-      (when (> (aref (object-max object) axis) point)
-        (push object right)))
-    (values left right)))
+(defun build-events (objects)
+  ;; 3 dimensions, max 2 events per object
+  (let ((events (make-array (* 6 (length objects))))
+        (p 0))
+    (declare (fixnum p))
+    (dotimes (k 3)
+      (dolist (obj objects)
+        (let ((min (object-min obj))
+              (max (object-max obj)))
+          (flet ((make (type)
+                   (setf (aref events p)
+                         (event type obj (if (= .e- type)
+                                             (aref max k)
+                                             (aref min k))
+                                k))
+                   (incf p)))
+            (cond ((= (aref min k) (aref max k))
+                   (make .e!))
+                  (t
+                   (make .e+)
+                   (make .e-)))))))
+    (sort (sb-kernel:%shrink-vector events p) #'event<)))
 
-(defun split-cost (left right parent-area)
-  (* (if (and left right)
-         0.9d0
-         1)
-     (+ (* (intersection-probability left parent-area)
-           (intersection-cost left))
-        (* (intersection-probability right parent-area)
-           (intersection-cost right)))))
+(defun find-plane (n events min max)
+  (let* ((nl (make-array 3 :element-type 'fixnum))
+         (np (make-array 3 :element-type 'fixnum))
+         (nr (make-array 3 :element-type 'fixnum :initial-contents (list n n n)))
+         (n-events (length events))
+         (best-side nil)
+         (best-cost #.sb-ext:single-float-positive-infinity)
+         (best-e #.sb-ext:single-float-positive-infinity)
+         (best-k 0)
+         (best-lc 0)
+         (best-rc 0))
+    (declare (dynamic-extent nl nr np)
+             (single-float best-cost best-e)
+             (type (integer 0 2) best-k))
+    (loop with i = 0
+          while (< i n-events)
+          do (let* ((event (aref events i))
+                    (e (event-e event))
+                    (k (event-k event))
+                    (p+ 0)
+                    (p- 0)
+                    (p! 0))
+               (declare (fixnum p+ p- p!))
+               (flet ((event-ok (i type)
+                        (and (< i n-events)
+                             (= k (event-k (aref events i)))
+                             (= e (event-e (aref events i)))
+                             (= type (event-type (aref events i))))))
+                 (loop while (event-ok i .e-)
+                       do (incf p-)
+                       (incf i))
+                 (loop while (event-ok i .e!)
+                       do (incf p!)
+                       (incf i))
+                 (loop while (event-ok i .e+)
+                       do (incf p+)
+                       (incf i)))
+               (setf (aref np k) p!)
+               (decf (aref nr k) p!)
+               (decf (aref nr k) p-)
+               (multiple-value-bind (cost side lc rc)
+                   (surface-area-heuristic min max e k (aref nl k) (aref nr k) (aref np k))
+                 (when (< cost best-cost)
+                   (setf best-cost cost
+                         best-e e
+                         best-k k
+                         best-side side
+                         best-lc lc
+                         best-rc rc)))
+               (incf (aref nl k) p+)
+               (incf (aref nl k) p!)
+               (setf (aref np k) 0)))
+    (values best-e best-k best-side best-cost best-lc best-rc)))
 
-(defun whole-cost (objects area)
-  (+ (* (intersection-probability objects area)
-        (intersection-cost objects))))
-
-(defun intersection-cost (objects)
-  ;; FIXME: Some objects are cheap, some expensive!
-  (* 0.01 (length objects)))
-
-(defun intersection-probability (objects parent-area)
-  (let ((sum 0))
-    (dolist (object objects)
-      (incf sum (/ (surface-area object) parent-area)))
-    sum))
-
-(defun surface-area (object)
-  (let ((min (object-min object))
-        (max (object-max object)))
-    (surface-area* min max)))
-
-(defun surface-area* (min max)
+(defun surface-area (min max)
   (declare (type vec min max))
   (let ((x (- (aref max 0) (aref min 0)))
         (y (- (aref max 1) (aref min 1)))
         (z (- (aref max 2) (aref min 2))))
     (+ (* x y) (* x z) (* y z))))
+
+(defun split-voxel (min max e k)
+  (declare (vec min max) (single-float e))
+  (let ((l-max (copy-vec max))
+        (r-min (copy-vec min)))
+    (setf (aref l-max k) e
+          (aref r-min k) e)
+    (values min l-max r-min max)))
+
+(defun surface-area-heuristic (min max e k nl nr np)
+  (multiple-value-bind (l-min l-max r-min r-max) (split-voxel min max e k)
+    (let* ((area (surface-area min max))
+           (pl (/ (surface-area l-min l-max) area))
+           (pr (/ (surface-area r-min r-max) area))
+           (c.p->l (split-cost pl pr (+ nl np) nr))
+           (c.p->r (split-cost pl pr nl (+ nr np))))
+      (if (and (< c.p->l c.p->r) (< pl 1.0))
+          (progn
+            (when (and (or (= 0 nl) (plusp np)) (= 1.0 pl))
+              (break "oops1 ~S, ~S" c.p->l c.p->r))
+            (values c.p->l :left (+ nl np) nr))
+          (progn
+            (when (and (or (= 0 nr) (plusp np)) (= 1.0 pr))
+              (break "oops2 ~S, ~S" c.p->l c.p->r))
+            (values c.p->r :right nl (+ nr np)))))))
+
+(defun split-cost (pl pr nl nr)
+  (if (or (and (= 1.0 pl) (= 0 nr))
+          (and (= 1.0 pr) (= 0 nl)))
+      #.sb-ext:single-float-positive-infinity
+      (* (if (or (= 0 nl) (= 0 nr))
+             0.8
+             1.0)
+         (+ *kd-traversal-cost*
+            (* *intersection-cost* (+ (* pl nl) (* pr nr)))))))

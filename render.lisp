@@ -147,6 +147,7 @@
                ;; ...but probably it is because object intersection functions
                ;; are not aware of MIN: so we probably need RAY-MIN and
                ;; RAY-MAX instead of just RAY-EXTENT.
+               #+nil
                (assert (<= (- min (* 2 epsilon)) (ray-extent ray) (+ max (* 2 epsilon)))
                        (min max (ray-extent ray))
                        "~S is not in range ~S - ~S" (ray-extent ray) min max))
