@@ -1,7 +1,5 @@
 (in-package :raylisp)
 
-(declaim (optimize (debug 2)))
-
 (deftype axis ()
   '(member 0 1 2))
 

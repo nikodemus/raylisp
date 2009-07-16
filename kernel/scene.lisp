@@ -242,12 +242,6 @@
 (defmethod kd-object-max ((obj intersection-object) list)
   (object-max obj))
 
-(defmethod kd-object-info ((obj intersection-object) list)
-  (object-info obj))
-
-(defmethod (setf kd-object-info) (value (obj intersection-object) list)
-  (setf (object-info obj) value))
-
 (defun make-scene-tree (objects)
   (let (bounded unbounded min max)
     (dolist (object objects)
