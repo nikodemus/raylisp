@@ -1,14 +1,12 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (require :sb-sprof)
-  (require :raylisp)
-  (require :mcclim)
-  (load (compile-file "clim-patch.lisp"))
-  (defpackage "RAYLISP-GUI"
-    (:use "CLIM-LISP" "CLIM")
-    (:import-from "RAYLISP"
-                  "@"
-                  "ORIGIN")
-    (:export "RUN")))
+  (require :sb-sprof))
+
+(defpackage "RAYLISP-GUI"
+  (:use "CLIM-LISP" "CLIM")
+  (:import-from "RAYLISP"
+                "@"
+                "ORIGIN")
+  (:export "RUN"))
 
 (in-package "RAYLISP-GUI")
 

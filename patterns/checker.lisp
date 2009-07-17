@@ -10,7 +10,6 @@
 
 (defmethod compute-pattern-key-function ((pattern checker-pattern) transform)
   (let ((inverse (inverse-matrix transform)))
-    (break "t = ~S" transform)
     (lambda (point)
       (declare (optimize speed) (vec point))
       (let ((p (transform-point point inverse)))
