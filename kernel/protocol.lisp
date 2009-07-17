@@ -96,62 +96,6 @@
                             (setf last int))))
                 t)))))))
 
-;;;## Shader protocol
-;;;
-;;; Shader protocol controls the compilation of SHADER instances into
-;;; a more efficient representation used for rendering. There must be
-;;; an applicable method on COMPUTE-SHADER-FUNCTION for each subclass of
-;;; SHADER that returns the corresponding shader function:
-;;;
-;;;#### The shader function
-;;;
-;;; must accept an INTERSECTION and a RAY, and return the apparent color.
-
-(defgeneric compute-shader-function (shader object scene transform))
-
-(defmethod compute-shader-function :around ((shader shader) object scene transform)
-  (call-next-method shader object scene (matrix* transform (transform-of shader))))
-
-(defmethod compute-shader-function ((pattern pattern) object scene transform)
-  ;; Patterns can act as shaders -- but PATTERN-FUNCTION will apply the pattern
-  ;; transform, so don't do it here!
-  (pattern-function pattern transform object scene))
-
-(declaim (ftype (function (t t t t) (values (function (shader scene-object vec vec float ray t)
-                                                      (values vec &optional))
-                                        &optional))
-                compile-shader))
-(defun compile-shader (shader object scene transform)
-  (declare (type scene-object object))
-  (if shader
-      (compute-shader-function shader object scene transform)
-      (constantly black)))
-
-(declaim (inline coefficient))
-(defun coefficient (value shader)
-  (declare (float value))
-  (/ value (the float (shader-weight shader))))
-
-(declaim (inline shade))
-(defun shade (object ray counters)
-  (declare (optimize speed))
-  (let* ((point (adjust-vec (ray-origin ray) (ray-direction ray)
-                            (ray-extent ray)))
-	 (normal (funcall (object-normal object) point))
-	 (n.d (dot-product normal (ray-direction ray))))
-    (flet ((%shade (n)
-             (funcall (object-shader object)
-                      point
-                      n
-                      n.d
-                      ray
-                      counters)))
-      (if (plusp n.d)
-          (let ((n2 (vec* normal -1.0)))
-            (declare (dynamic-extent n2))
-            (%shade n2))
-          (%shade normal)))))
-
 ;;;; CAMERA
 
 (defclass camera (name-mixin)

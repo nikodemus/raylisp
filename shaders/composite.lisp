@@ -10,7 +10,7 @@
                               (the function (compile-shader part object scene transform)))
 			    (shaders-of shader)))
 	 (count (float (length functions))))
-    (sb-int:named-lambda shade-composite (point normal dot ray counters)
+    (shader-lambda shade-composite (point normal dot ray counters)
       (declare (optimize speed))
       (let ((result (alloc-vec)))
         (dolist (fun functions)

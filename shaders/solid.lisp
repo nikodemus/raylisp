@@ -16,10 +16,9 @@
          (light-group (compute-light-group object scene)))
     (declare (type vec color ambient-color diffuse-color))
     (with-arrays (diffuse-color)
-      ;; DOT as argument is ignores -- is this correct?
-      (sb-int:named-lambda shade-solid (point normal dot ray counters)
+      (shader-lambda shade-solid (point normal dot ray counters)
         (declare (optimize speed))
-        (declare (ignore ray))
+        (declare (ignore ray dot))
 	(let ((color ambient-color))
 	  (dolist (light (light-group-lights light-group))
 	    (let* ((lv (light-vector light point))

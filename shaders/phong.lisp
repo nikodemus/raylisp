@@ -17,7 +17,7 @@
              (type (single-float (0.0)) size)
              (type vec ambient-term)
              (type function color-function))
-    (sb-int:named-lambda shade-phong (point normal n.d ray counters)
+    (shader-lambda shade-phong (point normal n.d ray counters)
       (declare (optimize speed)
                (ignore n.d))
       (let ((result (copy-vec ambient-term))

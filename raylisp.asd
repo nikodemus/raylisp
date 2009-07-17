@@ -15,6 +15,7 @@
                          (:file "kd-tree")
                          (:file "mixins")
                          (:file "scene")
+                         (:file "shader")
                          (:file "pattern")
                          (:file "protocol")
                          (:file "render")

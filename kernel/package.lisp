@@ -11,7 +11,6 @@
   (:nicknames "RL")
   (:use "CL" "ALEXANDRIA" "SB-CGA")
   (:shadow
-   "PI"
    "FLOAT"
    "FLOATP"
    "INTERSECTION"

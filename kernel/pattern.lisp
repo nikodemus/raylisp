@@ -16,23 +16,44 @@
 ;;;; TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ;;;; SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-;;;; What is this stuff?
-;;;;
-;;;; * Patterns can be used to blend between different color:
-;;;;   a pattern can always be used in an :COLOR initarg.
-;;;;
-;;;; * Patterns can be used to blend between different shaders:
-;;;;   a pattern can always be used in an :SHADER initarg.
-;;;;
-;;;; Other types of patterns can be added easily: just DEFINE-PATTERN-TYPE and
-;;;; you are good to go.
-;;;;
-;;;; Individual pattern classes provide different behaviours. At their core
-;;;; they provide a mapping from 3D coordinates (and other optional parameters)
-;;;; to _something_ which can either be selected from an indexed pattern map,
-;;;; or interpolated using an interpolating pattern map.
-
 (in-package :raylisp)
+
+;;;; PATTERNS
+;;;;
+;;;; Subclasses of INTERPOLATED-PATTERN and INDEXED-PATTERN implement
+;;;; different patterns.
+;;;;
+;;;; COMPUTE-PATTERN-KEY-FUNCTION is called for patterns used in the scene.
+;;;; The returned function is called with a point during rendering to obtain
+;;;; either a single-float in range 0.0-1.0 (for interpolated patterns) or
+;;;; non-negative integer (for indexed patterns), which in turn is used to
+;;;; select entries in the map associated with the pattern.
+;;;;
+;;;; COMPUTE-PATTERN-FUNCTION is called for map entries of patterns used
+;;;; in the scene. During rendering, after map entries (explained above)
+;;;; have been selected, their pattern functions are then called to obtain
+;;;; values for pattern at that point.
+;;;;
+;;;; In case of indexed patterns only the function for the entry corresponding
+;;;; to the computed index is called, whereas for interpolated patterns
+;;;; pattern functions on each side of the returned value are called after
+;;;; which their values are interpolated. (Except when the key value
+;;;; corresponds exactly to one of the map keys.)
+;;;;
+;;;; Pattern maps are specified as lists for indexed patterns, and association
+;;;; lists of the form (<single-float> <entry>) for interpolated patterns.
+;;;;
+;;;; Each pattern also has an associated type, which specifies the contexts
+;;;; it is meant for: map entries are verified against this type when the
+;;;; pattern object is created, but it has no purpose besides enabling such
+;;;; sanity checking.
+;;;;
+;;;; Currently implemented pattern types are :SHADER and :COLOR. More can be
+;;;; added by using DEFINE-PATTERN-TYPE.
+;;;;
+;;;; Currently all patterns return VEC values, but this is not a deep design:
+;;;; if eg. we stop punning RGB colors to vectors, we need to teach the pattern
+;;;; framework about interpolating them -- but that is not a big deal.
 
 (defclass pattern (transform-mixin)
   ((type
@@ -43,9 +64,6 @@
     :initarg :map
     :initform (required-argument :map)
     :reader pattern-map)))
-
-;;;; Every pattern has a defined type: This is used to sanity check the values
-;;;; the pattern produces.
 
 (defvar *pattern-types* (make-hash-table))
 
@@ -75,8 +93,13 @@
 (defgeneric pattern-function (pattern transform &rest args))
 
 (defmethod pattern-function ((pattern #.(class-of (alloc-vec))) transform &rest args)
-  (declare (ignore args))
-  (constantly pattern))
+  (declare (type vec pattern)
+           (ignore args))
+  (sb-int:named-lambda constant-pattern-function (point &rest args)
+    (declare (type vec point)
+             (ignore point args)
+             (optimize (safety 0)))
+    pattern))
 
 (defclass interpolated-pattern (pattern)
   ())
@@ -138,30 +161,58 @@
       (declare (type (simple-array single-float (*)) keys)
                (type (simple-array t (*)) values))
       (let ((map-size (length keys)))
-        (unless (= map-size (length values))
-          (error "Corrupt pattern: lengths of keys and values don't match."))
-        (sb-int:named-lambda pattern-at-point (point &rest args)
-          (declare (optimize speed) (dynamic-extent args))
-          (block pattern-at-point
-            (let ((value (funcall key-function point))
-                  (tmp 0.0))
-              (declare (single-float value tmp))
-              ;; FIXME: Linear search is not so good with big maps!
-              (let* ((index (loop for i from 0 below map-size
-                                  do (let ((this (aref keys i)))
-                                       (cond ((= value this)
-                                              ;; Exact hit, no need to compute anything else.
-                                              (return-from pattern-at-point
-                                                (apply (the function (aref values i)) point args)))
-                                             ((< tmp value this)
-                                              (setf tmp (- 1.0 (/ (- this value) (- this tmp))))
-                                              (return i))
-                                             (t
-                                              (setf tmp this)))))))
-                ;; Blend between the two values.
-                (vec-lerp (apply (the function (aref values (- index 1))) point args)
-                          (apply (the function (aref values index)) point args)
-                          tmp)))))))))
+        (if (eq :shader (pattern-type pattern))
+            (compute-interpolated-shader-pattern-function key-function keys values)
+            (sb-int:named-lambda pattern-at-point (point &rest args)
+              (declare (optimize speed) (dynamic-extent args))
+              (block pattern-at-point
+                (let ((value (funcall key-function point))
+                      (tmp 0.0))
+                  (declare (single-float value tmp))
+                  ;; FIXME: Linear search is not so good with big maps!
+                  (let* ((index (loop for i from 0 below map-size
+                                      do (let ((this (aref keys i)))
+                                           (cond ((= value this)
+                                                  ;; Exact hit, no need to compute anything else.
+                                                  (return-from pattern-at-point
+                                                    (apply (the function (aref values i)) point args)))
+                                                 ((< tmp value this)
+                                                  (setf tmp (- 1.0 (/ (- this value) (- this tmp))))
+                                                  (return i))
+                                                 (t
+                                                  (setf tmp this)))))))
+                    ;; Blend between the two values.
+                    (vec-lerp (apply (the function (aref values (- index 1))) point args)
+                              (apply (the function (aref values index)) point args)
+                              tmp))))))))))
+
+(defun compute-interpolated-shader-pattern-function (key-function keys values)
+  (declare (type function key-function)
+           (type (simple-array single-float (*)) keys)
+           (type simple-vector values))
+  (let ((map-size (length keys)))
+    (shader-lambda interpolated-shader-pattern (point normal n.d ray counters)
+      (declare (optimize speed))
+      (flet ((call (function)
+               (values (funcall (the function function) point normal n.d ray counters))))
+        (let ((value (funcall key-function point))
+              (tmp 0.0))
+          (declare (single-float value tmp))
+          ;; FIXME: Linear search is not so good with big maps!
+          (let* ((index (loop for i from 0 below map-size
+                              do (let ((this (aref keys i)))
+                                   (cond ((= value this)
+                                          ;; Exact hit, no need to compute anything else.
+                                          (return-from interpolated-shader-pattern
+                                            (call (aref values i))))
+                                         ((< tmp value this)
+                                          (setf tmp (- 1.0 (/ (- this value) (- this tmp))))
+                                          (return i))
+                                         (t
+                                          (setf tmp this)))))))
+            ;; Blend between the two values.
+            (vec-lerp (call (aref values (- index 1))) (call (aref values index))
+                      tmp)))))))
 
 (defclass indexed-pattern (pattern)
   ())
@@ -184,17 +235,24 @@
             (compute-pattern-key-function pattern matrix)))
          (values (apply #'pattern-map-values pattern matrix args)))
     (declare (type (simple-array t (*)) values))
-    (sb-int:named-lambda pattern-at-point (point &rest args)
-      (declare (optimize speed) (dynamic-extent args))
-      (apply (the function (aref values (funcall key-function point))) point args))))
+    (if (eq :shader (pattern-type pattern))
+        (shader-lambda indexed-shader-pattern (point normal n.d ray counters)
+          (declare (optimize speed))
+          (funcall (the function (aref values (funcall key-function point)))
+                   point normal n.d ray counters))
+        (lambda (point)
+          (funcall (the function (aref values (funcall key-function point))) point)))))
 
 ;;; Interaction with shaders...
 
-(defmethod compute-shader-function ((pattern pattern) object scene transform)
-  (pattern-function pattern transform object scene))
-
 (defmethod pattern-function ((shader shader) transform &rest args)
+  ;; FIXME: this is really ugly
   (destructuring-bind (object scene) args
     (check-type object scene-object)
     (check-type scene scene)
     (compute-shader-function shader object scene transform)))
+
+(defmethod compute-shader-function ((pattern pattern) object scene transform)
+  ;; Patterns can act as shaders -- but COMPUTE-PATTERN-FUNCTION will apply
+  ;; the pattern transform, so don't do it here!
+  (pattern-function pattern transform object scene))

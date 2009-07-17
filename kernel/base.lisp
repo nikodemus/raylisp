@@ -1,5 +1,7 @@
 (in-package :raylisp)
 
+(defconstant +pi+ (coerce pi 'single-float))
+
 (deftype float (&optional (min '*) (max '*))
   `(single-float ,min ,max))
 
@@ -25,8 +27,6 @@
 
 (defconstant float-positive-infinity (/ 1.0 0.0))
 (defconstant float-negative-infinity (/ -1.0 0.0))
-
-(defconstant pi +pi+)
 
 ;;;# Utilities
 ;;;
@@ -162,3 +162,27 @@ site."
                               ',keys
                               ',defaults)))))))
 
+;;;; Our protocols trust function types, so we want to make
+;;;; sure generated functions actually have the right type!
+(defun check-function-type (function type-name)
+  (unless (functionp function)
+    (error "~S is not a ~S" function type-name))
+  ;; So it's a function. Now check the exact type.
+  (let* ((target-ctype (sb-kernel:specifier-type type-name))
+         (real-type (sb-impl::%fun-type function))
+         (real-ctype (sb-kernel:specifier-type real-type)))
+    ;; First check for the exact type.
+    (unless (sb-kernel:csubtypep real-ctype target-ctype)
+      ;; Then check for the opposite: if this is true, the compiler
+      ;; is possibly just missing type information.
+      (let ((target-type (sb-kernel:type-specifier target-ctype)))
+        (if (sb-kernel:csubtypep target-ctype real-ctype)
+            (cerror "Ignore the issue and hope for the best."
+                    "~@<~S is a function of type ~S, but a ~S must be of type ~S ~
+                     is wanted. The function in question may actually have fully compatible ~
+                     behaviour, in which case adding type information to its definition ~
+                     will take care of the issue.~:@>"
+                    function real-type type-name target-type)
+            (error "~@<~S is a function of type ~S, but a ~S must be of type ~S.~:@>"
+                   function real-type type-name target-type)))))
+  function)

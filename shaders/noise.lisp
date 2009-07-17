@@ -10,7 +10,7 @@
         (end (compile-shader (end-of shader) object scene transform))
         (scale (/ 1.0 (scale-of shader))))
     (declare (optimize speed))
-    (lambda (point normal n.d ray counters)
+    (shader-lambda shade-noise (point normal n.d ray counters)
       (let* ((v (vec* point scale))
              (noise (vector-noise v))
              (start-color (funcall start point normal n.d ray counters))

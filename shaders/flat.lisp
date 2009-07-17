@@ -10,5 +10,5 @@
                         (vec* (scene-ambient-light scene)
                               (coefficient (ambient-of shader) shader))
                         (color-of shader))))
-    (constantly ambient-color)))
+    (constant-shader-function ambient-color)))
 

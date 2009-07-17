@@ -1066,7 +1066,7 @@
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))))
    (make-instance 'csg
                   :type 'difference
-                  :transform (rotate-around x-axis (/ pi 4))
+                  :transform (rotate-around x-axis (/ +pi+ 4))
                   :objects (list
                             (make-instance 'sphere
                                            :radius 4.0
@@ -1138,13 +1138,13 @@
                   :radius 4.0
                   :location (@ 0 3 0)
                   :transform (list
-                              (rotate-around x-axis (/ pi 4))
+                              (rotate-around x-axis (/ +pi+ 4))
                               (translate* -4.0 0.0 -2.0))
                   :shader *bright-red*
                   :name "control")
    (make-instance 'csg
                   :type 'difference
-                  :transform (rotate-around x-axis (/ pi 4))
+                  :transform (rotate-around x-axis (/ +pi+ 4))
                   :objects (list
                             (make-instance 'sphere
                                            :radius 4.0
