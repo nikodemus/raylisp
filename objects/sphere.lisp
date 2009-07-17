@@ -37,9 +37,9 @@
          (%normalize p p))))))
 
 (defmethod compute-object-extents ((sphere sphere) transform)
-  (transform-extents (vec -1.0 -1.0 -1.0)
-                     (vec 1.0 1.0 1.0)
-                     (matrix* transform (sphere-matrix sphere))))
+  (transform-bounds (vec -1.0 -1.0 -1.0)
+                    (vec 1.0 1.0 1.0)
+                    (matrix* transform (sphere-matrix sphere))))
 
 (defmethod compute-csg-properties ((sphere sphere) scene transform)
   (let* ((inverse (inverse-matrix (matrix* transform (sphere-matrix sphere))))

@@ -74,9 +74,9 @@
                     (t                              -z))))))))))
 
 (defmethod compute-object-extents ((box box) transform)
-  (transform-extents (vec -1.0 -1.0 -1.0)
-                     (vec 1.0 1.0 1.0)
-                     (matrix* transform (box-matrix box))))
+  (transform-bounds (vec -1.0 -1.0 -1.0)
+                    (vec 1.0 1.0 1.0)
+                    (matrix* transform (box-matrix box))))
 
 (defmethod compute-csg-properties ((box box) scene matrix)
   (let ((inverse (inverse-matrix (matrix* matrix (box-matrix box))))

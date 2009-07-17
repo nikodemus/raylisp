@@ -114,7 +114,7 @@
                      (class-name (class-of pattern)) correct-size real-size))
             (dolist (spec (pattern-map pattern))
               (unless (funcall verifier spec)
-                (oops value))))))))
+                (oops spec))))))))
 
 (defmethod pattern-map-values ((pattern interpolated-pattern) transform &rest args)
   (let* ((map (pattern-map pattern))
@@ -170,7 +170,7 @@
 
 (defmethod pattern-map-values ((pattern indexed-pattern) transform &rest args)
   (let* ((map (slot-value pattern 'map))
-         (values (make-array map-size))
+         (values (make-array (length map)))
          (p 0))
     (dolist (elt map)
       (setf (aref values p) (apply #'pattern-function elt transform args))
