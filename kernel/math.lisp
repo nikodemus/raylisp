@@ -121,13 +121,6 @@ if there are no positive real roots greater then epsilon."
   (declare (type float ax ay az bx by bz))
   (+ (* ax bx) (* ay by) (* az bz)))
 
-(declaim (inline adjust-vec))
-(defun adjust-vec (p d f)
-  (declare (type float f) (type vec p d))
-  (with-arrays (p d)
-    (macrolet ((dim (n) `(+ (p ,n) (* (d ,n) f))))
-      (vec (dim 0) (dim 1) (dim 2)))))
-
 (declaim (inline normalized-vec))
 (defun normalized-vec (x y z)
   (declare (type float x y z))

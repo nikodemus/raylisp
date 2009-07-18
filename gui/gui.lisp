@@ -98,6 +98,11 @@
     ()
   (require :raylisp))
 
+(define-raylisp-frame-command (com-set-gc-threshold :name t)
+    ()
+  (let ((mb (accept 'integer :prompt "Mb consed between GCs")))
+    (setf (sb-ext:bytes-consed-between-gcs) (* 1024 1024 (abs mb)))))
+
 (define-raylisp-frame-command (com-clear-canvas :name t)
     ()
   (window-clear (find-pane-named *application-frame* 'canvas)))

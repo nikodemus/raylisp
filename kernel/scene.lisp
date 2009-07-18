@@ -131,16 +131,8 @@
                (compiled-scene-light-groups c-scene))))
   scene)
 
-;;;## Shaders
-;;;
-;;; As a convenience feature NIL is also accepted as a shader (representing
-;;; constant black).
-
-(defclass shader (name-mixin transform-mixin)
-  ())
-
-(deftype compiled-shader ()
-  `(function (vec vec float ray counter-vector) vec))
+(deftype shader-function ()
+  `(function (vec vec single-float ray counter-vector) (values vec &optional)))
 
 ;;;## Objects
 
@@ -155,7 +147,7 @@
 
 (defstruct (shading-object (:conc-name object-))
   (normal (required-argument :normal) :type (function (vec) vec))
-  (shader (required-argument :shader) :type compiled-shader))
+  (shader (required-argument :shader) :type shader-function))
 
 (defstruct (intersection-object (:conc-name object-)
                                 (:include shading-object))

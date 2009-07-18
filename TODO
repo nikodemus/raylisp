@@ -3,6 +3,10 @@
 #+STARTUP: odd
 #+STARTUP: oddeven
 
+* TODO Backtraces broken
+  1. Test with x86 -- I hope this is a backend bug!
+  2. Reduce a test-case and post to sbcl-devel.
+
 * TODO FIXME
 *** TODO Need RAY-MIN in addition to RAY-EXTENT
     Otherwise %FIND-INTERSECTION* can find intersections closer than

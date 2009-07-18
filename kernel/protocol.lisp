@@ -18,13 +18,20 @@
   nil)
 
 (defun compile-scene-object (object scene transform &key shading-object)
+  ;; If this is a shading object for another object, the transform
+  ;; has already been applied.
   (let ((m (if shading-object
                transform
                (matrix* transform (transform-of object)))))
     (destructuring-bind (&key intersection normal)
         (compute-object-properties object scene m :shading-object shading-object)
      (assert normal)
-     (let ((shader (compile-shader (shader-of object) (or shading-object object) scene m)))
+     (let ((shader (compute-shader-function (shader-of object)
+                                            ;; If this is a shading object, tell the
+                                            ;; shader about the real object.
+                                            (or shading-object object)
+                                            scene
+                                            m)))
        (if shading-object
            (make-shading-object
             :normal normal

@@ -25,13 +25,8 @@
 ;;;; scene objects. The returned function is then called during rendering to
 ;;;; compute the visible color for points on object surface.
 
-(deftype shader-function ()
-  "Shader function type: functions returned by COMPUTE-SHADER-FUNCTION should
-have this type. First argument is the intersection pont, second is the surface
-normal at point (on visible side), third is the dot product of the outward
-pointing surface normal and ray direction, and fourth is the ray. The returned
-value is the visible color."
-  `(function (vec vec single-float ray t) (values vec &optional)))
+(defclass shader (name-mixin transform-mixin)
+  ())
 
 (defmacro shader-lambda (&whole form name lambda-list &body body)
   "Provides automatic type declarations for shader function, and allows the
@@ -45,9 +40,18 @@ function to be named, and adds a block with that name around the body."
          (declare (type vec ,vector ,normal)
                   (type single-float ,n.d)
                   (type ray ,ray)
-                  (optimize (sb-c::recognize-self-calls 0)))
-         ,@declarations
-         (the vec (values (block ,name ,@forms)))))))
+                  (type counter-vector ,counters)
+                  (optimize (sb-c::recognize-self-calls 0)
+                            (sb-c::type-check 0)
+                            (sb-c::verify-arg-count 0)))
+         (the vec
+           (values
+            (block ,name
+              (locally
+                  (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
+                (let ,(mapcar (lambda (arg) (list arg arg)) lambda-list)
+                 ,@declarations
+                 ,@forms)))))))))
 
 (defun constant-shader-function (value)
   (check-type value vec)
@@ -67,6 +71,9 @@ function to be named, and adds a block with that name around the body."
   ;; this.
   (call-next-method shader object scene (matrix* transform (transform-of shader))))
 
+(defmethod compute-shader-function ((shader null) object scene transform)
+  (constant-shader-function black))
+
 (declaim (ftype (function (t t t t) (values shader-function &optional))
                 compile-shader))
 (defun compile-shader (shader object scene transform)
@@ -82,20 +89,29 @@ function to be named, and adds a block with that name around the body."
 
 (declaim (inline shade))
 (defun shade (object ray counters)
-  (declare (optimize speed))
-  (let* ((point (adjust-vec (ray-origin ray) (ray-direction ray)
-                            (ray-extent ray)))
-	 (normal (funcall (object-normal object) point))
-	 (n.d (dot-product normal (ray-direction ray))))
+  ;; Make sure the types are right: shader functions do not check
+  ;; their argument types! The compiler should be able to eliminate
+  ;; actual type checks from there, but let's make sure we don't
+  ;; accidentally trust stuff!
+  (declare (type shading-object object)
+           (type ray ray)
+           (type counter-vector counters)
+           (optimize safety))
+  (let* ((point (adjust-vec (ray-origin ray) (ray-direction ray) (ray-extent ray)))
+         (normal (funcall (object-normal object) point))
+         (n.d (dot-product normal (ray-direction ray))))
+    (declare (dynamic-extent point)
+             (type vec point normal)
+             (type single-float n.d))
     (flet ((%shade (n)
-             (funcall (object-shader object)
-                      point
-                      n
-                      n.d
-                      ray
-                      counters)))
+             (declare (type vec n)
+                      (dynamic-extent n))
+             (values (funcall (object-shader object)
+                              point
+                              n
+                              n.d
+                              ray
+                              counters))))
       (if (plusp n.d)
-          (let ((n2 (vec* normal -1.0)))
-            (declare (dynamic-extent n2))
-            (%shade n2))
+          (%shade (vec* normal -1.0))
           (%shade normal)))))
