@@ -58,55 +58,6 @@
               `(let ((x ,base)) ,form))))
       whole))
 
-;;;## Root Solvers
-;;;
-;;; Two simple and exceedingly naive quadratic root solvers: it should
-;;; be noted that these most likely suffer from numerical accuracy
-;;; issues, but the author's current competence does not extend to
-;;; fixing this right now.
-
-(declaim (inline min-pos-quad-root))
-(defun min-pos-quad-root (a b c)
-  "Returns the smallest positive real root for ax^2+bx+c, or -1.0
-if there are no positive real roots greater then epsilon."
-  (declare (type float a b c))
-  (let ((d (- (square b) (* 4.0 a c))))
-    (if (minusp d)
-	-1.0
-	(let* ((sqrt-d (sqrt d))
-	       (2a (* 2.0 a))
-	       (r1 (/ (+ (- b) sqrt-d) 2a))
-	       (r2 (/ (- (- b) sqrt-d) 2a)))
-          (if (significantp r1)
-              (if (significantp r2)
-                  (min r1 r2)
-                  r1)
-              (if (significantp r2)
-                  r2
-                  -1.0))))))
-
-(declaim (inline pos-quad-roots))
-(defun pos-quad-roots (a b c)
-  "Returns positive roots for ax^2+bx+c."
-  (declare (type float a b c))
-  (let ((d (- (square b) (* 4.0 a c))))
-    (if (minusp d)
-        (values -1.0 -1.0)
-        (let* ((sqrt-d (sqrt d))
-               (2a (* 2.0 a))
-               (r1 (/ (+ (- b) sqrt-d) 2a))
-               (r2 (/ (- (- b) sqrt-d) 2a)))
-          (cond ((significantp r1)
-                 (if (significantp r2)
-                     (if (< r1 r2)
-                         (values r1 r2)
-                         (values r2 r1))
-                     (values r1 -1.0)))
-                ((significantp r2)
-                 (values r2 -1.0))
-                (t
-                 (values -1.0 -1.0)))))))
-
 ;;;## Vectors
 
 (defun @ (x y z)

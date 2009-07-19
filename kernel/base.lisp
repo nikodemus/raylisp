@@ -71,7 +71,7 @@ so that (ARRAY ...) corresponds to (AREF ARRAY ...)."
 
 ;;; Note: our EPSILON formula is purely experimental.
 
-(defconstant epsilon 0.0005
+(defconstant epsilon 0.001
   "Used as a liminal value to work around floating point inaccuracy.")
 
 (declaim (inline significantp))
