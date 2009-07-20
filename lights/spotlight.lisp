@@ -14,6 +14,11 @@ begin the maximum value. Spotlight fades towards its edges."))
                (type float f))
       (vec* color (* (- f aperture) scale)))))
 
+(defmethod initialize-instance :after ((light spotlight) &key point-at)
+  (when point-at
+    (let ((dir (normalize (vec- point-at (location-of light)))))
+      (setf (slot-value light 'direction) dir))))
+
 (defmethod compute-light-properties ((light spotlight) scene)
   (let* ((location (location-of light))
 	 (color (color-of light))
