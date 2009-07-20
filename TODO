@@ -7,14 +7,29 @@
   1. Test with x86 -- I hope this is a backend bug!
   2. Reduce a test-case and post to sbcl-devel.
 
-* TODO FIXME
-*** TODO Need RAY-MIN in addition to RAY-EXTENT
-    Otherwise %FIND-INTERSECTION* can find intersections closer than
-    it wants. Or is RAY-ORIGIN good enough?
-*** TODO Now that light groups are in place there is no need for SCENE to be a defstruct
-    Previously SCENE-COMPILED-SCENE needed to be fast.
+* TODO Need RAY-MIN in addition to RAY-EXTENT
+  Otherwise %FIND-INTERSECTION* can find intersections closer than
+  it wants. This is probably also good for shadow rays, as the
+  existing ray can be modified to walk it. Maybe rename RAY-START and RAY-END.
+* TODO Now that light groups are in place there is no need for SCENE to be a defstruct
+  Previously SCENE-COMPILED-SCENE needed to be fast. Well, it still
+  does, since it is still used in a few places during rendering: those
+  need to be changed to using the rendering representation, AKA
+  COMPILED-SCENE.
+* TODO Restructure geometry protocol
+*** TODO Separate out computation of intersection and normal functions
+*** TODO Provide INTERSECTION-LAMBDA
+*** TODO Provide NORMAL-LAMBDA
+*** TODO Check the derived types of computed functions as in shader protocol
+*** TODO Make callers of normal functions allocate a result object for the callee
+* TODO Restructure CGS protocol
+*** TODO Separate out computation of all-intersections and inside-p functions
+*** TODO Provide INSIDE-P-LAMBDA
+*** TODO Provide ALL-INTERSECTIONS-LAMBDA
+*** TODO Check the derived types of the called functions
+*** TODO Make callers of all-intersections function allocate intersection vectors for the callee
 * TODO ARCHITECTURE
-*** TODO Shared parts
+*** TODO Share stuff
     To save memory
 ***** TODO Cache pattern key vectors
 ***** TODO Cache pattern function vectors when possible
@@ -22,16 +37,38 @@
       indicates if it can be cached for (a) all cases (b) cases with
       identical transforms.
 ***** TODO Cache constantly functions
+***** TODO Cache matrices
+      At least IDENTITY-MATRIX should be shared -- or maybe I should
+      go back to punning it to NIL, so that a single test is enough
+      for the common case?
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
+*** TODO Sky-sphere
 *** TODO Patterns
-***** TODO Transform rest of pattern-like shaders into patterns
+***** TODO NOISE should be a pattern
+***** TODO COMPOSITE should be COMPOSITE-PATTERN instead
+      But keys are not keys, weights! And the whole thing is not
+      a pattern, really.
+***** TODO TURBULENCE-PATTERN
+***** TODO STRIPE-PATTERN
+***** TODO BOX-PATTERN
+      Interpolated: 0 at the edges of the box, 1 at the middle.
+***** TODO OBJECT-PATTERN
+      Indexed: 1 if point is inside the object, 0 if not. Also repeating!
+***** TODO SLOPE-PATTERN
+      This is tricky: it needs the surface normal! So need to
+      reconsider things a bit...
+      
+
 *** TODO Integrate pertubated normals into general shader framework
     As a subprotocol, maybe: shaders inheriting from NORMAL-SHADER
     could have extra magic applied to them -- or at least the normal
     frobbing stuff easily available. Alternatively move normals to
     same level of privilege as transformations, so that everyone
     gets them for "free".
+
+    Assuming TEXTURE-SHADER is becoming the new default, how do I
+    specify normal pertubation in there?
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference
     images would be golden, along with some sort of timings.

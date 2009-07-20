@@ -30,15 +30,13 @@
 	 (camera (compute-camera-function camera))
          (counters (make-counters))
          (start (get-internal-run-time))
-         (result))
+         (result (alloc-vec)))
     (let ((rx (- (/ (* 2 x) width) 1.0))
           (ry (- 1.0 (/ (* 2 y) height)))
           (*image-coordinates* (cons x y)))
       (funcall camera
                (sb-int:named-lambda shoot-ray-callback (ray)
-                 (if result
-                     (error "never")
-                     (setf result (raytrace ray scene counters))))
+                 (setf result (raytrace result ray scene counters)))
                rx
                ry
                counters)
@@ -62,7 +60,8 @@
                           (error "Not a valid callback: ~S" callback))))
          (counters (make-counters))
          (fheight (float height))
-         (fwidth (float width)))
+         (fwidth (float width))
+         (result (alloc-vec)))
     (declare (function callback camera)
              (single-float fheight fwidth))
     (when verbose
@@ -74,7 +73,7 @@
          (setf timing args))
        (lambda ()
          (flet ((trace-1-ray (ray)
-                  (raytrace ray scene counters)))
+                  (raytrace result ray scene counters)))
            (declare (dynamic-extent #'trace-1-ray))
            (dotimes (y height)
              (dotimes (x width)
@@ -105,13 +104,13 @@
                                (cerror ,continue "Oops:~% ~A" c))))))
      ,@body))
 
-(defun raytrace (ray scene counters)
-  "Traces the RAY in SCENE, returning the apparent color."
+;;; COLOR argument may be stack-allocated by callers.
+(defun raytrace (result ray scene counters)
   (let* ((object (find-scene-intersection ray scene counters))
-         (color (if object
-                    (shade object ray counters)
-                    (scene-background-color scene))))
-    (vec* color (ray-weight ray))))
+         (apparent-color (if object
+                             (shade result object ray counters)
+                             (scene-background-color scene))))
+    (%vec* result apparent-color (ray-weight ray))))
 
 (defun %find-intersection (ray all-objects min max counters shadowp)
   (declare (optimize speed))

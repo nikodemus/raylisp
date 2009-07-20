@@ -143,6 +143,7 @@
 (define-raylisp-frame-command (com-render-all :name t)
     ()
   (maphash (lambda (name scene)
+             (declare (ignore name))
              (render-scene scene (find-pane-named *application-frame* 'canvas)))
            raylisp::*scenes*))
 

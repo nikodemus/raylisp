@@ -31,20 +31,21 @@
 (defmacro shader-lambda (&whole form name lambda-list &body body)
   "Provides automatic type declarations for shader function, and allows the
 function to be named, and adds a block with that name around the body."
-  (destructuring-bind (vector normal n.d ray counters) lambda-list
-    (declare (ignore counters))
+  (destructuring-bind (color point normal n.d ray counters) lambda-list
     (multiple-value-bind (forms declarations doc)
         (parse-body body :documentation t :whole form)
       `(sb-int:named-lambda ,name ,lambda-list
          ,@(when doc (list doc))
-         (declare (type vec ,vector ,normal)
+         (declare (type color ,color)
+                  (type point ,point)
+                  (type vec ,normal)
                   (type single-float ,n.d)
                   (type ray ,ray)
                   (type counter-vector ,counters)
                   (optimize (sb-c::recognize-self-calls 0)
                             (sb-c::type-check 0)
                             (sb-c::verify-arg-count 0)))
-         (the vec
+         (the color
            (values
             (block ,name
               (locally
@@ -55,10 +56,12 @@ function to be named, and adds a block with that name around the body."
 
 (defun constant-shader-function (value)
   (check-type value vec)
-  (shader-lambda constant-shader-lambda (point normal n.d ray counters)
-    (declare (ignore point normal n.d ray counters) (optimize (safety 0)))
+  (shader-lambda constant-shader-lambda (result point normal n.d ray counters)
+    (declare (ignore result point normal n.d ray counters) (optimize (safety 0)))
     value))
 
+(declaim (ftype (function (t t t matrix) shader-function)
+                compute-shader-function))
 (defgeneric compute-shader-function (shader object scene transform))
 
 (defmethod compute-shader-function :around (shader object scene transform)
@@ -88,7 +91,7 @@ function to be named, and adds a block with that name around the body."
   (/ value (the float (shader-weight shader))))
 
 (declaim (inline shade))
-(defun shade (object ray counters)
+(defun shade (result object ray counters)
   ;; Make sure the types are right: shader functions do not check
   ;; their argument types! The compiler should be able to eliminate
   ;; actual type checks from there, but let's make sure we don't
@@ -107,6 +110,7 @@ function to be named, and adds a block with that name around the body."
              (declare (type vec n)
                       (dynamic-extent n))
              (values (funcall (object-shader object)
+                              result
                               point
                               n
                               n.d

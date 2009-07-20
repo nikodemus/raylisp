@@ -1,5 +1,15 @@
 (in-package :raylisp)
 
+(deftype color ()
+  `vec)
+
+(deftype point ()
+  'vec)
+
+(deftype shader-function ()
+  `(function (color point vec single-float ray counter-vector)
+             (values color &optional)))
+
 (defconstant +pi+ (coerce pi 'single-float))
 
 (deftype float (&optional (min '*) (max '*))

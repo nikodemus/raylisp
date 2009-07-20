@@ -73,19 +73,14 @@
            ,@body)))
 
 (define-pattern-type :shader (object)
-  ;; SHADER objects are obviously good. PATTERN-FUNCTION for a VEC returns a
-  ;; function that always returns that vector for any number of arguments.
-  ;; Since we pun VECs and RGB colors this means that a VEC in a pattern map
-  ;; is fine for a shader. A pattern of type :SHADER is also cosher, of
-  ;; course. Less obviously patterns of type :COLOR are good, since they
-  ;; ignore all but the first argument.
-  (or (typep object '(or shader vec))
+  ;; SHADER objects are obviously good. PATTERN-FUNCTION for a COLOR returns a
+  ;; function that always returns that color for any number of arguments. A
+  ;; pattern of type :SHADER is also cosher, of course.
+  (or (typep object '(or shader color))
       (and (typep object 'pattern) (eq :shader (pattern-type object)))))
 
 (define-pattern-type :color (object)
-  ;; Colors are more restricted: we want a function calladble with just a
-  ;; single point --- so shaders are not good.
-  (or (typep object 'vec)
+  (or (typep object 'color)
       (and (typep object 'pattern) (eq :color (pattern-type object)))))
 
 (defgeneric compute-pattern-key-function (pattern transform))
@@ -191,28 +186,32 @@
            (type (simple-array single-float (*)) keys)
            (type simple-vector values))
   (let ((map-size (length keys)))
-    (shader-lambda interpolated-shader-pattern (point normal n.d ray counters)
+    (shader-lambda interpolated-shader-pattern (result point normal n.d ray counters)
       (declare (optimize speed))
-      (flet ((call (function)
-               (values (funcall (the function function) point normal n.d ray counters))))
+      (flet ((call (res function)
+               (values (funcall (the function function) res point normal n.d ray counters))))
         (let ((value (funcall key-function point))
-              (tmp 0.0))
-          (declare (single-float value tmp))
+              (blend 0.0))
+          (declare (single-float value blend))
           ;; FIXME: Linear search is not so good with big maps!
           (let* ((index (loop for i from 0 below map-size
                               do (let ((this (aref keys i)))
                                    (cond ((= value this)
                                           ;; Exact hit, no need to compute anything else.
                                           (return-from interpolated-shader-pattern
-                                            (call (aref values i))))
-                                         ((< tmp value this)
-                                          (setf tmp (- 1.0 (/ (- this value) (- this tmp))))
+                                            (call result (aref values i))))
+                                         ((< blend value this)
+                                          (setf blend (- 1.0 (/ (- this value) (- this blend))))
                                           (return i))
                                          (t
-                                          (setf tmp this)))))))
+                                          (setf blend this))))))
+                 (tmp (alloc-vec)))
+            (declare (dynamic-extent tmp))
             ;; Blend between the two values.
-            (vec-lerp (call (aref values (- index 1))) (call (aref values index))
-                      tmp)))))))
+            (%vec-lerp result
+                       (call result (aref values (- index 1)))
+                       (call tmp (aref values index))
+                       blend)))))))
 
 (defclass indexed-pattern (pattern)
   ())
@@ -236,10 +235,10 @@
          (values (apply #'pattern-map-values pattern matrix args)))
     (declare (type (simple-array t (*)) values))
     (if (eq :shader (pattern-type pattern))
-        (shader-lambda indexed-shader-pattern (point normal n.d ray counters)
+        (shader-lambda indexed-shader-pattern (result point normal n.d ray counters)
           (declare (optimize speed))
           (funcall (the function (aref values (funcall key-function point)))
-                   point normal n.d ray counters))
+                   result point normal n.d ray counters))
         (lambda (point)
           (funcall (the function (aref values (funcall key-function point))) point)))))
 

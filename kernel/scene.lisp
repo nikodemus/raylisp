@@ -131,9 +131,6 @@
                (compiled-scene-light-groups c-scene))))
   scene)
 
-(deftype shader-function ()
-  `(function (vec vec single-float ray counter-vector) (values vec &optional)))
-
 ;;;## Objects
 
 (defclass scene-object (transform-mixin light-group-mixin)
