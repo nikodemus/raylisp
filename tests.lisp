@@ -168,8 +168,14 @@
                   :direction (v 2 8 -1)))
   (:camera
    (make-instance 'pinhole-camera
-                  :look-at (v -250 0 100)
-                  :location (v -10 150 0))))
+                  :look-at (v -300 0 -100)
+                  :location (v -100 150 100)))
+  (:background
+   (make-instance 'sky-sphere-shader
+                  :pigment (make-instance 'noise-pattern
+                                          :type :color
+                                          :map `((0.0 ,white)
+                                                 (1.0 ,blue))))))
 
 (defscene test-teapot-2
   (:objects
@@ -639,7 +645,7 @@
   (:lights
    (make-instance 'point-light
                   :location (@ -30 30 -30)))
-  (:background-color blue)
+  (:background blue)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 12)
@@ -671,7 +677,6 @@
                                               :color green)))))
   (:lights
    (make-instance 'solar-light :direction y-axis))
-  (:background-color black)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
@@ -698,7 +703,6 @@
                                               :color blue)))))
   (:lights
    (make-instance 'solar-light :direction y-axis))
-  (:background-color black)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
@@ -729,7 +733,6 @@
                                                  :color green)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 0.5)))
-  (:background-color black)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
@@ -784,7 +787,6 @@
    #+nil
    (make-instance 'solar-light :direction y-axis)
    (make-instance 'point-light :location (@ 0 200 0)))
-  (:background-color black)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
@@ -971,7 +973,7 @@
                   :location (@ -30 30 -30)
                   :direction (v 30 -30 35)
                   :aperture 0.98))
-  (:background-color blue)
+  (:background blue)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 16)

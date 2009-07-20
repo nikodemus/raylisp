@@ -109,7 +109,10 @@
   (let* ((object (find-scene-intersection ray scene counters))
          (apparent-color (if object
                              (shade result object ray counters)
-                             (scene-background-color scene))))
+                             (funcall (compiled-scene-background
+                                       (scene-compiled-scene scene))
+                                      result
+                                      ray))))
     (%vec* result apparent-color (ray-weight ray))))
 
 (defun %find-intersection (ray all-objects min max counters shadowp)

@@ -24,13 +24,21 @@
 ;;;; compilation COMPUTE-SHADER-FUNCTION is called for shaders attached to
 ;;;; scene objects. The returned function is then called during rendering to
 ;;;; compute the visible color for points on object surface.
+;;;;
+;;;; BACKGROUND-SHADER
+;;;;
+;;;; Subclasses of BACKGROUND-SHADER implemen different background shaders:
+;;;; during scene compilation COMPUTE-BACKGROUND-SHADER-FUNCTION is called for
+;;;; the scene background. The returned function is then called during rendering
+;;;; to compute apparent color of rays which do not hit any objects.
 
 (defclass shader (name-mixin transform-mixin)
   ())
 
+(defclass background-shader ()
+  ())
+
 (defmacro shader-lambda (&whole form name lambda-list &body body)
-  "Provides automatic type declarations for shader function, and allows the
-function to be named, and adds a block with that name around the body."
   (destructuring-bind (color point normal n.d ray counters) lambda-list
     (multiple-value-bind (forms declarations doc)
         (parse-body body :documentation t :whole form)
@@ -54,10 +62,36 @@ function to be named, and adds a block with that name around the body."
                  ,@declarations
                  ,@forms)))))))))
 
+(defmacro background-shader-lambda (&whole form name lambda-list &body body)
+  (destructuring-bind (color ray) lambda-list
+    (multiple-value-bind (forms declarations doc)
+        (parse-body body :documentation t :whole form)
+      `(sb-int:named-lambda ,name ,lambda-list
+         ,@(when doc (list doc))
+         (declare (type color ,color)
+                  (type ray ,ray)
+                  (optimize (sb-c::recognize-self-calls 0)
+                            (sb-c::type-check 0)
+                            (sb-c::verify-arg-count 0)))
+         (the color
+           (values
+            (block ,name
+              (locally
+                  (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
+                (let ,(mapcar (lambda (arg) (list arg arg)) lambda-list)
+                 ,@declarations
+                 ,@forms)))))))))
+
 (defun constant-shader-function (value)
   (check-type value vec)
-  (shader-lambda constant-shader-lambda (result point normal n.d ray counters)
+  (shader-lambda constant-shader (result point normal n.d ray counters)
     (declare (ignore result point normal n.d ray counters) (optimize (safety 0)))
+    value))
+
+(defun constant-background-shader-function (value)
+  (check-type value vec)
+  (background-shader-lambda constant-background-shader (result ray)
+    (declare (ignore result ray) (optimize (safety 0)))
     value))
 
 (declaim (ftype (function (t t t matrix) shader-function)
@@ -76,6 +110,19 @@ function to be named, and adds a block with that name around the body."
 
 (defmethod compute-shader-function ((shader null) object scene transform)
   (constant-shader-function black))
+
+(declaim (ftype (function (t t) background-shader-function)
+                compute-background-shader-function))
+(defgeneric compute-background-shader-function (shader scene))
+
+(defmethod compute-background-shader-function :around (shader scene)
+  (check-function-type (call-next-method) 'background-shader-function))
+
+(defmethod compute-background-shader-function ((shader null) scene)
+  (constant-background-shader-function black))
+
+(defmethod compute-background-shader-function ((shader #.(class-of (alloc-vec))) scene)
+  (constant-background-shader-function shader))
 
 (declaim (ftype (function (t t t t) (values shader-function &optional))
                 compile-shader))

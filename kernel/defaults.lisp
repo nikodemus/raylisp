@@ -12,7 +12,7 @@
   (list :adaptive-limit 0.05
 	:ambient 0.05
 	:ambient-light white
-	:background-color black
+	:background black
         :diffuse 0.9
 	:depth-limit 5
 	:ior 1.0

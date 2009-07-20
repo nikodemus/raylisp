@@ -23,7 +23,7 @@
   (depth-limit (find-default :depth-limit 'fixnum) :type fixnum)
   (adaptive-limit
    (find-default :adaptive-limit '(float 0.0 1.0)) :type (float 0.0 1.0))
-  (background-color (find-default :background-color 'vec) :type vec)
+  (background (find-default :background))
   (ambient-light (find-default :ambient-light 'vec) :type vec)
   (default-camera)
   (compiled-scene))
@@ -47,7 +47,7 @@
                  (make-scene :name ',name
                              :objects (flatten ,(get-key :objects))
                              :lights (flatten ,(get-key :lights))
-                             :background-color ,(get-key :background-color 'vec)
+                             :background ,(get-key :background t)
                              :ambient-light ,(get-key :ambient-light 'vec)
                              :adaptive-limit ,(get-key :adaptive-limit '(float 0.0 1.0))
                              :depth-limit ,(get-key :depth-limit 'fixnum)
@@ -93,7 +93,9 @@
   (objects nil :type list)
   (lights nil :type list)
   (tree nil :type (or null kd-node))
-  (light-groups (make-hash-table :test #'equal)))
+  (light-groups (make-hash-table :test #'equal))
+  (background (constant-background-shader-function black)
+              :type background-shader-function))
 
 (defun scene-light-groups (scene)
   (let ((c (scene-compiled-scene scene)))
@@ -105,6 +107,8 @@
 (defun compile-scene (scene)
   (let ((c-scene (make-compiled-scene)))
     (setf (scene-compiled-scene scene) c-scene)
+    (setf (compiled-scene-background c-scene)
+          (compute-background-shader-function (scene-background scene) scene))
     (let ((c-objs (mapcar (lambda (obj)
                             (compile-scene-object obj scene (identity-matrix)))
                           (scene-objects scene))))
