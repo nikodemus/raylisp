@@ -73,31 +73,27 @@
 ;;; TODO: benchmark with and without statistic collection: we can't
 ;;; afford to spend too much time here.
 
-(defvar *render-verbose* t)
-
-(defun print-report (scene counters time &optional (stream *render-verbose*))
+(defun print-report (scene counters timings &key (stream t))
   (let ((intersections (getf counters :intersections))
 	(hits (getf counters :hits))
 	(shadow-tests (getf counters :shadow-tests))
 	(shadows (getf counters :shadows))
         (c-scene (scene-compiled-scene scene)))
-    (format stream "~&Objects: ~A~%~
-                    Unbounded: ~A~%~
-                    Lights:  ~A~%~
-                    KD-tree depth: ~A~%~
-                    Initial rays: ~A~%~
-                    Reflections:  ~A~%~
-                    Refractions:  ~A~%~
+    (format stream "~&Objects: ~A, Lights: ~A~%~
+                    KD-tree depth: ~A, Unbounded: ~A~%~
+                    Camera rays: ~A~%~
+                    Reflections:  ~A, Refractions:  ~A~%~
                     Intersection tests/hits: ~A / ~A~50T~@[~D%~]~%~
                     Shadow tests/hits:       ~A / ~A~50T~@[~D%~]~%~
-                    Internal runtime: ~A seconds~%"
+                    Real: ~,2F, User: ~,2F System: ~,2F seconds~%~
+                    GC: ~,2F seconds, ~,2F Mb consed"
 	    (length (scene-objects scene))
-            (length (compiled-scene-objects c-scene))
 	    (length (scene-lights scene))
             (let ((kd (compiled-scene-tree c-scene)))
-              (if (kd-interior-node-p kd)
+              (if kd
                   (kd-depth kd)
                   0))
+            (length (compiled-scene-objects c-scene))
 	    (getf counters :camera)
 	    (getf counters :reflected)
 	    (getf counters :refracted)
@@ -107,9 +103,12 @@
 	    shadow-tests shadows
 	    (unless (zerop shadows)
 	      (round (* 100 (/ shadows shadow-tests))))
-            (float (/ time internal-time-units-per-second)))))
+            (/ (getf timings :real-time-ms) 1000.0)
+            (/ (getf timings :user-run-time-us) 1000000.0)
+            (/ (getf timings :system-run-time-us) 1000000.0)
+            (/ (getf timings :gc-run-time-ms) 1000.0)
+            (/ (getf timings :bytes-consed) (* 1024.0 1024.0)))))
 
-(defun maybe-report (scene counters time)
-  (when *render-verbose*
-    (print-report scene (counter-plist counters) time *render-verbose*)))
+(defun report (scene counters timings stream)
+  (print-report scene (counter-plist counters) timings :stream stream))
 
