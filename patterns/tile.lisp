@@ -24,9 +24,9 @@
 (defmethod indexed-pattern-size ((pattern tile-pattern))
   4)
 
-(defmethod compute-pattern-key-function ((pattern tile-pattern) transform)
+(defmethod compute-indexed-pattern-function ((pattern tile-pattern) transform)
   (let ((inverse (inverse-matrix transform)))
-    (lambda (point)
+    (indexed-pattern-lambda tile-pattern (point)
       (declare (optimize speed) (vec point))
       (let ((p (transform-point point inverse)))
         (declare (dynamic-extent p) (vec p))

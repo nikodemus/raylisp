@@ -38,29 +38,31 @@
 (defclass background-shader ()
   ())
 
-(defmacro shader-lambda (&whole form name lambda-list &body body)
-  (destructuring-bind (color point normal n.d ray counters) lambda-list
-    (multiple-value-bind (forms declarations doc)
-        (parse-body body :documentation t :whole form)
-      `(sb-int:named-lambda ,name ,lambda-list
-         ,@(when doc (list doc))
-         (declare (type color ,color)
-                  (type point ,point)
-                  (type vec ,normal)
-                  (type single-float ,n.d)
-                  (type ray ,ray)
-                  (type counter-vector ,counters)
-                  (optimize (sb-c::recognize-self-calls 0)
-                            (sb-c::type-check 0)
-                            (sb-c::verify-arg-count 0)))
-         (the color
-           (values
-            (block ,name
-              (locally
-                  (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
-                (let ,(mapcar (lambda (arg) (list arg arg)) lambda-list)
-                 ,@declarations
-                 ,@forms)))))))))
+(defmacro shader-lambda (&whole form name (result point normal n.d ray counters)
+                         &body body)
+  (multiple-value-bind (forms declarations doc)
+      (parse-body body :documentation t :whole form)
+    `(sb-int:named-lambda ,name (,result ,point ,normal ,n.d ,ray ,counters)
+       ,@(when doc (list doc))
+       (declare (type color ,result)
+                (type point ,point)
+                (type vec ,normal)
+                (type single-float ,n.d)
+                (type ray ,ray)
+                (type counter-vector ,counters)
+                (optimize (sb-c::recognize-self-calls 0)
+                          (sb-c::type-check 0)
+                          (sb-c::verify-arg-count 0)))
+       (the color
+         (values
+          (block ,name
+            (locally
+                (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
+              (let ((,result ,result) (,point ,point)
+                    (,normal ,normal) (,n.d ,n.d)
+                    (,ray ,ray) (,counters ,counters))
+                ,@declarations
+                ,@forms))))))))
 
 (defmacro background-shader-lambda (&whole form name lambda-list &body body)
   (destructuring-bind (color ray) lambda-list
@@ -103,7 +105,7 @@
   ;; make sure the function type looks about right.
   (check-function-type (call-next-method) 'shader-function))
 
-(defmethod compute-shader-function :around ((shader shader) object scene transform)
+(defmethod compute-shader-function :around ((shader transform-mixin) object scene transform)
   ;; Apply the transform of the shader: otherwise all subclasses need to do
   ;; this.
   (call-next-method shader object scene (matrix* transform (transform-of shader))))

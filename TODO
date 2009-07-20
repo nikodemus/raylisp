@@ -7,11 +7,9 @@
   1. Test with x86 -- I hope this is a backend bug!
   2. Reduce a test-case and post to sbcl-devel.
 * TODO Rename constants +FOO +
-* TODO Check pattern type for context, somehow
 * TODO Rename "transform" variables into "matrix"
 * TODO Make it possible to specify :SCALE 0.8 and :TRANSLATE '(0.1 2 4.4)
   for anything that accepts a transform.
-* TODO Make :COLOR shader function take a result argument as well.
 * TODO Rename VECTOR-NOISE &co into VEC-NOISE, etc.
 * TODO Need RAY-MIN in addition to RAY-EXTENT
   Otherwise %FIND-INTERSECTION* can find intersections closer than
@@ -50,7 +48,6 @@
 *** TODO Shared CSG shaders
     It should be possible to specify a toplevel shader for an entire CGS.
 *** TODO Patterns
-***** TODO NOISE should be a pattern
 ***** TODO COMPOSITE should be COMPOSITE-PATTERN instead
       But keys are not keys, weights! And the whole thing is not
       a pattern, really.

@@ -24,14 +24,14 @@
     :initarg :size
     :reader indexed-pattern-size)))
 
-(defmethod compute-pattern-key-function ((pattern checker-pattern) transform)
+(defmethod compute-indexed-pattern-function ((pattern checker-pattern) transform)
   (let ((inverse (inverse-matrix transform))
         (mod (indexed-pattern-size pattern)))
     (declare (type (integer 2 #.most-positive-fixnum) mod))
-    (lambda (point)
-      (declare (optimize speed) (vec point))
+    (indexed-pattern-lambda checker-pattern (point)
+      (declare (optimize speed))
       (let ((p (transform-point point inverse)))
-        (declare (dynamic-extent p) (vec p))
+        (declare (dynamic-extent p))
         (macrolet ((dim (n)
                      `(ffloor (+ epsilon (aref p ,n)))))
           (mod (truncate (+ (dim 0) (dim 1) (dim 2))) mod))))))

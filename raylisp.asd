@@ -16,6 +16,7 @@
                          (:file "mixins")
                          (:file "scene")
                          (:file "shader")
+                         (:file "pigment")
                          (:file "pattern")
                          (:file "protocol")
                          (:file "render")

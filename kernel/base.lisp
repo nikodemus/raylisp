@@ -6,6 +6,15 @@
 (deftype point ()
   'vec)
 
+(deftype interpolated-pattern-function ()
+  `(function (point) (values (single-float 0.0 1.0) &optional)))
+
+(deftype indexed-pattern-function ()
+  `(function (point) (values array-index &optional)))
+
+(deftype pigment-function ()
+  `(function (color point) (values color &optional)))
+
 (deftype shader-function ()
   `(function (color point vec single-float ray counter-vector)
              (values color &optional)))

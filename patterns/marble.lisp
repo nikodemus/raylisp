@@ -3,9 +3,9 @@
 (defclass marble-pattern (interpolated-pattern axis-mixin)
   ())
 
-(defmethod compute-pattern-key-function ((pattern marble-pattern) transform)
+(defmethod compute-interpolated-pattern-function ((pattern marble-pattern) transform)
   (let ((inverse (inverse-matrix (matrix* transform (reorient (axis-of pattern) z-axis)))))
-    (lambda (point)
+    (interpolated-pattern-lambda marble-pattern (point)
       (declare (optimize speed))
       (let ((p (transform-point point inverse)))
         (declare (dynamic-extent p))

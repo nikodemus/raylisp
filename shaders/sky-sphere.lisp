@@ -25,10 +25,7 @@
     :reader pigment-of)))
 
 (defmethod compute-background-shader-function ((shader sky-sphere-shader) scene)
-  (let* ((pigment (pigment-of shader))
-         (pattern-function (pattern-function pigment (identity-matrix))))
-    (assert (or (typep pigment 'color)
-                (eq :color (pattern-type pigment))))
+  (let ((pigment-fun (compute-pigment-function (pigment-of shader) (identity-matrix))))
     (background-shader-lambda sky-sphere-shader (result ray)
       (declare (ignore result))
-      (funcall pattern-function (ray-direction ray)))))
+      (funcall pigment-fun result (ray-direction ray)))))

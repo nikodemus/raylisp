@@ -23,7 +23,7 @@
     :initarg :mode
     :initform :scale)))
 
-(defmethod compute-pattern-key-function ((pattern noise-pattern) transform)
+(defmethod compute-interpolated-pattern-function ((pattern noise-pattern) transform)
   (let ((inverse (inverse-matrix transform))
         (mode (slot-value pattern 'mode)))
     (declare (optimize speed))
@@ -31,20 +31,18 @@
     ;; to deal with it.
     (ecase mode
       (:scale
-       (lambda (point)
+       (interpolated-pattern-lambda scale-noise-pattern (point)
          (let ((p (transform-point point inverse)))
            (declare (dynamic-extent p))
            (* 0.5 (+ 1.0 (vector-noise p))))))
       (:abs
-       (lambda (point)
+       (interpolated-pattern-lambda abs-noise-pattern (point)
          (let ((p (transform-point point inverse)))
            (declare (dynamic-extent p))
-           ;; Scale to 0-1 range
            (abs (vector-noise p)))))
       (:clamp
-       (lambda (point)
+       (interpolated-pattern-lambda clamp-noise-pattern (point)
          (let ((p (transform-point point inverse)))
            (declare (dynamic-extent p))
-           ;; Scale to 0-1 range
            (clamp (vector-noise p) 0.0 1.0)))))))
 

@@ -63,9 +63,7 @@
 
 (defmethod compute-shader-function ((shader texture-shader) object scene transform)
   (let* (#+nil (inverse (inverse-matrix transform))
-         #+nil
-         (pigment-fun (compute-pigment-function (pigment-of shader)))
-         (pigment-fun (pattern-function (pigment-of shader) transform))
+         (pigment-fun (compute-pigment-function (pigment-of shader) transform))
          #+nil
          (normal-fun (compute-pertubation-function (normal-of shader)))
          (light-group (compute-light-group object scene))
@@ -82,9 +80,10 @@
     (shader-lambda shade-texture (result point normal n.d ray counters)
       (declare (optimize speed))
       (let* ((point2 point #+nil (transform-point point inverse))
-             (pigment (funcall pigment-fun point2))
+             (tmp (alloc-vec))
+             (pigment (funcall pigment-fun tmp point2))
              (normal2 #+nil (funcall normal-fun point2) normal))
-        (declare (dynamic-extent #+nil point2 #+nil normal2))
+        (declare (dynamic-extent #+nil point2 #+nil normal2 tmp))
         (%copy-vec result black)
         ;; For all lights...
         (dolist (light (light-group-lights light-group))

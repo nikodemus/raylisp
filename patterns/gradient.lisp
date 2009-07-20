@@ -6,11 +6,11 @@
     :initarg :smooth
     :reader smoothp)))
 
-(defmethod compute-pattern-key-function ((pattern gradient-pattern) transform)
+(defmethod compute-interpolated-pattern-function ((pattern gradient-pattern) transform)
   (let ((inverse (inverse-matrix
                   (matrix* transform (reorient (axis-of pattern) z-axis)))))
     (if (smoothp pattern)
-        (lambda (point)
+        (interpolated-pattern-lambda smooth-gradient-pattern (point)
           (declare (optimize speed))
           (let ((p (transform-point point inverse)))
             (declare (dynamic-extent p))
@@ -21,7 +21,7 @@
                           (+ r 2.0))
                          (t
                           r))))))
-        (lambda (point)
+        (interpolated-pattern-lambda gradient-pattern (point)
           (declare (optimize speed))
           (let ((p (transform-point point inverse)))
             (declare (dynamic-extent p))
