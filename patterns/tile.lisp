@@ -18,13 +18,13 @@
 
 (in-package :raylisp)
 
-(defclass tiles-pattern (indexed-pattern)
+(defclass tile-pattern (indexed-pattern)
   ())
 
-(defmethod indexed-pattern-size ((pattern tiles-pattern))
+(defmethod indexed-pattern-size ((pattern tile-pattern))
   4)
 
-(defmethod compute-pattern-key-function ((pattern tiles-pattern) transform)
+(defmethod compute-pattern-key-function ((pattern tile-pattern) transform)
   (let ((inverse (inverse-matrix transform)))
     (lambda (point)
       (declare (optimize speed) (vec point))

@@ -26,7 +26,7 @@
 
 (defmethod compute-pattern-key-function ((pattern checker-pattern) transform)
   (let ((inverse (inverse-matrix transform))
-        (mod (1+ (indexed-pattern-size pattern))))
+        (mod (indexed-pattern-size pattern)))
     (declare (type (integer 2 #.most-positive-fixnum) mod))
     (lambda (point)
       (declare (optimize speed) (vec point))

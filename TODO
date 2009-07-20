@@ -89,6 +89,7 @@
     Aka cheap caustics.
 *** TODO Turbulence shader
 *** TODO Variant reflection
+***** TODO Done as part of texture for metals, but should be available separately.
 *** TODO Fill lights
 ***** TODO Make filling selective: shadowed by some objects, not all.
 *** TODO Cylinder
@@ -97,6 +98,8 @@
 *** TODO Height fields
 *** TODO Radiosity shader
 *** TODO Metallic shaders
+***** TODO Specifying the freshnel ratio
+      That is, interpolating between the light/reflection and local color.
 * TODO CAMERAS
 *** TODO Fisheye camera
 *** TODO Focal blur

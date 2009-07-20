@@ -78,7 +78,7 @@
                                     (1.0 ,color2))))))
      (make-instance 'plane
                    :shader (make-instance 'texture-shader
-                                          :pigment (make-instance 'columns-pattern
+                                          :pigment (make-instance 'tile-pattern
                                                                   :type :color
                                                                   :map (list
                                                                         (marble black white (rotate* 1.0 2.7 0.3))
@@ -1236,7 +1236,7 @@
                   (make-instance 'checker-pattern
                                  :type :shader
                                  :transform (scale* 2.0 2.0 2.0)
-                                 :map (list (make-instance 'phong-shader :color black)
+                                 :map (list (make-instance 'phong-shader :color white)
                                             (make-instance 'checker-pattern
                                                            :type :shader
                                                            :map (list (make-instance 'phong-shader :color black)
