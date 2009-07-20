@@ -163,7 +163,7 @@
               (block pattern-at-point
                 (let ((value (funcall key-function point))
                       (tmp 0.0))
-                  (declare (single-float value tmp))
+                  (declare (type (single-float 0.0 1.0) value tmp))
                   ;; FIXME: Linear search is not so good with big maps!
                   (let* ((index (loop for i from 0 below map-size
                                       do (let ((this (aref keys i)))
@@ -192,7 +192,7 @@
                (values (funcall (the function function) res point normal n.d ray counters))))
         (let ((value (funcall key-function point))
               (blend 0.0))
-          (declare (single-float value blend))
+          (declare (type (single-float 0.0 1.0) value blend))
           ;; FIXME: Linear search is not so good with big maps!
           (let* ((index (loop for i from 0 below map-size
                               do (let ((this (aref keys i)))

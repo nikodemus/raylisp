@@ -983,19 +983,31 @@
 
 (defscene test-noise
   (:objects
-   (make-instance 'sphere
-                  :radius 3.0
-                  :shader (make-instance 'noise-shader
-                                         :start (make-instance 'solid-shader :color (@ 0.2 0.2 1.0))
-                                         :end (make-instance 'solid-shader :color white)
-                                         :scale 0.8)))
+   (make-instance 'plane
+                  :location (v 0 0 0)
+                  :shader (make-instance 'texture-shader :pigment white))
+   (flet ((obj (x mode)
+            (make-instance 'sphere
+                           :radius 3.0
+                           :location (v x 3 0)
+                           :shader
+                           (make-instance 'noise-pattern
+                                          :type :shader
+                                          :mode mode
+                                          :map `((0.0 ,(make-instance 'texture-shader :pigment (v 0.2 0.2 1.0)))
+                                                 (1.0 ,(make-instance 'texture-shader :pigment white)))))))
+     (list
+      (obj -6 :scale)
+      (obj 0 :clamp)
+      (obj 6 :abs))))
   (:lights
-   (make-instance 'solar-light :direction (v -1 1 -1)))
-  (:ambient-light (@ 0.1 0.1 0.1))
+   (make-instance 'point-light
+                  :location (v -10 10 -15)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 5 -5)
-                     :look-at +origin+)))
+                     :location (@ 0 4 -20)
+                     :look-at (v 0 3 0)
+                     :focal-length 3.0)))
 
 (defscene test-x-axis-camera
   (:objects

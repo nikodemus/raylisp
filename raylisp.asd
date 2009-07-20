@@ -45,6 +45,7 @@
             :components ((:file "checker")
                          (:file "gradient")
                          (:file "marble")
+                         (:file "noise")
                          (:file "tile")
                          (:file "wood")))
    (:module "shaders"
@@ -52,7 +53,6 @@
             :components ((:file "bump")
                          (:file "composite")
                          (:file "flat")
-                         (:file "noise")
                          (:file "phong")
                          (:file "raytrace")
                          (:file "solid")
