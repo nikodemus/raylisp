@@ -55,7 +55,8 @@
                          (:file "noise")
                          (:file "phong")
                          (:file "raytrace")
-                         (:file "solid")))
+                         (:file "solid")
+                         (:file "texture")))
    (:module "models"
             :components ((:static-file "teapot.obj")))
    (:file "tests" :depends-on

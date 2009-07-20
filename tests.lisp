@@ -55,6 +55,70 @@
   (:camera
    *view*))
 
+;;; Three copper balls on a checkered marble floor. TILES-PATTERN
+;;; gives a
+;;;
+;;;   121212
+;;;   343434
+;;;   121212
+;;;   343434
+;;;
+;;; layout to the floor, so no continuities appear between different
+;;; marble tiles. :METALLIC in the texture means that highlights and
+;;; reflections pick up the color of the material.
+(defscene test-metal
+  (:objects
+   (flet ((marble (color1 color2 &optional (transform (identity-matrix)))
+            (let ((s 0.5))
+              (make-instance 'marble-pattern
+                             :type :color
+                             :transform (list (scale* s s s) transform)
+                             :map `((0.0 ,color1)
+                                    (0.9 ,color1)
+                                    (1.0 ,color2))))))
+     (make-instance 'plane
+                   :shader (make-instance 'texture-shader
+                                          :pigment (make-instance 'columns-pattern
+                                                                  :type :color
+                                                                  :map (list
+                                                                        (marble black white (rotate* 1.0 2.7 0.3))
+                                                                        (marble white black (translate* 1.2 0.5 1.5))
+                                                                        (marble white black (rotate* 0.0 1.0 0.0))
+                                                                        (marble black white)))
+                                          :transform (scale* 6.0 1.0 6.0)
+                                          :diffuse 1.0)))
+   (make-instance 'sphere
+                  :radius 300.0
+                  :shader (make-instance 'solid-shader :color (v 0.6 0.8 1.0)))
+   (flet ((ball (p r o)
+            (make-instance 'sphere
+                           :location (v p 2.0 -2)
+                           :radius 3.0
+                           :shader (make-instance 'texture-shader
+                                                  :pigment (v 1.0 0.55 0.4)
+                                                  :diffuse (- 1.0 r)
+                                                  :reflection r
+                                                  :brilliance 2.0
+                                                  :specular r
+                                                  :roughness o
+                                                  :metallic t
+                                                  :fresnel 0.5))))
+     (list (ball -6 0.5    0.005)
+           (ball 0.0 0.6   0.004)
+           (ball 6 0.75    0.0025))))
+  (:lights
+   (make-instance 'spotlight
+                  :location (v -10 10 -10)
+                  :point-at (v -3 0 -2)
+                  :color white
+                  :aperture 0.8)
+   (make-instance 'point-light
+                  :fill-light t
+                  :location (v -10 10 -10)
+                  :color (v 0.1 0.1 0.1)))
+  (:camera
+   *view*))
+
 (defun triangle-box (min max &rest initargs)
   (let (triangles)
     (flet ((tri (&rest vertices)
@@ -670,10 +734,11 @@
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
-      (make-instance 'pinhole-camera
-                     :location (@ 8 6.5 -2)
-                     :look-at +origin+
-                     :focal-length 3.0)))
+   (make-instance 'pinhole-camera
+                  :location (@ 8 6.5 -2)
+                  :look-at +origin+
+                  :focal-length 3.0)))
+
 
 (defscene test-5
   (:objects
