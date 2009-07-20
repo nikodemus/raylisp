@@ -45,6 +45,7 @@
             :components ((:file "checker")
                          (:file "gradient")
                          (:file "marble")
+                         (:file "tiles")
                          (:file "wood")))
    (:module "shaders"
             :depends-on ("kernel")
