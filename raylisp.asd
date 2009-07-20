@@ -55,6 +55,7 @@
                          (:file "flat")
                          (:file "phong")
                          (:file "raytrace")
+                         (:file "sky-sphere")
                          (:file "solid")
                          (:file "texture")))
    (:module "models"
