@@ -50,6 +50,7 @@
 
 ;;;; Check that the contents of the map match the promised type, and also give
 ;;;; the keys a once-over.
+#+nil
 (defmethod initialize-instance :after ((pattern pattern) &key)
   (let* ((type (pattern-type pattern))
          (verifier (or (gethash type *pattern-types*)

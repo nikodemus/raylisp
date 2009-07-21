@@ -56,27 +56,24 @@
    *view*))
 
 ;;; Generating a mesh patch from an arbitrary function.
-;;;
-;;; FIXME: This show artefects: a couple of rays somehow passing through the
-;;; mesh -- bug either in intersecting a mesh, building the KD tree, or
-;;; traversing it?
 (defscene test-mesh-field
   (:objects
    (generate-mesh-field (lambda (x z)
-                          (vector-noise (vec x 0.0 z)))
-                        20.0 200 20.0 200
+                          (+ (vector-noise (vec x 0.0 z))
+                             (sin z)
+                             (sin (+ z x))))
+                        20.0 150 20.0 150
                         :transform (list (translate* -10.0 0.0 -10.0)
                                          (scale* 1.0 0.3 1.0))
                         :shader (make-instance 'texture-shader
                                                :pigment white)))
-  (:background blue)
   (:lights
    *lamp*)
   (:camera
    (make-instance 'pinhole-camera
                          :location (v 0 18 -30)
                          :look-at (v 0 0 -3)
-                         :focal-length 9.0)))
+                         :focal-length 3.0)))
 
 ;;; Three copper balls on a checkered marble floor. TILES-PATTERN
 ;;; gives a

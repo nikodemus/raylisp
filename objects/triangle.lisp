@@ -43,13 +43,13 @@
                    (tvec (vec- (ray-origin ray) a))
                    ;; Calculate U parameter and test bounds
                    (u (* (dot-product tvec pvec) inv-det)))
-              (unless (<= 0.0 u 1.0)
+              (unless (<= (- epsilon) u (+ 1.0 epsilon))
                 (return-from triangle-intersection nil))
               (let* ( ;; Prepare to test V parameter
                      (qvec (cross-product tvec edge1))
                      ;; Calculate V parameter and test bounds
                      (v (* (dot-product dir qvec) inv-det)))
-                (when (or (< v 0.0) (> (+ v u) 1.0))
+                (when (or (< v (- epsilon)) (> (+ v u) (+ 1.0 epsilon)))
                   (return-from triangle-intersection nil))
                 ;; Calculate intersection distance
                 (let ((s (* (dot-product edge2 qvec) inv-det)))
