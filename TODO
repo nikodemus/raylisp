@@ -3,6 +3,16 @@
 #+STARTUP: odd
 #+STARTUP: oddeven
 
+* TODO Bugs in mesh rendering or KD tree
+  See TEST-MESH-FIELD -- rays that hit the background somehow pass
+  through the mesh.
+* TODO Optimize KD tree further
+  Sampling TEST-MESH-FIELD greater resolution absolutely kills the
+  performance. There in addition to the optimizations outlined in
+  the "streaming KD tree" presentation, it seems to me that a patch
+  like that is a worst-case scenario: there are + and - events for
+  the same point for each triangle per axis! I wonder if this could
+  be exploited somehow?
 * TODO Backtraces broken from type errors
   1. Test with x86 -- I hope this is a backend bug!
   2. Reduce a test-case and post to sbcl-devel.

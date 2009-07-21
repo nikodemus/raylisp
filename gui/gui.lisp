@@ -123,7 +123,7 @@
 (define-raylisp-frame-command (com-report :name t)
     ()
   (sb-sprof:stop-profiling)
-  (sb-sprof:report :type :flat))
+  (sb-sprof:report :stream sb-sys:*stdout*))
 
 (defvar *last-scene-name* nil)
 

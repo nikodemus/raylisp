@@ -15,6 +15,8 @@
 ;;; over normal function always, giving it the edge vectors computed by the
 ;;; intersection...
 
+(defconstant +triangle-epsilon+ 0.000001)
+
 (defmethod compute-object-properties ((triangle triangle) scene transform &key shading-object)
   (let* ((vertices (vertices-of triangle))
          (m transform)
@@ -34,7 +36,7 @@
                  (pvec (cross-product dir edge2))
                  ;; If determinant is near zero, ray lies in plane of the triangle
                  (det (dot-product edge1 pvec)))
-            (when (< (- epsilon) det epsilon)
+            (when (< (- +triangle-epsilon+) det +triangle-epsilon+)
               (return-from triangle-intersection nil))
             (let* ((inv-det (/ 1.0 det))
                    ;; Calculate distance from A to ray origin
