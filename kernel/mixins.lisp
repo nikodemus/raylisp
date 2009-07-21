@@ -12,7 +12,8 @@
 (defun ensure-transform (spec)
   (etypecase spec
     (cons (apply #'matrix* (reverse spec)))
-    (matrix spec)))
+    (matrix spec)
+    (null (identity-matrix))))
 
 (defmethod transform-of ((obj transform-mixin))
   (ensure-transform (slot-value obj '%transform)))
