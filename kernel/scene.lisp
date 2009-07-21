@@ -250,5 +250,7 @@
               (t
                (push object unbounded)))))
     (let ((tree (when bounded
-                  (build-kd-tree bounded min max))))
+                  (build-kd-tree bounded min max
+                                 :verbose t
+                                 :name "scene bounding tree"))))
       (values tree unbounded))))

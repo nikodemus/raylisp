@@ -298,25 +298,44 @@
 (defparameter *kd-traversal-cost* 0.2)
 (defparameter *intersection-cost* 0.05)
 
-(defun build-kd-tree (set min max)
-  (let ((size (kd-set-size set)))
-    (labels ((rec (n events min max)
-               (multiple-value-bind (e k side cost) (find-plane n events min max)
-                 (if (> cost (* *intersection-cost* n))
-                     (make-kd-leaf-node :min min :max max
-                                        :objects (when (plusp (length events))
-                                                   (events->subset events set)))
-                     (multiple-value-bind (left-events right-events nl nr)
-                         (split-events size events e k side)
-                       (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
-                         (values (make-kd-interior-node
-                                  :plane-position e
-                                  :axis k
-                                  :min min
-                                  :max max
-                                  :left (rec nl left-events lmin lmax)
-                                  :right (rec nr right-events rmin rmax)))))))))
-      (rec size (build-events size set) min max))))
+(defun build-kd-tree (set min max &key verbose (name "KD-tree") (type "objects"))
+  (let ((size (kd-set-size set))
+        (tree nil))
+    (flet ((build-it ()
+             (labels ((rec (n events min max)
+                        (multiple-value-bind (e k side cost) (find-plane n events min max)
+                          (if (> cost (* *intersection-cost* n))
+                              (make-kd-leaf-node :min min :max max
+                                                 :objects (when (plusp (length events))
+                                                            (events->subset events set)))
+                              (multiple-value-bind (left-events right-events nl nr)
+                                  (split-events size events e k side)
+                                (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
+                                  (values (make-kd-interior-node
+                                           :plane-position e
+                                           :axis k
+                                           :min min
+                                           :max max
+                                           :left (rec nl left-events lmin lmax)
+                                           :right (rec nr right-events rmin rmax)))))))))
+               (setf tree (rec size (build-events size set) min max)))))
+      (cond (verbose
+             (format t "~&Building ~A for ~A ~A~%" name size type)
+             (finish-output t)
+             (fresh-line t)
+             (sb-ext:call-with-timing
+              (lambda (&rest timings)
+                (format t "  Tree depth: ~A~%" (kd-depth tree))
+                (format t "  Real: ~,2F, User: ~,2F System: ~,2F seconds~%  ~
+                             GC: ~,2F seconds, ~,2F Mb consed~%"
+                        (real-time-seconds timings)
+                        (user-run-time-seconds timings)
+                        (system-run-time-seconds timings)
+                        (gc-run-time-seconds timings)
+                        (gc-mb-consed timings)))
+              #'build-it))
+            (t
+             (build-it))))))
 
 (defun build-events (size set)
   ;; 3 dimensions, max 2 events per object

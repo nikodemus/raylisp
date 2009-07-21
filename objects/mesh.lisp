@@ -139,7 +139,10 @@
 
 (defmethod compute-object-properties ((mesh mesh) scene transform &key shading-object)
   (let* ((kd-tree (or (mesh-kd-tree mesh)
-                      (build-kd-tree mesh (slot-value mesh 'min) (slot-value mesh 'max))))
+                      (build-kd-tree mesh (slot-value mesh 'min) (slot-value mesh 'max)
+                                     :verbose t
+                                     :name "mesh bounding tree"
+                                     :type "triangles")))
          (vertices (slot-value mesh 'vertices))
          (indices (sb-ext:array-storage-vector (slot-value mesh 'indices)))
          ;; KLUDGE!
