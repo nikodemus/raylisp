@@ -78,9 +78,11 @@
 	(hits (getf counters :hits))
 	(shadow-tests (getf counters :shadow-tests))
 	(shadows (getf counters :shadows))
-        (c-scene (scene-compiled-scene scene)))
-    (format stream "~&Objects: ~A, Lights: ~A~%~
-                    KD-tree depth: ~A, Unbounded: ~A~%~
+        (c-scene (scene-compiled-scene scene))
+        (meshes (remove-if-not (lambda (obj) (typep obj 'mesh))
+                               (scene-objects scene))))
+    (format stream "~&Total objects: ~A, lights: ~A~%~
+                    KD-tree depth: ~A, Unbounded: ~A, Meshes: ~A (avg depth: ~A)~%~
                     Camera rays: ~A~%~
                     Reflections:  ~A, Refractions:  ~A~%~
                     Intersection tests/hits: ~A / ~A~50T~@[~D%~]~%~
@@ -94,6 +96,8 @@
                   (kd-depth kd)
                   0))
             (length (compiled-scene-objects c-scene))
+            (length meshes)
+            (mean (mapcar (lambda (m) (kd-depth (mesh-kd-tree m))) meshes))
 	    (getf counters :camera)
 	    (getf counters :reflected)
 	    (getf counters :refracted)
