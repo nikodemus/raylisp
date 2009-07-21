@@ -62,7 +62,7 @@
                           (+ (vector-noise (vec x 0.0 z))
                              (sin z)
                              (sin (+ z x))))
-                        20.0 150 20.0 150
+                        20.0 350 20.0 350
                         :transform (list (translate* -10.0 0.0 -10.0)
                                          (scale* 1.0 0.3 1.0))
                         :shader (make-instance 'texture-shader

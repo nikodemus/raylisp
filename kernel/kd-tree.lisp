@@ -27,6 +27,7 @@
 (defun kd-max (kd-node)
   (kd-node-max kd-node))
 
+(declaim (inline make-kd-interior-node))
 (defstruct (kd-interior-node (:include kd-node))
   (left (required-argument :left) :type kd-node)
   (right (required-argument :right) :type kd-node)
@@ -55,6 +56,7 @@
                  1)))
     (rec kd-node)))
 
+(declaim (inline make-kd-leaf-node))
 (defstruct (kd-leaf-node (:include kd-node) (:predicate kd-leaf-p))
   objects)
 
@@ -295,7 +297,7 @@
         (push obj objects)))
     (make-kd-subset (delete-duplicates objects) set)))
 
-(defparameter *kd-traversal-cost* 0.2)
+(defparameter *kd-traversal-cost* 0.25)
 (defparameter *intersection-cost* 0.05)
 
 (defun build-kd-tree (set min max &key verbose (name "KD-tree") (type "objects"))
@@ -344,9 +346,9 @@
         (p 0))
     (declare (fixnum p))
     (map-kd-set (lambda (obj)
-                  (dotimes (k 3)
-                    (let ((min (kd-object-min obj set))
-                          (max (kd-object-max obj set)))
+                  (let ((min (kd-object-min obj set))
+                        (max (kd-object-max obj set)))
+                    (dotimes (k 3)
                       (flet ((make (type)
                                (setf (aref events p)
                                      (make-event
@@ -377,6 +379,7 @@
            (single-float e)
            (optimize speed))
   (let ((info (make-array size :element-type '(unsigned-byte 3)))
+        (n-events (length events))
         (common 0))
     (declare (fixnum common)
              (sb-int:truly-dynamic-extent info))
@@ -384,7 +387,7 @@
              (setf (aref info (event-id event)) class
                    common (logior common class))))
       ;; Sweep 1: Classify along K
-      (dotimes (i (length events))
+      (dotimes (i n-events)
         (let ((event (aref events i)))
           (when (= k (event-k event))
             (let ((type (event-type event))
@@ -400,25 +403,25 @@
                      (classify event +right-only+)))))))
       ;; Sweep 2: split into left and right -- including other Ks
       (let ((left-list (when (logtest common +left-only+)
-                         (make-array (length events))))
+                         (make-array n-events)))
             (right-list (when (logtest common +right-only+)
-                          (make-array (length events))))
+                          (make-array n-events)))
             (left 0) (right 0) (pl 0) (pr 0))
         (declare (fixnum left right pl pr))
         (macrolet ((inc (x)
                      `(setf ,x (logand most-positive-fixnum (+ ,x 1)))))
-          (dotimes (i (length events))
+          (dotimes (i n-events)
             (let* ((event (aref events i))
                    (mask (aref info (event-id event))))
               (macrolet ((handle-event (&key left-side right-side)
                            `(progn
                               ,@(when left-side
                                       `((unless left-list
-                                          (setf left-list (make-array (length events))))
+                                          (setf left-list (make-array n-events)))
                                         (setf (aref left-list (1- (inc pl))) event)))
                               ,@(when right-side
                                       `((unless right-list
-                                          (setf right-list (make-array (length events))))
+                                          (setf right-list (make-array n-events)))
                                         (setf (aref right-list (1- (inc pr))) event)))
                               (unless (logtest mask +counted+)
                                 ,@(when left-side `((inc left)))
@@ -446,9 +449,7 @@
          (best-side nil)
          (best-cost #.sb-ext:single-float-positive-infinity)
          (best-e #.sb-ext:single-float-positive-infinity)
-         (best-k 0)
-         (best-lc 0)
-         (best-rc 0))
+         (best-k 0))
     (declare (dynamic-extent nl nr np)
              (single-float best-cost best-e)
              (type (integer 0 2) best-k))
@@ -467,9 +468,10 @@
                  (declare (fixnum p+ p- p!))
                  (flet ((event-ok (i type)
                           (and (< i n-events)
-                               (= k (event-k (aref events i)))
-                               (= e (event-e (aref events i)))
-                               (= type (event-type (aref events i))))))
+                               (= k (event-k (setf event (aref events i))))
+                               (= e (event-e event))
+                               (= type (event-type event)))))
+                   (declare (inline event-ok))
                    (loop while (event-ok i .e-)
                          do (inc p-)
                             (inc i))
@@ -482,20 +484,18 @@
                  (setf (aref np k) p!)
                  (dec (aref nr k) p!)
                  (dec (aref nr k) p-)
-                 (multiple-value-bind (cost side lc rc)
+                 (multiple-value-bind (cost side)
                      (surface-area-heuristic min max e k (aref nl k) (aref nr k) (aref np k))
                    (declare (single-float cost))
                    (when (< cost best-cost)
                      (setf best-cost cost
                            best-e e
                            best-k k
-                           best-side side
-                           best-lc lc
-                           best-rc rc)))
+                           best-side side)))
                  (inc (aref nl k) p+)
                  (inc (aref nl k) p!)
                  (setf (aref np k) 0))))
-    (values best-e best-k best-side best-cost best-lc best-rc)))
+    (values best-e best-k best-side best-cost)))
 
 (defun surface-area (min max)
   (declare (type vec min max))
@@ -523,11 +523,11 @@
           (progn
             (when (and (or (= 0 nl) (plusp np)) (= 1.0 pl))
               (break "oops1 ~S, ~S" c.p->l c.p->r))
-            (values c.p->l :left (+ nl np) nr))
+            (values c.p->l :left))
           (progn
             (when (and (or (= 0 nr) (plusp np)) (= 1.0 pr))
               (break "oops2 ~S, ~S" c.p->l c.p->r))
-            (values c.p->r :right nl (+ nr np)))))))
+            (values c.p->r :right))))))
 
 (defun split-cost (pl pr nl nr)
   (if (or (and (= 1.0 pl) (= 0 nr))
