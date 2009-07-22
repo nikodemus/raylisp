@@ -209,11 +209,14 @@
    (make-instance 'model
                   :mesh *utah-teapot*
                   :shader (make-instance 'texture-shader :pigment white))
-   #+nil
    (make-instance 'model
                   :mesh *utah-teapot*
                   :shader (make-instance 'texture-shader :pigment red)
-                  :transform (translate* 0.0 1.0 0.0)))
+                  :transform (translate* 0.0 50.0 250.0))
+   (make-instance 'model
+                  :mesh *utah-teapot*
+                  :shader (make-instance 'texture-shader :pigment green)
+                  :transform (translate* 0.0 -50.0 -350.0)))
   (:background
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
@@ -225,8 +228,9 @@
                   :direction (v 2 8 -1)))
   (:camera
    (make-instance 'pinhole-camera
-                  :look-at (v -250 0 100)
-                  :location (v -10 150 0))))
+                  :look-at (slot-value *utah-teapot* 'min)
+                  :location (v 350 350 900)
+                  :focal-length 5.5)))
 
 (defscene test-triangle
   (:objects

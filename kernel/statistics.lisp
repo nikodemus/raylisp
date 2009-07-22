@@ -79,8 +79,9 @@
 	(shadow-tests (getf counters :shadow-tests))
 	(shadows (getf counters :shadows))
         (c-scene (scene-compiled-scene scene))
-        (meshes (remove-if-not (lambda (obj) (typep obj 'mesh))
-                               (scene-objects scene))))
+        (meshes (remove-duplicates (mapcar 'model-mesh
+                                           (remove-if-not (lambda (obj) (typep obj 'model))
+                                                          (scene-objects scene))))))
     (format stream "~&Total objects: ~A, lights: ~A~%~
                     KD-tree depth: ~A, Unbounded: ~A, Meshes: ~A~@[ (avg depth: ~A)~]~%~
                     Camera rays: ~A~%~
