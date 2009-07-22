@@ -67,27 +67,5 @@
          (c (transform-point (elt vertices 2) m)))
     (values (vec-min a b c) (vec-max a b c))))
 
-;;;; To have something to test with we define a partial .obj reader.
 
-(defun load-obj (pathname &rest initargs)
-  (let (triangles vertices)
-    (block snarf
-      (with-open-file (f pathname)
-        (loop
-          (ecase (read-char f nil :eof)
-            ((#\# #\newline #\g)
-             (read-line f))
-            (#\v
-             (push (vec (read f) (read f) (read f)) vertices))
-            (#\f
-             (push (simple-vector (1- (read f)) (1- (read f)) (1- (read f))) triangles))
-            (:eof
-             (return-from snarf))))))
-    (let ((vertex-vector (coerce (nreverse vertices) 'simple-vector)))
-      (loop for triangle in triangles
-            collect (apply #'make-instance 'triangle
-                           :vertices (simple-vector (aref vertex-vector (aref triangle 0))
-                                                    (aref vertex-vector (aref triangle 1))
-                                                    (aref vertex-vector (aref triangle 2)))
-                           initargs)))))
 

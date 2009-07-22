@@ -219,21 +219,25 @@
 ;;;; Right now we use lists to pass INTERSECTION-OBJECTS to the KD-tree --
 ;;;; this is what tells the tree building code how to deal with them.
 
-(defmethod kd-set-size ((list list))
-  (length list))
+(defmethod kd-set-size ((objects cl:simple-vector))
+  (length objects))
 
-(defmethod map-kd-set (function (list list))
-  (dolist (elt list)
-    (funcall function elt)))
+(defmethod map-kd-set (function (objects cl:simple-vector))
+  (declare (function function))
+  (dotimes (i (length objects))
+    (funcall function i)))
 
-(defmethod make-kd-subset (subset (list list))
-  subset)
+(defmethod make-kd-subset (subset (objects cl:simple-vector))
+  (let (list)
+    (dolist (i subset)
+      (push (aref objects i) list))
+    list))
 
-(defmethod kd-object-min ((obj intersection-object) list)
-  (object-min obj))
+(defmethod kd-object-min (id (objects cl:simple-vector))
+  (object-min (aref objects id)))
 
-(defmethod kd-object-max ((obj intersection-object) list)
-  (object-max obj))
+(defmethod kd-object-max (id (objects cl:simple-vector))
+  (object-max (aref objects id)))
 
 (defun make-scene-tree (objects)
   (let (bounded unbounded min max)
@@ -250,7 +254,8 @@
               (t
                (push object unbounded)))))
     (let ((tree (when bounded
-                  (build-kd-tree bounded min max
+                  (build-kd-tree (coerce bounded 'simple-vector)
+                                 min max
                                  :verbose t
                                  :name "scene bounding tree"))))
       (values tree unbounded))))

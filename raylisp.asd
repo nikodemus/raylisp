@@ -32,6 +32,10 @@
                          (:file "point-light")
                          (:file "solar-light")
                          (:file "spotlight")))
+   (:module "formats"
+            :depends-on ("kernel" "objects")
+            :components ((:file "obj")
+                         (:file "ply")))
    (:module "objects"
             :depends-on ("kernel")
             :components ((:file "csg")

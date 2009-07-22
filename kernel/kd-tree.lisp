@@ -198,15 +198,15 @@
                                                     (* distance (aref ray-direction prev-axis))))
                                            point))))
                              :cont))
-                (when current-node
-                  (let ((objects (kd-objects current-node)))
-                    (when objects
-                      (multiple-value-bind (result info)
-                          (funcall function objects
-                                   (kd-stack-distance stack entry-pointer)
-                                   (kd-stack-distance stack exit-pointer))
-                        (when result
-                          (return-from kd-traverse (values result info)))))))
+                   (when current-node
+                     (let ((objects (kd-objects current-node)))
+                       (when objects
+                         (multiple-value-bind (result info)
+                             (funcall function objects
+                                      (kd-stack-distance stack entry-pointer)
+                                      (kd-stack-distance stack exit-pointer))
+                           (when result
+                             (return-from kd-traverse (values result info)))))))
                 (setf entry-pointer exit-pointer
                       current-node (kd-stack-node stack exit-pointer)
                       exit-pointer (kd-stack-prev stack entry-pointer))))))))
@@ -253,10 +253,10 @@
 ;;;; The interface is somewhat generic: define appropriate methods on
 ;;;;
 ;;;;   KD-SET-SIZE set
-;;;;   MAP-KD-SET function set
-;;;;   MAKE-KD-SUBSET subset set
-;;;;   KD-OBJECT-MIN object set
-;;;;   KD-OBJECT-MAX object set
+;;;;   MAP-KD-SET function set (calls function with ub32 ids)
+;;;;   MAKE-KD-SUBSET ids set
+;;;;   KD-OBJECT-MIN id set
+;;;;   KD-OBJECT-MAX id set
 ;;;;
 ;;;; and you can hand your own data to the implemntation and cast rays at it
 ;;;; using KD-TRAVERSE. See Eg. objects/mesh.lisp for what this is good for.
@@ -271,9 +271,8 @@
 (defgeneric kd-object-max (object set))
 
 (defstruct event
-  (object (required-argument :object))
   (type (required-argument :type) :type (integer 0 2))
-  (id (required-argument :id) :type (and unsigned-byte fixnum))
+  (id (required-argument :id) :type (unsigned-byte 32))
   (e (required-argument :e) :type single-float)
   (k (required-argument :k) :type (integer 0 2)))
 
@@ -291,13 +290,12 @@
 
 (defun events->subset (events set)
   (declare (simple-vector events))
-  (let (objects)
+  (let (ids)
     (dotimes (i (length events))
-      (let ((obj (event-object (aref events i))))
-        (push obj objects)))
-    (make-kd-subset (delete-duplicates objects) set)))
+      (pushnew (event-id (aref events i)) ids))
+    (make-kd-subset ids set)))
 
-(defparameter *kd-traversal-cost* 0.25)
+(defparameter *kd-traversal-cost* 0.2)
 (defparameter *intersection-cost* 0.05)
 
 (defun build-kd-tree (set min max &key verbose (name "KD-tree") (type "objects"))
@@ -312,6 +310,8 @@
                                                             (events->subset events set)))
                               (multiple-value-bind (left-events right-events nl nr)
                                   (split-events size events e k side)
+                                #+nil
+                                (break "split ~S:~S, ~S/~S" k e nl nr)
                                 (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
                                   (values (make-kd-interior-node
                                            :plane-position e
@@ -345,14 +345,13 @@
         (id 0)
         (p 0))
     (declare (fixnum p))
-    (map-kd-set (lambda (obj)
-                  (let ((min (kd-object-min obj set))
-                        (max (kd-object-max obj set)))
+    (map-kd-set (lambda (id)
+                  (let ((min (kd-object-min id set))
+                        (max (kd-object-max id set)))
                     (dotimes (k 3)
                       (flet ((make (type)
                                (setf (aref events p)
                                      (make-event
-                                      :object obj
                                       :id id
                                       :type type
                                       :e (if (= .e- type)

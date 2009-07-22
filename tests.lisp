@@ -55,18 +55,44 @@
   (:camera
    *view*))
 
+(defparameter *stanford-bunny*
+  (load-mesh "models/stanford-bunny.ply"
+             :transform (list (rotate* 0.0 -3.0 0.0)
+                              (scale* 30.0 30.0 30.0))))
+
+(defparameter *utah-teapot*
+  (load-mesh "models/utah-teapot.obj"
+             :transform (rotate* (/ +pi+ -2) 0.0 0.0)))
+
+(defscene test-bunny
+  (:objects
+   (make-instance 'plane
+                  :shader (make-instance 'texture-shader :pigment white))
+   (make-instance 'model
+                  :mesh *stanford-bunny*
+                  :shader (make-instance 'phong-shader :color white)))
+  (:lights
+   (make-instance 'spotlight
+                  :location (v -10 10 -10)
+                  :point-at +origin+))
+  (:camera
+   (make-instance 'pinhole-camera
+                         :location (v 0 10 -15)
+                         :look-at (v 2 2.5 0)
+                         :focal-length 3.0)))
+
 ;;; Generating a mesh patch from an arbitrary function.
 (defscene test-mesh-field
   (:objects
-   (generate-mesh-field (lambda (x z)
-                          (+ (vector-noise (vec x 0.0 z))
-                             (sin z)
-                             (sin (+ z x))))
-                        20.0 350 20.0 350
-                        :transform (list (translate* -10.0 0.0 -10.0)
-                                         (scale* 1.0 0.3 1.0))
-                        :shader (make-instance 'texture-shader
-                                               :pigment white)))
+   (make-instance 'model
+                  :mesh (generate-mesh-field (lambda (x z)
+                                               (+ (vector-noise (vec x 0.0 z))
+                                                  (sin z)
+                                                  (sin (+ z x))))
+                                             20.0 200 20.0 200
+                                             :transform (list (translate* -10.0 0.0 -10.0)
+                                                              (scale* 1.0 0.3 1.0)))
+                  :shader (make-instance 'texture-shader :pigment white)))
   (:lights
    *lamp*)
   (:camera
@@ -180,34 +206,20 @@
 
 (defscene test-teapot
   (:objects
-   (load-obj "models/teapot.obj"
-             :shader (make-instance 'phong-shader :color white)
-             :transform (rotate* (/ +pi+ -2) 0.0 0.0)))
-  (:lights
-   (make-instance 'solar-light
-                  :direction (v 2 8 -1)))
-  (:camera
-   (make-instance 'pinhole-camera
-                  :look-at (v -300 0 -100)
-                  :location (v -100 150 100)))
+   (make-instance 'model
+                  :mesh *utah-teapot*
+                  :shader (make-instance 'texture-shader :pigment white))
+   #+nil
+   (make-instance 'model
+                  :mesh *utah-teapot*
+                  :shader (make-instance 'texture-shader :pigment red)
+                  :transform (translate* 0.0 1.0 0.0)))
   (:background
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
                                           :type :color
                                           :map `((0.0 ,white)
-                                                 (1.0 ,blue))))))
-
-(defscene test-teapot-2
-  (:objects
-   (load-obj "models/teapot.obj"
-             :shader (make-instance 'phong-shader :color white)
-             :transform (rotate* (/ +pi+ -2) 0.0 0.0))
-   (build-mesh
-    (mapcar #'vertices-of
-            (load-obj "models/teapot.obj"))
-    :shader (make-instance 'phong-shader :color white)
-    :transform (list (rotate* (/ +pi+ -2) 0.0 0.0)
-                     (translate* 100.0 0.0 100.0))))
+                                                 (1.0 ,blue)))))
   (:lights
    (make-instance 'solar-light
                   :direction (v 2 8 -1)))
