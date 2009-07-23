@@ -1,22 +1,69 @@
 (in-package :raylisp)
 
+;;;; TRANSFORMABLE
+;;;;
+;;;; Transformable objects have a MATRIX slot, and deal specially with
+;;;; initargs :ROTATE, :TRANSLATE, :SCALE, :MATRIX, and :MATRIX-LIST
+
+(defclass transformable ()
+  ((%matrix)))
+
+(defun parse-transform-arguments (plist)
+  (let ((matrix (identity-matrix))
+        (rotatep nil)
+        (translatep nil)
+        (scalep nil)
+        (matrixp nil)
+        (matrix-listp nil))
+    (flet ((apply-transform (m)
+             (setf matrix (matrix* m matrix))))
+      (doplist (key val plist)
+        (case key
+          (:rotate
+           (if rotatep
+               (warn "Ignoring secondary rotation: ~S" val)
+               (apply-transform (rotate val)))
+           (setf rotatep t))
+          (:translate
+           (if translatep
+               (warn "Ignoring secondary translation: ~S" val)
+               (apply-transform (translate val)))
+           (setf translatep t))
+          (:scale
+           (if scalep
+               (warn "Ignoring secondary scaling: ~S" val)
+               (let ((scale (if (realp val)
+                                (scale (v val val val))
+                                (scale val))))
+                 (apply-transform scale)))
+           (setf scalep t))
+          (:matrix
+           (if matrixp
+               (warn "Ignoring secondary matrix:~%   ~A" val)
+               (apply-transform val))
+           (setf listp t))
+          (:matrix-list
+           (if matrix-listp
+               (warn "Ignoring secondary matrix list:~%  ~A" val)
+               (if (cdr val)
+                   (apply-transform (apply #'matrix* (reverse val)))
+                   (apply-transform (car val))))
+           (setf matrix-listp t))
+          (%matrix
+           (error "Unexpected ~S keyword argument: ~S" key val)))))
+    matrix))
+
+(defmethod initialize-instance :before ((obj transformable) &rest initargs
+                                        &key rotate translate scale matrix matrix-list)
+  (declare (ignore rotate translate scale matrix matrix-list))
+  (setf (slot-value obj '%matrix) (parse-transform-arguments initargs)))
+
+(defmethod transform-of ((obj transformable))
+  (slot-value obj '%matrix))
+
 ;;;## General Purpose Mixins
 ;;;
 ;;; Used by shaders, patterns, lights, and objects.
-
-(defclass transform-mixin ()
-  ((%transform
-    :initform (identity-matrix)
-    :initarg :transform)))
-
-(defun ensure-transform (spec)
-  (etypecase spec
-    (cons (apply #'matrix* (reverse spec)))
-    (matrix spec)
-    (null (identity-matrix))))
-
-(defmethod transform-of ((obj transform-mixin))
-  (ensure-transform (slot-value obj '%transform)))
 
 (defclass axis-mixin ()
   ((axis

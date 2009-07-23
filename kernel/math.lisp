@@ -67,6 +67,10 @@
 (defun v (x y z)
   (vec (float x) (float y) (float z)))
 
+(defun deg (degrees)
+  "Returns radians for degrees."
+  (float (* pi (/ degrees 180))))
+
 (declaim (inline dot-product*))
 (defun dot-product* (ax ay az bx by bz)
   (declare (type float ax ay az bx by bz))

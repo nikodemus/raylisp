@@ -18,22 +18,20 @@
 
 (defpackage :raylisp-ply-loader
   (:use :cl :alexandria)
-  (:import-from :raylisp
-                #:build-mesh
-                #:define-mesh-loader))
+  (:import-from :raylisp #:define-mesh-loader))
 
 (in-package :raylisp-ply-loader)
 
 (define-mesh-loader :ply load-ply)
 
-(defun load-ply (pathname transform)
+(defun load-ply (pathname)
   (let (ply)
     (unwind-protect
          (progn
            (setf ply (open-ply pathname))
            (let ((vertices (get-element :vertex '(:x :y :z) ply))
                  (faces (get-element :face '(:vertex-indices) ply)))
-             (build-mesh vertices faces :transform transform)))
+             (values vertices faces)))
       (close-ply ply))))
 
 (defclass ply ()

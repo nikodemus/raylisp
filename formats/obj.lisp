@@ -20,14 +20,13 @@
   (:use :cl)
   (:import-from :raylisp
                 #:define-mesh-loader
-                #:build-mesh
                 #:v))
 
 (in-package :raylisp-obj-loader)
 
 (define-mesh-loader :obj load-obj)
 
-(defun load-obj (pathname transform)
+(defun load-obj (pathname)
   ;; This is seriously incomplete!
   (let (faces vertices)
     (block snarf
@@ -42,6 +41,5 @@
              (push (vector (1- (read f)) (1- (read f)) (1- (read f))) faces))
             (:eof
              (return-from snarf))))))
-    (let ((vertex-vector (coerce (nreverse vertices) 'simple-vector))
-          (face-vector (coerce (nreverse faces) 'simple-vector)))
-      (build-mesh vertex-vector face-vector :transform transform))))
+    (values (coerce (nreverse vertices) 'simple-vector)
+            (coerce (nreverse faces) 'simple-vector))))

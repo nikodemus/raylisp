@@ -17,22 +17,22 @@
          (floor
           (make-instance 'plane :shader chessboard))
          (lamp
-          (make-instance 'point-light :location (@ 0 30 0) :color white))
+          (make-instance 'point-light :location (v 0 30 0) :color white))
          (sun
-          (make-instance 'solar-light :direction (@ 1 1 0) :color white))
+          (make-instance 'solar-light :direction (v 1 1 0) :color white))
          (view
           (make-instance 'pinhole-camera
-                         :location (@ 0 18 -30)
+                         :location (v 0 18 -30)
                          :look-at +origin+
                          :focal-length 4.0))
          (floor-view
           (make-instance 'pinhole-camera
-                         :location (@ 0 0 -30)
+                         :location (v 0 0 -30)
                          :look-at +origin+
                          :focal-length 4.0))
          (top-view
           (make-instance 'pinhole-camera
-                         :location (@ 0 18 0)
+                         :location (v 0 18 0)
                          :look-at +origin+
                          :focal-length 4.0)))
     (defparameter *chessboard* chessboard)
@@ -55,18 +55,19 @@
   (:camera
    *view*))
 
+;;; The Stanford meshes need to be scaled up on load: otherwise we get
+;;; numerical artifacts trying to intersect tiny triangles -- esp. with
+;;; transformed rays!
 (defparameter *stanford-bunny*
-  (load-mesh "models/stanford-bunny.ply"
-             :transform (list (rotate* 0.0 -3.0 0.0)
-                              (scale* 30.0 30.0 30.0))))
+  (load-mesh "models/stanford-bunny.ply" :scale 30))
 
+#+nil
 (defparameter *stanford-dragon*
-  (load-mesh "models/stanford-dragon.ply"
-             :transform (scale* 30.0 30.0 30.0)))
+  (load-mesh "models/stanford-dragon.ply" :scale 30))
 
 (defparameter *utah-teapot*
   (load-mesh "models/utah-teapot.obj"
-             :transform (rotate* (/ +pi+ -2) 0.0 0.0)))
+             :rotate (v (deg -90) 0 0)))
 
 (defscene test-bunny
   (:objects
@@ -74,7 +75,8 @@
                   :shader (make-instance 'texture-shader :pigment white))
    (make-instance 'model
                   :mesh *stanford-bunny*
-                  :shader (make-instance 'phong-shader :color white)))
+                  :shader (make-instance 'phong-shader :color white)
+                  :rotate (v 0.0 -3.0 0.0)))
   (:lights
    (make-instance 'spotlight
                   :location (v -10 10 -10)
@@ -89,18 +91,19 @@
 #+nil
 (defscene test-dragon
   (:objects
-   (flet ((marble (color1 color2 &optional (transform (identity-matrix)))
+   (flet ((marble (color1 color2 &optional (matrix (identity-matrix)))
             (let ((s 0.5))
               (make-instance 'marble-pattern
                              :type :color
-                             :transform (list (scale* s s s) transform)
+                             :scale s
+                             :matrix matrix
                              :map `((0.0 ,color1)
                                     (0.9 ,color1)
                                     (1.0 ,color2))))))
      (make-instance 'plane
                    :shader (make-instance 'texture-shader
                                           :pigment white
-                                          :transform (scale* 6.0 1.0 6.0)
+                                          :scale (v 6.0 1.0 6.0)
                                           :diffuse 1.0)))
    (flet ((dragon (c refl f rou m &optional (r (identity-matrix)))
             (make-instance 'model
@@ -113,10 +116,10 @@
                                                   :reflection refl
                                                   :pigment c
                                                   :fresnel f)
-                           :transform (list r
-                                            (translate* -2.0 -1.8 0.0)
-                                            m
-                                            (rotate* 0.0 -0.3 0.0)))))
+                           :matrix-list (list r
+                                              (translate* -2.0 -1.8 0.0)
+                                              m
+                                              (rotate* 0.0 -0.3 0.0)))))
 
      (list (dragon (v 1.0 0.6 0.45)
                    0.5 0.6 0.015
@@ -154,8 +157,8 @@
                                                   (sin z)
                                                   (sin (+ z x))))
                                              20.0 200 20.0 200
-                                             :transform (list (translate* -10.0 0.0 -10.0)
-                                                              (scale* 1.0 0.3 1.0)))
+                                             :translate (v -10 0 -10)
+                                             :scale (v 1 0.3 1))
                   :shader (make-instance 'texture-shader :pigment white)))
   (:lights
    *lamp*)
@@ -178,14 +181,14 @@
 ;;; reflections pick up the color of the material.
 (defscene test-metal
   (:objects
-   (flet ((marble (color1 color2 &optional (transform (identity-matrix)))
-            (let ((s 0.5))
-              (make-instance 'marble-pattern
-                             :type :color
-                             :transform (list (scale* s s s) transform)
-                             :map `((0.0 ,color1)
-                                    (0.9 ,color1)
-                                    (1.0 ,color2))))))
+   (flet ((marble (color1 color2 &optional (matrix (identity-matrix)))
+            (make-instance 'marble-pattern
+                           :type :color
+                           :scale 0.5
+                           :matrix matrix
+                           :map `((0.0 ,color1)
+                                  (0.9 ,color1)
+                                  (1.0 ,color2)))))
      (make-instance 'plane
                    :shader (make-instance 'texture-shader
                                           :pigment (make-instance 'tile-pattern
@@ -195,7 +198,7 @@
                                                                         (marble white black (translate* 1.2 0.5 1.5))
                                                                         (marble white black (rotate* 0.0 1.0 0.0))
                                                                         (marble black white)))
-                                          :transform (scale* 6.0 1.0 6.0)
+                                          :scale (v 6.0 1.0 6.0)
                                           :diffuse 1.0)))
    (make-instance 'sphere
                   :radius 300.0
@@ -276,11 +279,11 @@
    (make-instance 'model
                   :mesh *utah-teapot*
                   :shader (make-instance 'texture-shader :pigment red)
-                  :transform (translate* 0.0 50.0 250.0))
+                  :translate (v 0 50 250))
    (make-instance 'model
                   :mesh *utah-teapot*
                   :shader (make-instance 'texture-shader :pigment green)
-                  :transform (translate* 0.0 -50.0 -350.0)))
+                  :translate (v 0 -50 -350)))
   (:background
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
@@ -299,12 +302,12 @@
 (defscene test-triangle
   (:objects
    (triangle-box (v 1 0 0) (v 2 1 1) :shader *bright-red*
-                 :transform (rotate* 0.0 1.0 0.0))
+                 :rotate (v 0 1 0))
    (make-instance 'box
                   :min (v -2 0 0)
                   :max (v -1 1 1)
                   :shader *bright-blue*
-                  :transform (rotate* 0.0 1.0 0.0)))
+                  :rotate (v 0.0 1.0 0.0)))
   (:lights
    (make-instance 'point-light
                   :location (v -10 10 -10)))
@@ -315,14 +318,14 @@
 (defscene test-pattern-shader
   (:objects
    (make-instance 'plane
-                  :transform (rotate* 0.0 (/ +pi+ 8) 0.0)
+                  :rotate (v 0.0 (deg 22.5) 0.0)
                   :shader
                   (make-instance 'phong-shader
                                  :color
                                  (make-instance 'gradient-pattern
                                                 :type :color
                                                 :axis (vec 1.0 0.0 2.0)
-                                                :transform (scale* 4.0 4.0 4.0)
+                                                :scale 4.0
                                                 :map `((0.0 ,black)
                                                        (0.2 ,red)
                                                        (0.3 ,red)
@@ -336,7 +339,7 @@
 (defscene test-pattern-shader-2
   (:objects
    (make-instance 'plane
-                  :transform (rotate* 0.0 (/ +pi+ 8) 0.0)
+                  :rotate (v 0 (deg 22.5) 0)
                   :shader
                   (make-instance 'gradient-pattern
                                  :type :shader
@@ -395,7 +398,7 @@
                   :shader *chessboard*)
    (make-instance 'cylinder
                   :axis x-axis
-                  :transform (translate* 0.0 -5.0 0.0)
+                  :translate (v 0.0 -5.0 0.0)
                   :shader (make-instance 'phong-shader :color yellow))
    (make-instance 'cylinder
                   :start (v 0 5 -4)
@@ -472,7 +475,7 @@
                   :radius 4.0
                   :location (v 0.0 4.0 -2.0)
                   :shader (make-instance 'phong-shader
-                                         :transform (rotate* 0.0 0.0 1.0)
+                                         :rotate (v 0.0 0.0 1.0)
                                          :color (make-instance 'marble-pattern
                                                                :type :color
                                                                :map `((0.0 ,black)
@@ -488,10 +491,10 @@
   (:objects
    *floor*
    (make-instance 'box
-                  :transform (matrix* (translate* 0.0 3.0 -2.0)
-                                      (scale* 3.0 3.0 3.0))
+                  :scale 3.0
+                  :translate (v 0 3 -2)
                   :shader (make-instance 'phong-shader
-                                         :transform (scale* 0.2 0.2 0.2)
+                                         :scale 0.2
                                          :color (make-instance 'wood-pattern
                                                                :type :color
                                                                :map `((0.0 ,black)
@@ -510,10 +513,10 @@
                                 :min +origin+
                                 :max (vec 1.0 1.0 1.0)
                                 :shader *bright-red*
-                                :transform (matrix*
-                                            (translate* (* i 2.0) 1.0 (* i 2.0))
+                                :matrix-list (list
+                                            (rotate* (- (random +pi+)) 0.0 (random +pi+))
                                             (rotate* 0.0 (random +pi+) 0.0)
-                                            (rotate* (- (random +pi+)) 0.0 (random +pi+))))))
+                                            (translate* (* i 2.0) 1.0 (* i 2.0))))))
   (:lights
    (make-instance 'point-light
                   :location (vec -10.0 30.0 -10.0)))
@@ -577,18 +580,13 @@
                   :look-at +origin+
                   :location (vec/ (vec -3.5 5.0 -5.0) 2.0))))
 
-(defun xtranslate* (x y z)
-  (translate* (float x) (float y) (float z)))
-(defun xscale* (x y z)
-  (scale* (float x) (float y) (float z)))
-
 (defscene test-kd-split-1
   (:objects
    (loop for j from -10 upto 10
          append (loop for i from -10 upto 10
                       collect (make-instance 'sphere
                                              :radius 1.0
-                                             :transform (xtranslate* (* 0.5 i) 0 (* 0.5 j))
+                                             :translate (v (* 0.5 i) 0 (* 0.5 j))
                                              :shader *bright-red*))))
   (:lights
    *lamp*)
@@ -601,7 +599,7 @@
          append (loop for i from -10 upto 10
                       collect (make-instance 'sphere
                                              :radius 1.0
-                                             :transform (xtranslate* (* 2.5 i) 0 (* 2.5 j))
+                                             :translate (v (* 2.5 i) 0 (* 2.5 j))
                                              :shader *bright-red*))))
   (:lights
    *lamp*)
@@ -615,20 +613,21 @@
    (loop for i from -3 upto 3
          collect (make-instance 'sphere
                                 :radius 1.0
-                                :transform (xtranslate* (* 3 i) 1 0)
+                                :translate (v (* 3 i) 1 0)
                                 :shader *bright-red*))
    (loop for i from -3 upto 3
          collect (make-instance 'sphere
                                 :radius 0.5
-                                :location (@ (* 3 i) 3 0)
+                                :location (v (* 3 i) 3 0)
                                 :shader *bright-red*))
    (loop for i from -3 upto 3
          collect (make-instance 'sphere
                                 :radius 0.5
-                                :transform (xtranslate* (* 3 i) 5 0)
+                                :translate (v (* 3 i) 5 0)
                                 :shader *bright-red*))
    (make-instance 'sphere
-                  :transform (list (xscale* 5 0.5 0.5) (xtranslate* 0 2 -5))
+                  :scale (v 5.0 0.5 0.5)
+                  :translate (v 0 2 -5)
                   :shader *bright-blue*))
   (:lights
    *lamp*)
@@ -642,11 +641,11 @@
    (make-instance 'csg
                   :type 'intersection
                   :objects (list (make-instance 'sphere
-                                                :location (@ 1.5 -0.1 0)
+                                                :location (v 1.5 -0.1 0)
                                                 :radius 4.0
                                                 :shader *bright-red*)
                                  (make-instance 'sphere
-                                                :location (@ -1.5 -0.1 0)
+                                                :location (v -1.5 -0.1 0)
                                                 :radius 4.0
                                                 :shader *bright-blue*))))
   (:lights
@@ -663,15 +662,15 @@
     (list
      (make-instance 'plane
                     :normal (v 0 0 -1)
-                    :location (@ 0 0 1)
+                    :location (v 0 0 1)
                     :shader *chessboard*)
      (make-instance 'plane
                     :normal (v 1 1 0)
-                    :location (@ 1 0 0)
+                    :location (v 1 0 0)
                     :shader *bright-red*)
      (make-instance 'plane
                     :normal (v -1 1 0)
-                    :location (@ -1 0 0)
+                    :location (v -1 0 0)
                     :shader *bright-red*)
      *floor*)))
   (:lights
@@ -682,8 +681,8 @@
 (defscene test-1
   (:objects
    (make-instance 'sphere
-                  :location (@ 0 -1 0)
-                  :transform (scale (@ 3 0.5 0.5))
+                  :location (v 0 -1 0)
+                  :scale (v 3 0.5 0.5)
                   :shader
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
@@ -692,19 +691,19 @@
                                                        :map `((0.0 ,blue)
                                                               (1.0 ,green)))))
    (make-instance 'sphere
-                  :location (@ 0 0 0)
-                  :transform (scale (@ 3 0.5 0.5))
+                  :location (v 0 0 0)
+                  :scale (v 3 0.5 0.5)
                   :shader
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
                                                        :type :color
                                                        :smooth t
-                                                       :transform (rotate* 0.0 (/ +pi+ 2) 0.0)
+                                                       :rotate (v 0 (deg 90) 0)
                                                        :map `((0.0 ,black)
                                                               (1.0 ,white)))))
    (make-instance 'sphere
-                  :location (@ 0 1 0)
-                  :transform (scale (@ 3 0.5 0.5))
+                  :location (v 0 1 0)
+                  :scale (v 3 0.5 0.5)
                   :shader
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
@@ -713,11 +712,11 @@
                                                               (1.0 ,yellow))))))
   (:lights
    (make-instance 'point-light
-                  :location (@ 10 5 -20)))
-  (:ambient-light (@ 0.1 0.1 0.1))
+                  :location (v 10 5 -20)))
+  (:ambient-light (v 0.1 0.1 0.1))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 3 -20)
+                     :location (v 0 3 -20)
                      :look-at +origin+
                      :focal-length 4.0)))
 
@@ -740,18 +739,18 @@
                                    :ambient 0.2
                                    :color yellow))))
    (make-instance 'plane
-                  :location (@ 0 -1 0)
+                  :location (v 0 -1 0)
                   :shader *chessboard*))
   (:lights
    (make-instance 'point-light
-                  :location (@ -30 30 -30)))
+                  :location (v -30 30 -30)))
   (:background blue)
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 12)
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 0.5 -4)
+                     :location (v 0 0.5 -4)
                      :look-at +origin+
                      :focal-length 3.0)))
 
@@ -762,16 +761,16 @@
       :type 'intersection
       :objects (list
                 (make-instance 'sphere
-                               :location (@ -0.5 0 0)
+                               :location (v -0.5 0 0)
                                :shader
                                (make-instance 'solid-shader :color red))
                 (make-instance 'sphere
-                               :location (@ 0.5 0 0)
+                               :location (v 0.5 0 0)
                                :shader
                                (make-instance 'solid-shader
                                               :color blue))
                 (make-instance 'sphere
-                               :location (@ 0 -0.1 0)
+                               :location (v 0 -0.1 0)
                                :shader
                                (make-instance 'solid-shader
                                               :color green)))))
@@ -782,7 +781,7 @@
   (:depth-limit 5)
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 1.5 -10)
+                     :location (v 0 1.5 -10)
                      :look-at +origin+
                      :focal-length 3.0)))
 
@@ -793,11 +792,11 @@
       :type 'intersection
       :objects (list
                 (make-instance 'sphere
-                               :location (@ -0.5 0 0)
+                               :location (v -0.5 0 0)
                                :shader
                                (make-instance 'solid-shader :color red))
                 (make-instance 'sphere
-                               :location (@ 0.5 0 0)
+                               :location (v 0.5 0 0)
                                :shader
                                (make-instance 'solid-shader
                                               :color blue)))))
@@ -808,7 +807,7 @@
   (:depth-limit 5)
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 1.5 -10)
+                     :location (v 0 1.5 -10)
                      :look-at +origin+
                      :focal-length 3.0)))
 
@@ -822,12 +821,12 @@
                                   :shader
                                   (make-instance 'solid-shader :color red))
                    (make-instance 'sphere
-                                  :location (@ 0 1 0)
+                                  :location (v 0 1 0)
                                   :shader
                                   (make-instance 'solid-shader
                                                  :color blue))
                    (make-instance 'sphere
-                                  :location (@ 1 0 0)
+                                  :location (v 1 0 0)
                                   :shader
                                   (make-instance 'solid-shader
                                                  :color green)))))
@@ -838,7 +837,7 @@
   (:depth-limit 5)
   (:camera
    (make-instance 'pinhole-camera
-                  :location (@ 8 6.5 -2)
+                  :location (v 8 6.5 -2)
                   :look-at +origin+
                   :focal-length 3.0)))
 
@@ -846,27 +845,27 @@
 (defscene test-5
   (:objects
    #+nil
-   (list   
+   (list
     (make-instance 'sphere
                    :radius 1.0
-                   :transform (translate (@ 1 0 0))
+                   :translate (v 1 0 0)
                    :shader (make-instance 'solid-shader :color red))
     (make-instance 'sphere
                    :radius 1.0
-                   :transform (translate (@ 0 1 0))
+                   :translate (v 0 1 0)
                    :shader (make-instance 'solid-shader :color green))
     (make-instance 'sphere
                    :radius 1.0
-                   :transform (translate (@ 0 0 1))
+                   :translate (v 0 0 1)
                    :shader (make-instance 'solid-shader :color blue)))
    (make-instance 'plane
                   :normal (v -0.5 1 0)
-                  :shader (make-instance 'solid-shader :color white))   
+                  :shader (make-instance 'solid-shader :color white))
    #+nil
    (loop for i from -100 upto 100
          collect (make-instance 'sphere
                                 :radius 0.5
-                                :transform (translate (@ 0 0 i))
+                                :translate (v 0 0 i)
                                 :shader (make-instance 'solid-shader :color purple)))
    (make-instance
     'csg
@@ -875,7 +874,7 @@
     (list
      (make-instance 'plane
                     :normal (v 0 1 0)
-                    :location (@ 0 -1 0)
+                    :location (v 0 -1 0)
                     :shader (make-instance 'solid-shader :color yellow))
      (make-instance 'plane
                     :normal (v 0.5 1 0)
@@ -886,13 +885,13 @@
   (:lights
    #+nil
    (make-instance 'solar-light :direction y-axis)
-   (make-instance 'point-light :location (@ 0 200 0)))
+   (make-instance 'point-light :location (v 0 200 0)))
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 100 30)
+                     :location (v 0 100 30)
                      :look-at +origin+
                      :focal-length 3.0)))
 
@@ -916,153 +915,153 @@
   (:objects
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -4 0 16)
+                  :location (v -4 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -3 0 16)
+                  :location (v -3 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -2 0 16)
+                  :location (v -2 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -1 0 16)
+                  :location (v -1 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -0 0 16)
+                  :location (v -0 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 1 0 16)
+                  :location (v 1 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 2 0 16)
+                  :location (v 2 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 3 0 16)
+                  :location (v 3 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 4 0 16)
+                  :location (v 4 0 16)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -4 0 12)
+                  :location (v -4 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -3 0 12)
+                  :location (v -3 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -2 0 12)
+                  :location (v -2 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -1 0 12)
+                  :location (v -1 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -0 0 12)
+                  :location (v -0 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 1 0 12)
+                  :location (v 1 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 2 0 12)
+                  :location (v 2 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 3 0 12)
+                  :location (v 3 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 4 0 12)
+                  :location (v 4 0 12)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -4 0 8)
+                  :location (v -4 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -3 0 8)
+                  :location (v -3 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -2 0 8)
+                  :location (v -2 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -1 0 8)
+                  :location (v -1 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -0 0 8)
+                  :location (v -0 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 1 0 8)
+                  :location (v 1 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 2 0 8)
+                  :location (v 2 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 3 0 8)
+                  :location (v 3 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 4 0 8)
+                  :location (v 4 0 8)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -4 0 4)
+                  :location (v -4 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -3 0 4)
+                  :location (v -3 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -2 0 4)
+                  :location (v -2 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -1 0 4)
+                  :location (v -1 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ -0 0 4)
+                  :location (v -0 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 1 0 4)
+                  :location (v 1 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 2 0 4)
+                  :location (v 2 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 3 0 4)
+                  :location (v 3 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :radius 0.4
-                  :location (@ 4 0 4)
+                  :location (v 4 0 4)
                   :shader *test-6-shader*)
    (make-instance 'sphere
                   :shader *test-6-shader*)
    (make-instance
     'plane
-    :location (@ 0 -1 0)
+    :location (v 0 -1 0)
     :shader
     (make-instance 'checker-pattern
                    :type :shader
@@ -1070,7 +1069,7 @@
                               (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
    (make-instance 'spotlight
-                  :location (@ -30 30 -30)
+                  :location (v -30 30 -30)
                   :direction (v 30 -30 35)
                   :aperture 0.98))
   (:background blue)
@@ -1079,7 +1078,7 @@
   (:depth-limit 16)
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 0.5 -4)
+                     :location (v 0 0.5 -4)
                      :look-at +origin+
                      :focal-length 3.0)))
 
@@ -1107,7 +1106,7 @@
                   :location (v -10 10 -15)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 4 -20)
+                     :location (v 0 4 -20)
                      :look-at (v 0 3 0)
                      :focal-length 3.0)))
 
@@ -1116,16 +1115,16 @@
    (make-instance 'sphere :shader (make-instance 'solid-shader :color red))
    (make-instance 'plane
                   :normal x-axis
-                  :location (@ -1 0 0)
+                  :location (v -1 0 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
                                                     (make-instance 'phong-shader :color white :ambient 0.1)))))
   (:lights
-   (make-instance 'solar-light :direction (@ 1 1 1)))
+   (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 10 0 0)
+                     :location (v 10 0 0)
                      :look-at +origin+)))
 
 (defscene test-y-axis-camera
@@ -1133,7 +1132,7 @@
    (make-instance 'sphere :shader (make-instance 'solid-shader :color green))
    (make-instance 'plane
                   :normal y-axis
-                  :location (@ 0 -1 0)
+                  :location (v 0 -1 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
@@ -1142,7 +1141,7 @@
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 10 0)
+                     :location (v 0 10 0)
                      :look-at +origin+)))
 
 (defscene test-z-axis-camera
@@ -1150,7 +1149,7 @@
    (make-instance 'sphere :shader (make-instance 'solid-shader :color blue))
    (make-instance 'plane
                   :normal z-axis
-                  :location (@ 0 0 -1)
+                  :location (v 0 0 -1)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
@@ -1159,7 +1158,7 @@
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 0 10)
+                     :location (v 0 0 10)
                      :look-at +origin+)))
 
 (defscene test-transform
@@ -1167,10 +1166,10 @@
    (make-instance 'sphere :shader (make-instance 'solid-shader :color red))
    (make-instance 'sphere
                   :shader (make-instance 'solid-shader :color blue)
-                  :transform (matrix* (xtranslate* 0 2 0)
-                                       (rotate-around z-axis 1.5)))
+                  :translate (v 0 2 0)
+                  :matrix (rotate-around z-axis 1.5))
    (make-instance 'plane
-                  :location (@ 0 -1 0)
+                  :location (v 0 -1 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
                                          :map (list (make-instance 'phong-shader :color black)
@@ -1179,46 +1178,46 @@
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 1 10 -10)
+                     :location (v 1 10 -10)
                      :look-at +origin+)))
 
 (defscene test-perspective
   (:objects
    (make-instance 'sphere
-                  :location (@ 10 0 0) :shader (make-instance 'solid-shader :color red))
+                  :location (v 10 0 0) :shader (make-instance 'solid-shader :color red))
    (make-instance 'sphere
-                  :location (@ -10 0 0) :shader (make-instance 'solid-shader :color green))
+                  :location (v -10 0 0) :shader (make-instance 'solid-shader :color green))
    (make-instance 'sphere
-                  :location (@ 0 0 0) :shader (make-instance 'solid-shader :color blue))
+                  :location (v 0 0 0) :shader (make-instance 'solid-shader :color blue))
    (make-instance 'sphere
-                  :location (@ 0 0 10) :shader (make-instance 'solid-shader :color (@ 1 1 0)))
+                  :location (v 0 0 10) :shader (make-instance 'solid-shader :color (v 1 1 0)))
    (make-instance 'sphere
-                  :location (@ 0 0 -10) :shader (make-instance 'solid-shader :color (@ 0 1 1)))
+                  :location (v 0 0 -10) :shader (make-instance 'solid-shader :color (v 0 1 1)))
    (make-instance 'csg
                   :type 'difference
                   :objects (list
                             (make-instance 'plane
                                            :normal (v 0 1 0)
-                                           :location (@ 0 -1 0)
-                                           :transform (rotate-around z-axis (/ +pi+ -4))
+                                           :location (v 0 -1 0)
+                                           :matrix (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
-                                           :location (@ 0 0 -0.01)
+                                           :location (v 0 0 -0.01)
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
-                                                                  :transform (scale* 2.0 2.0 2.0)
+                                                                  :scale 2.0
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1)))))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
       (make-instance 'pinhole-camera
-                     :location (@ 0 20 30)
-                     :look-at (@ 0 -1 0)
+                     :location (v 0 20 30)
+                     :look-at (v 0 -1 0)
                      :focal-length 3.0)))
 
 (defscene test-csg-transforms
@@ -1228,41 +1227,41 @@
                   :objects (list
                             (make-instance 'plane
                                            :normal (v 0 1 0)
-                                           :location (@ 0 -1 0)
-                                           :transform (rotate-around z-axis (/ +pi+ -4))
+                                           :location (v 0 -1 0)
+                                           :matrix (rotate-around z-axis (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
-                                                                  :transform (scale* 5.0 5.0 5.0)
+                                                                  :scale 5
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
-                                           :location (@ 0 0 -0.01)
+                                           :location (v 0 0 -0.01)
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
-                                                                  :transform (scale* 5.0 5.0 5.0)
+                                                                  :scale 5
                                                                   :map (list (make-instance 'phong-shader :color black)
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))))
    (make-instance 'csg
                   :type 'difference
-                  :transform (rotate-around x-axis (/ +pi+ 4))
+                  :matrix (rotate-around x-axis (/ +pi+ 4))
                   :objects (list
                             (make-instance 'sphere
                                            :radius 4.0
-                                           :location (@ 0 3 0)
-                                           :transform (scale* 1.1 1.1 1.1)
+                                           :location (v 0 3 0)
+                                           :scale 1.1
                                            :shader *bright-red*
                                            :name "source")
                             (make-instance 'plane
-                                           :location (@ 0 -10 0)
+                                           :location (v 0 -10 0)
                                            :shader *bright-blue*
                                            :name "cut"))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
    (make-instance 'pinhole-camera
-                  :location (@ 0 20 30)
-                  :look-at (@ 0 -1 0)
+                  :location (v 0 20 30)
+                  :look-at (v 0 -1 0)
                   :focal-length 3.0)))
 
 (defscene test-mirror
@@ -1315,23 +1314,23 @@
    *floor*
    (make-instance 'sphere
                   :radius 4.0
-                  :location (@ 0 3 0)
-                  :transform (list
+                  :location (v 0 3 0)
+                  :matrix-list (list
                               (rotate-around x-axis (/ +pi+ 4))
                               (translate* -4.0 0.0 -2.0))
                   :shader *bright-red*
                   :name "control")
    (make-instance 'csg
                   :type 'difference
-                  :transform (rotate-around x-axis (/ +pi+ 4))
+                  :matrix (rotate-around x-axis (/ +pi+ 4))
                   :objects (list
                             (make-instance 'sphere
                                            :radius 4.0
-                                           :location (@ 0 3 0)
+                                           :location (v 0 3 0)
                                            :shader *bright-red*
                                            :name "source")
                             (make-instance 'plane
-                                           :location (@ 0 -10 0)
+                                           :location (v 0 -10 0)
                                            :shader *bright-blue*
                                            :name "cut"))))
   (:lights
@@ -1349,17 +1348,17 @@
                   :shader
                   (make-instance 'checker-pattern
                                  :type :shader
-                                 :transform (scale* 2.0 2.0 2.0)
+                                 :scale 2
                                  :map (list (make-instance 'phong-shader :color white)
                                             (make-instance 'checker-pattern
                                                            :type :shader
                                                            :map (list (make-instance 'phong-shader :color black)
                                                                       (make-instance 'phong-shader :color white))
-                                                           :transform (matrix*
-                                                                       (rotate* 0.0 (/ +pi+ 4) 0.0)
-                                                                       (let ((s (/ 1.0 (sqrt 2.0))))
-                                                                         (scale* s s s))
-                                                                       (translate* 0.5 0.0 0.5)))))))
+                                                           :matrix-list (list
+                                                                         (translate* 0.5 0.0 0.5)
+                                                                         (let ((s (/ 1.0 (sqrt 2.0))))
+                                                                           (scale* s s s))
+                                                                         (rotate* 0.0 (deg 45) 0.0)))))))
   (:lights
    *lamp*)
   (:camera
@@ -1409,12 +1408,12 @@
   (test math.1
 	(transform-point y-axis (reorient y-axis (v 1 1 1)))
 	(normalize (v 1 1 1)))
-  (test math.2 (vec 1.0 2.0 4.654) (@ 1 2 4.654)))
+  (test math.2 (vec 1.0 2.0 4.654) (v 1 2 4.654)))
 
 ;;; FIXME: OBSOLETE
 #+nil
 (defun test-ray ()
-  (let* ((from (@ 1 0 -1))
+  (let* ((from (v 1 0 -1))
 	 (direction (normalize (v -1 0 1)))
 	 (ray (make-ray :origin from :direction direction)))
     (multiple-value-bind (reflected refracted)
@@ -1445,11 +1444,11 @@
 	      direction)))))
 
 (defun test-sphere ()
-  (flet ((make-sphere (radius location &key transform)
+  (flet ((make-sphere (radius location &key matrix)
 	   (compile-scene-object (make-instance 'sphere
                                                 :radius radius
                                                 :location location
-                                                :transform transform)
+                                                :matrix matrix)
                                  (make-scene)
                                  (identity-matrix)))
 	 (normal (object point)
@@ -1460,43 +1459,43 @@
 		 (ray-extent ray)
 		 -1.0))))
     (let ((s (make-sphere 1.0 +origin+)))
-      (test sphere.1.1 (intersect s (@ 0 0 -2) z-axis)
+      (test sphere.1.1 (intersect s (v 0 0 -2) z-axis)
 	    1.0)
-      (test sphere.1.2 (intersect s (@ 1 0 -2) z-axis)
+      (test sphere.1.2 (intersect s (v 1 0 -2) z-axis)
 	    2.0)
-      (test sphere.1.3 (intersect s (@ 1 0.001 -2) z-axis)
+      (test sphere.1.3 (intersect s (v 1 0.001 -2) z-axis)
 	    -1.0)
       (test sphere.1.4
-            (let* ((o (@ 0 0 -2))
+            (let* ((o (v 0 0 -2))
 		   (d (intersect s o z-axis)))
 	      (normal s (vec+ o (vec* z-axis d))))
-	    (@ 0 0 -1)))
+	    (v 0 0 -1)))
     (let ((s (make-sphere 0.5 +origin+)))
-      (test sphere.2.1 (intersect s (@ 0 0 -2) z-axis)
+      (test sphere.2.1 (intersect s (v 0 0 -2) z-axis)
 	    1.5)
-      (test sphere.2.2 (intersect s (@ 0 0 -1) z-axis)
+      (test sphere.2.2 (intersect s (v 0 0 -1) z-axis)
 	    0.5)
       (test sphere.2.3
-	    (let* ((o (@ 0 0 -2))
+	    (let* ((o (v 0 0 -2))
 		   (d (intersect s o z-axis)))
 	      (normal s (vec+ o (vec* z-axis d))))
-	    (@ 0 0 -1)))
-    (let ((s (make-sphere 1.0 (@ 1 0 0))))
-      (test sphere.3.1 (intersect s (@ -0.001 0 0) z-axis)
+	    (v 0 0 -1)))
+    (let ((s (make-sphere 1.0 (v 1 0 0))))
+      (test sphere.3.1 (intersect s (v -0.001 0 0) z-axis)
 	    -1.0))
 
-    (let* ((s (make-sphere 1.0 (@ 0 -1 0)))
-	   (o (@ 0 -1 -2))
+    (let* ((s (make-sphere 1.0 (v 0 -1 0)))
+	   (o (v 0 -1 -2))
 	   (dist (intersect s o z-axis))
 	   (pos (vec+ o (vec* z-axis dist))))
       (test sphere.4.1 dist 1.0)
-      (test sphere.4.2 pos (@ 0 -1 -1))
-      (test sphere.4.3 (normal s pos) (@ 0 0 -1)))
+      (test sphere.4.2 pos (v 0 -1 -1))
+      (test sphere.4.3 (normal s pos) (v 0 0 -1)))
 
-    (let ((s (make-sphere 1.0 (@ 0 1 0)
-			  :transform (scale (@ 2 1 1))))
-	  (x-neg (@ -3 1 0))
-	  (y-neg (@ 0 -1 0)))
+    (let ((s (make-sphere 1.0 (v 0 1 0)
+			  :matrix (scale (v 2 1 1))))
+	  (x-neg (v -3 1 0))
+	  (y-neg (v 0 -1 0)))
       (test sphere.5.1 (intersect s x-neg x-axis) 1.0)
       (test sphere.5.2 (intersect s y-neg y-axis) 1.0))))
 
@@ -1514,23 +1513,23 @@
 		 -1.0))))
     (let ((p (make-plane y-axis +origin+)))
       (test plane.1.1
-	    (intersect p (@ 0 1 0) (@ 0 -1 0))
+	    (intersect p (v 0 1 0) (v 0 -1 0))
 	    1.0))
-    (let ((p (make-plane (@ 1 1 0) +origin+)))
+    (let ((p (make-plane (v 1 1 0) +origin+)))
       (test plane.2.1
-	    (intersect p (@ 0 1 0) (@ -1 0 0))
+	    (intersect p (v 0 1 0) (v -1 0 0))
 	    1.0)
       (test plane.2.2
-	    (plusp (intersect p (@ 0 1 0) (@ -1 0.1 0)))
+	    (plusp (intersect p (v 0 1 0) (v -1 0.1 0)))
 	    t)
-      (let ((o (@ 0 1 0))
-	    (d (@ -1 0.1 0)))
+      (let ((o (v 0 1 0))
+	    (d (v -1 0.1 0)))
 	(test plane.2.3
 	      (normal p (adjust-vec o d (intersect p o d)))
-	      (normalize (@ 1 1 0)))))
-    (let ((p (make-plane (@ 1 1 0) (@ -1 0 0))))
+	      (normalize (v 1 1 0)))))
+    (let ((p (make-plane (v 1 1 0) (v -1 0 0))))
       (test plane.3.1
-	    (intersect p +origin+ (@ 0 -1 0))
+	    (intersect p +origin+ (v 0 -1 0))
 	    1.0))))
 
 

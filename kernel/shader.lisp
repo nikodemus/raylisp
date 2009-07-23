@@ -32,7 +32,7 @@
 ;;;; the scene background. The returned function is then called during rendering
 ;;;; to compute apparent color of rays which do not hit any objects.
 
-(defclass shader (name-mixin transform-mixin)
+(defclass shader (name-mixin transformable)
   ())
 
 (defclass background-shader ()
@@ -105,7 +105,7 @@
   ;; make sure the function type looks about right.
   (check-function-type (call-next-method) 'shader-function))
 
-(defmethod compute-shader-function :around ((shader transform-mixin) object scene transform)
+(defmethod compute-shader-function :around ((shader transformable) object scene transform)
   ;; Apply the transform of the shader: otherwise all subclasses need to do
   ;; this.
   (call-next-method shader object scene (matrix* transform (transform-of shader))))

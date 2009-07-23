@@ -18,6 +18,7 @@
                          (:file "shader")
                          (:file "pigment")
                          (:file "pattern")
+                         (:file "object")
                          (:file "protocol")
                          (:file "render")
                          (:file "output")))

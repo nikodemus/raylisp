@@ -1,7 +1,7 @@
 .PHONY: clean wc
 
 clean:
-	rm *.fasl */*.fasl *~ */*~
+	rm -f *.fasl */*.fasl
 
 wc:
 	wc -l *.asd *.lisp */*.lisp

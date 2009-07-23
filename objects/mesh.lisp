@@ -185,8 +185,9 @@
 ;;;; GENERATING MESHES
 
 (defun generate-mesh-field (function width x-samples depth z-samples
-                            &key transform)
-  (let* ((transform (ensure-transform transform))
+                            &rest args &key rotate scale translate matrix matrix-list)
+  (declare (ignore rotate scale translate matrix matrix-list))
+  (let* ((transform (parse-transform-arguments args))
          (n-triangles (* 2 (- x-samples 1) (- z-samples 1)))
          (n-vertices (* x-samples z-samples))
          (indices (make-array (list n-triangles 3) :element-type 'fixnum))
@@ -239,23 +240,25 @@
       (when errorp
         (error "Unknown mesh format: ~S" format))))
 
-(defun load-mesh (pathname &key format transform)
+(defun load-mesh (pathname &rest initargs &key format scale rotate translate matrix matrix-list)
+  (declare (ignore scale rotate translate matrix matrix-list))
   (let* ((type (pathname-type pathname))
          (mesh-format (if (stringp type)
                           (or format (intern (string-upcase type) :keyword))
                           (or format (error "Filetype not apparent, please specify :FORMAT")))))
-    (funcall (find-mesh-loader mesh-format) pathname transform)))
+    (multiple-value-bind (vertices faces)
+        (funcall (find-mesh-loader mesh-format) pathname)
+      (build-mesh vertices faces (parse-transform-arguments initargs)))))
 
-(defun build-mesh (vertices faces &key transform)
+(defun build-mesh (vertices faces matrix)
   (declare (simple-vector vertices faces))
   (let ((map (make-hash-table :test #'equalp))
-        (transform (ensure-transform transform))
         (indices (make-array (list (length faces) 3) :element-type 'fixnum))
         (p 0)
         (max (vec float-negative-infinity float-negative-infinity float-negative-infinity))
         (min (vec float-positive-infinity float-positive-infinity float-positive-infinity)))
     (labels ((vertex (face i)
-               (let ((vertex (transform-point (aref vertices (elt face i)) transform)))
+               (let ((vertex (transform-point (aref vertices (elt face i)) matrix)))
                  (%vec-min min min vertex)
                  (%vec-max max max vertex)
                  (setf (aref indices p i)

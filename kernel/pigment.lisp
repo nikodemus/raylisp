@@ -34,7 +34,7 @@
 (defmethod compute-pigment-function :around (pigment matrix)
   (check-function-type (call-next-method) 'pigment-function))
 
-(defmethod compute-pigment-function :around ((pigment transform-mixin) matrix)
+(defmethod compute-pigment-function :around ((pigment transformable) matrix)
   (call-next-method pigment (matrix* matrix (transform-of pigment))))
 
 (defmacro pigment-lambda (&whole form name lambda-list &body body)

@@ -135,21 +135,6 @@
                (compiled-scene-light-groups c-scene))))
   scene)
 
-;;;## Objects
-
-(defclass scene-object (transform-mixin light-group-mixin)
-  ((shader
-    :initform (find-default :shader '(or null shader)) :initarg :shader
-    :accessor shader-of)
-   (name
-    :initarg :name
-    :initform nil
-    :accessor name-of)
-   (bounding-box-only
-    :initform nil
-    :initarg :bounding-box-only
-    :reader bounding-box-only-p)))
-
 (defstruct (shading-object (:conc-name object-))
   (normal (required-argument :normal) :type (function (vec) vec))
   (shader (required-argument :shader) :type shader-function))

@@ -20,7 +20,7 @@
 
 ;;;; PATTERNS
 
-(defclass pattern (transform-mixin)
+(defclass pattern (transformable)
   ((type
     :initarg :type
     :initform (required-argument :type)
@@ -98,7 +98,7 @@
 (defmethod compute-interpolated-pattern-function :around (pattern matrix)
   (check-function-type (call-next-method) 'interpolated-pattern-function))
 
-(defmethod compute-interpolated-pattern-function :around ((pattern transform-mixin) matrix)
+(defmethod compute-interpolated-pattern-function :around ((pattern transformable) matrix)
   (call-next-method pattern (matrix* matrix (transform-of pattern))))
 
 (defun expand-pattern-lambda (result-type name point body whole)
@@ -218,7 +218,7 @@
 (defmethod compute-index-pattern-function :around (pattern matrix)
   (check-function-type (call-next-method) 'indexed-pattern-function))
 
-(defmethod compute-index-pattern-function :around ((pattern transform-mixin) matrix)
+(defmethod compute-index-pattern-function :around ((pattern transformable) matrix)
   (call-next-method pattern (matrix* matrix (transform-of pattern))))
 
 (defmacro indexed-pattern-lambda (&whole form name (point) &body body)
