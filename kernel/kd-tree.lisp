@@ -116,6 +116,109 @@
            (%find-intersection ray objects min max counters shadowp)))
     (kd-traverse #'kd-intersect ray root)))
 
+;;;; SAVING KD-TREES ON DISK
+;;;;
+;;;; Binary format:
+;;;;
+;;;; HEADER
+;;;;   ub32 (total number of nodes)
+;;;; NODE START
+;;;;   ub32 (node number, odd = leaf, even = interior)
+;;;;   single,single,single (node min)
+;;;;   single,single,single (node max)
+;;;;   IF LEAF
+;;;;     ub32 (number of objects in node)
+;;;;     ub32,ub32,ub32... (specified number of object ids)
+;;;;   ELSE
+;;;;     ub32 (left child id)
+;;;;     ub32 (right child id)
+;;;;     ub8 (axis)
+;;;;     single (plane position)
+;;;; NODE END
+;;;;
+;;;;   node 0 is the root, and always last. child nodes always
+;;;;   come before their parents.
+
+(defun save-kd-tree (tree pathname &key (if-exists :error))
+  (assert (member if-exists '(:error :supersede)))
+  (let ((nodes (make-hash-table))
+        (in -1)
+        (leaf -1))
+    (with-open-file (f pathname
+                       :element-type '(unsigned-byte 8)
+                       :direction :output
+                       :if-exists if-exists)
+      (macrolet ((inc (x)
+                   `(setf ,x (logand #xffffffff (+ ,x 1)))))
+        (labels ((number-node (node)
+                   (setf (gethash node nodes)
+                         (if (kd-leaf-p node)
+                             (1+ (* (inc leaf) 2))
+                             (* (inc in) 2))))
+                 (write-node (node)
+                   (write-word (gethash node nodes) f)
+                   (let ((min (kd-min node))
+                         (max (kd-max node)))
+                     (write-single (aref min 0) f)
+                     (write-single (aref min 1) f)
+                     (write-single (aref min 2) f)
+                     (write-single (aref max 0) f)
+                     (write-single (aref max 1) f)
+                     (write-single (aref max 2) f)
+                     (cond ((kd-leaf-p node)
+                            (let* ((objects (kd-objects node))
+                                   (n (length objects)))
+                              (write-word (length objects) f)
+                              (dotimes (i n)
+                                (write-word (aref objects i) f))))
+                           (t
+                            (write-word (gethash (kd-left node) nodes) f)
+                            (write-word (gethash (kd-right node) nodes) f)
+                            (write-byte (kd-axis node) f)
+                            (write-single (kd-plane-position node) f)))))
+                 (walk (node)
+                   (number-node node)
+                   (cond ((kd-leaf-p node)
+                          (write-node node))
+                         (t
+                          (walk (kd-left node))
+                          (walk (kd-right node))
+                          (write-node node)))))
+          (walk tree)
+          tree)))))
+
+(defun load-kd-tree (pathname)
+  (with-open-file (f pathname :element-type '(unsigned-byte 8))
+    (loop
+      (let* ((n-nodes (read-word f))
+             (nodes (make-array n-nodes)))
+        (let ((node-number (read-word f))
+              (min (vec (read-single f) (read-single f) (read-single f)))
+              (max (vec (read-single f) (read-single f) (read-single f))))
+          (setf (aref nodes node-number)
+                (if (oddp node-number)
+                    (let ((n-objects (read-word f)))
+                      (make-kd-leaf-node
+                       :min min
+                       :max max
+                       :objects
+                       (when (plusp n-objects)
+                         (let ((objects (make-array n-objects :element-type '(unsigned-byte 32))))
+                           (dotimes (i n-objects)
+                             (setf (aref objects i) (read-word f)))
+                           objects))))
+                    (make-kd-interior-node
+                     :min min
+                     :max max
+                     :left (aref nodes (read-word f))
+                     :right (aref nodes (read-word f))
+                     :axis (read-byte f)
+                     :plane-position (read-single f))))
+          (when (zerop node-number)
+            (return-from load-kd-tree (aref nodes 0))))))))
+
+;;;; TRAVERSING A KD-TREE
+
 ;;; RayTravAlgRECB from Appendix C.
 (defun kd-traverse (function ray root)
   (declare (kd-node root)
