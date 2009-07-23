@@ -12,6 +12,19 @@
 
 (defgeneric compute-object-properties (scene-object scene transform &key shading-object))
 
+(defmethod compute-object-properties :around ((obj scene-object) scene transform
+                                              &key shading-object)
+  (if (bounding-box-only-p obj)
+      (multiple-value-bind (min max) (compute-object-extents obj (identity-matrix))
+        (compute-object-properties (make-instance 'box
+                                                  :min min
+                                                  :max max
+                                                  :shader (shader-of obj))
+                                   scene
+                                   transform
+                                   :shading-object shading-object))
+      (call-next-method)))
+
 (defgeneric compute-object-extents (scene-object transform))
 
 (defmethod compute-object-extents ((object scene-object) transform)

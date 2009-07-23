@@ -144,7 +144,11 @@
    (name
     :initarg :name
     :initform nil
-    :accessor name-of)))
+    :accessor name-of)
+   (bounding-box-only
+    :initform nil
+    :initarg :bounding-box-only
+    :reader bounding-box-only-p)))
 
 (defstruct (shading-object (:conc-name object-))
   (normal (required-argument :normal) :type (function (vec) vec))

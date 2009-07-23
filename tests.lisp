@@ -60,6 +60,10 @@
              :transform (list (rotate* 0.0 -3.0 0.0)
                               (scale* 30.0 30.0 30.0))))
 
+(defparameter *stanford-dragon*
+  (load-mesh "models/stanford-dragon.ply"
+             :transform (scale* 30.0 30.0 30.0)))
+
 (defparameter *utah-teapot*
   (load-mesh "models/utah-teapot.obj"
              :transform (rotate* (/ +pi+ -2) 0.0 0.0)))
@@ -80,6 +84,66 @@
                          :location (v 0 10 -15)
                          :look-at (v 2 2.5 0)
                          :focal-length 3.0)))
+
+;;;; Disabled as building the KD-tree for the dragon takes over a minute!
+#+nil
+(defscene test-dragon
+  (:objects
+   (flet ((marble (color1 color2 &optional (transform (identity-matrix)))
+            (let ((s 0.5))
+              (make-instance 'marble-pattern
+                             :type :color
+                             :transform (list (scale* s s s) transform)
+                             :map `((0.0 ,color1)
+                                    (0.9 ,color1)
+                                    (1.0 ,color2))))))
+     (make-instance 'plane
+                   :shader (make-instance 'texture-shader
+                                          :pigment white
+                                          :transform (scale* 6.0 1.0 6.0)
+                                          :diffuse 1.0)))
+   (flet ((dragon (c refl f rou m &optional (r (identity-matrix)))
+            (make-instance 'model
+                           :mesh *stanford-dragon*
+                           :shader (make-instance 'texture-shader
+                                                  :specular refl
+                                                  :diffuse (- 0.9 refl)
+                                                  :roughness rou
+                                                  :metallic t
+                                                  :reflection refl
+                                                  :pigment c
+                                                  :fresnel f)
+                           :transform (list r
+                                            (translate* -2.0 -1.8 0.0)
+                                            m
+                                            (rotate* 0.0 -0.3 0.0)))))
+
+     (list (dragon (v 1.0 0.6 0.45)
+                   0.5 0.6 0.015
+                   (translate* 2.0 0.0 -4.0) (rotate* 0.0 0.4 0.0))
+           (dragon (v 0.9 0.9 0.65)
+                   0.75 0.5 0.01
+                   (translate* 0.0 0.0 0.0)  (rotate* 0.0 -0.1 0.0)))))
+  (:background
+   (make-instance 'sky-sphere-shader
+                  :pigment (make-instance 'noise-pattern
+                                          :type :color
+                                          :map `((0.0 ,white)
+                                                 (1.0 ,blue)))))
+  (:lights
+   (make-instance 'spotlight
+                  :location (v -1 8 -10)
+                  :point-at +origin+
+                  :aperture 0.8)
+   (make-instance 'point-light
+                  :location (v -10 10 -10)
+                  :fill-light t
+                  :color (v 0.1 0.1 0.1)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :location (v -15 10 -25)
+                  :look-at (v 0.5 1 0)
+                  :focal-length 6.0)))
 
 ;;; Generating a mesh patch from an arbitrary function.
 (defscene test-mesh-field
