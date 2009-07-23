@@ -55,11 +55,17 @@
 (defun %mesh-vertex (index vertex-index indices vertices)
   (aref vertices (aref indices index vertex-index)))
 
+(defun mesh-face-count (mesh)
+  (array-dimension (slot-value mesh 'indices) 0))
+
+(defun mesh-vertex-count (mesh)
+  (length (slot-value mesh 'vertices)))
+
 ;;;; We compute a separate KD tree for each mesh. This tells the tree
 ;;;; code how to handle meshes.
 
 (defmethod kd-set-size ((mesh mesh))
-  (array-dimension (slot-value mesh 'indices) 0))
+  (mesh-face-count mesh))
 
 (defmethod map-kd-set (function (mesh mesh))
   (dotimes (i (kd-set-size mesh))
@@ -193,8 +199,8 @@
          (sx (/ (- (float x-samples) 1.0) (float width)))
          (sz (/ (- (float z-samples) 1.0) (float depth)))
          (v -1)
-         (max (vec float-negative-infinity float-negative-infinity float-negative-infinity))
-         (min (vec float-positive-infinity float-positive-infinity float-positive-infinity)))
+         (min (positive-infinity-vec))
+         (max (negative-infinity-vec)))
     (dotimes (z z-samples)
       (let ((rz (/ z sz)))
         (dotimes (x x-samples)
@@ -243,27 +249,35 @@
   (let* ((type (pathname-type pathname))
          (mesh-format (if (stringp type)
                           (or format (intern (string-upcase type) :keyword))
-                          (or format (error "Filetype not apparent, please specify :FORMAT")))))
-    (multiple-value-bind (vertices faces)
-        (funcall (find-mesh-loader mesh-format) pathname)
-      (let ((mesh (build-mesh vertices faces (parse-transform-arguments initargs)))
-            (kd-file (make-pathname :type "kd" :defaults pathname)))
-        (cond ((probe-file kd-file)
-               (setf (mesh-kd-tree mesh)
-                     (load-kd-tree kd-file)))
-              (t
-               (let ((tree (build-mesh-kd-tree mesh)))
-                 (setf (mesh-kd-tree mesh) tree)
-                 (save-kd-tree tree kd-file))))
-        mesh))))
+                          (or format (error "Filetype not apparent, please specify :FORMAT"))))
+         (matrix (parse-transform-arguments initargs)))
+    (if (eq :mesh mesh-format)
+        (load-builtin-mesh pathname matrix)
+        (multiple-value-bind (vertices faces)
+            (funcall (find-mesh-loader mesh-format) pathname)
+          (let ((mesh (build-mesh vertices faces matrix)))
+            (if (matrix= matrix (identity-matrix))
+                ;; If we did not transform on load, we can reuse an old
+                ;; KD-tree -- if we have one. If not, build and save one.
+                (let ((kd-file (make-pathname :type "kd" :defaults pathname)))
+                  (cond ((probe-file kd-file)
+                         (setf (mesh-kd-tree mesh)
+                               (load-kd-tree kd-file)))
+                        (t
+                         (let ((tree (build-mesh-kd-tree mesh)))
+                           (setf (mesh-kd-tree mesh) tree)
+                           (save-kd-tree tree kd-file)))))
+                (let ((tree (build-mesh-kd-tree mesh)))
+                  (setf (mesh-kd-tree mesh) tree)))
+            mesh)))))
 
 (defun build-mesh (vertices faces matrix)
   (declare (simple-vector vertices faces))
   (let ((map (make-hash-table :test #'equalp))
         (indices (make-array (list (length faces) 3) :element-type '(unsigned-byte 32)))
         (p 0)
-        (max (vec float-negative-infinity float-negative-infinity float-negative-infinity))
-        (min (vec float-positive-infinity float-positive-infinity float-positive-infinity)))
+         (min (positive-infinity-vec))
+         (max (negative-infinity-vec)))
     (labels ((vertex (face i)
                (let ((vertex (transform-point (aref vertices (elt face i)) matrix)))
                  (%vec-min min min vertex)
@@ -286,3 +300,87 @@
                        :vertices merged-vertices
                        :min min
                        :max max)))))
+
+;;;; BUILT-IN MESH SERIALIZATION
+;;;;
+;;;; Binary format:
+;;;;
+;;;; #x4D455348 (magic bytes, ascii codes for MESH)
+;;;; ub32 (format version, currently zero)
+;;;; ub32 (number of vertices)
+;;;; ub32 (number of indices)
+;;;; single,single,single (vertex)
+;;;; ...repeats for specified number of times
+;;;; ub32,ub32,ub32 (face triplet)
+;;;; ...repeats for specifid number of times
+
+(defconstant +mesh-magic-bytes+ #x4d455348)
+(defconstant +mesh-format-version+ 0)
+
+(defun save-mesh (mesh pathname &key (if-exists :error))
+  (with-open-file (f pathname
+                     :element-type '(unsigned-byte 8)
+                     :direction :output
+                     :if-does-not-exist :create
+                     :if-exists if-exists)
+    (let* ((vertices (mesh-vertices mesh))
+           (indices (mesh-indices mesh))
+           (vertex-count (length vertices))
+           (face-count (mesh-face-count mesh)))
+      (write-word +mesh-magic-bytes+ f)
+      (write-word +mesh-format-version+ f)
+      (write-word vertex-count f)
+      (write-word face-count f)
+      (dotimes (i vertex-count)
+        (let ((vertex (aref vertices i)))
+          (dotimes (j 3)
+            (write-single (aref vertex j) f))))
+      (dotimes (i face-count)
+        (dotimes (j 3)
+          (write-word (aref indices i j) f))))
+    (write-kd-tree (mesh-kd-tree mesh) f))
+  mesh)
+
+(defun load-builtin-mesh (pathname matrix)
+  (let ((pathname (merge-pathnames pathname (make-pathname :type "mesh")))
+        (transformp (not (matrix= matrix (identity-matrix)))))
+    (with-open-file (f pathname
+                       :element-type '(unsigned-byte 8)
+                       :if-does-not-exist :error)
+      (unless (= +mesh-magic-bytes+ (read-word f))
+        (error "~A is not a Raylisp mesh file" pathname))
+      (let ((version (read-word f)))
+        (unless (= +mesh-format-version+ version)
+          (error "Unknown Raylisp mesh format: ~A" version)))
+      (let* ((vertex-count (read-word f))
+             (face-count (read-word f))
+             (vertices (make-array vertex-count))
+             (faces (make-array (list face-count 3) :element-type '(unsigned-byte 32)))
+             (min (positive-infinity-vec))
+             (max (negative-infinity-vec)))
+        (if transformp
+            (dotimes (i vertex-count)
+              (let ((vertex (transform-point
+                             (vec (read-single f) (read-single f) (read-single f))
+                             matrix)))
+                (%vec-min min min vertex)
+                (%vec-max max max vertex)
+                (setf (aref vertices i) vertex)))
+            (dotimes (i vertex-count)
+              (let ((vertex (vec (read-single f) (read-single f) (read-single f))))
+                (%vec-min min min vertex)
+                (%vec-max max max vertex)
+                (setf (aref vertices i) vertex))))
+        (dotimes (i face-count)
+          (dotimes (j 3)
+            (setf (aref faces i j) (read-word f))))
+        (let ((mesh (make-instance 'mesh
+                                   :min min
+                                   :max max
+                                   :vertices vertices
+                                   :indices faces)))
+          (setf (mesh-kd-tree mesh)
+                (if transformp
+                    (build-mesh-kd-tree mesh)
+                    (read-kd-tree f)))
+          mesh)))))

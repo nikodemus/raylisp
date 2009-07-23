@@ -50,6 +50,12 @@
 (defconstant float-positive-infinity (/ 1.0 0.0))
 (defconstant float-negative-infinity (/ -1.0 0.0))
 
+(defun negative-infinity-vec ()
+  (vec float-negative-infinity float-negative-infinity float-negative-infinity))
+
+(defun positive-infinity-vec ()
+  (vec float-positive-infinity float-positive-infinity float-positive-infinity))
+
 ;;;# Utilities
 ;;;
 ;;; Note: RAYLISP shadows VECTOR and SIMPLE-VECTOR; we set up things

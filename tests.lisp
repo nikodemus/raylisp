@@ -55,17 +55,9 @@
   (:camera
    *view*))
 
-;;; The Stanford meshes need to be scaled up on load: otherwise we get
-;;; numerical artifacts trying to intersect tiny triangles -- esp. with
-;;; transformed rays!
-(defvar *stanford-bunny*
-  (load-mesh "models/stanford-bunny.ply" :scale 30))
-(defvar *stanford-dragon*
-  (load-mesh "models/stanford-dragon.ply" :scale 30))
-
-(defparameter *utah-teapot*
-  (load-mesh "models/utah-teapot.obj"
-             :rotate (v (deg -90) 0 0)))
+(defparameter *stanford-bunny* (load-mesh "models/stanford-bunny.mesh"))
+(defparameter *stanford-dragon* (load-mesh "models/stanford-dragon.mesh"))
+(defparameter *utah-teapot*  (load-mesh "models/utah-teapot.mesh"))
 
 (defscene test-bunny
   (:objects
@@ -83,7 +75,7 @@
    (make-instance 'pinhole-camera
                          :location (v 0 10 -15)
                          :look-at (v 2 2.5 0)
-                         :focal-length 3.0)))
+                         :focal-length 4.0)))
 
 (defscene test-dragon
   (:objects
