@@ -1,12 +1,12 @@
 (in-package :raylisp)
 
 (defclass plane (scene-object)
-  ((normal :initform y-axis :initarg :normal :accessor normal-of)
+  ((normal :initform +y+ :initarg :normal :accessor normal-of)
    (location :initform +origin+ :initarg :location :accessor location-of)))
 
 (defun plane-matrix (plane)
   (matrix* (translate (location-of plane))
-           (reorient y-axis (normal-of plane))))
+           (reorient +y+ (normal-of plane))))
 
 (defmethod compute-object-properties ((plane plane) scene transform &key shading-object)
   (multiple-value-bind (inverse adjunct)
@@ -30,7 +30,7 @@
                (progn
                  nil)))))
      :normal
-     (constantly (normalize (transform-point y-axis adjunct))))))
+     (constantly (normalize (transform-point +y+ adjunct))))))
 
 (defmethod compute-csg-properties ((plane plane) scene transform)
   (let ((inverse (inverse-matrix (matrix* transform (plane-matrix plane))))

@@ -397,7 +397,7 @@
                   :location (v 0.0 -8.0 0.0)
                   :shader *chessboard*)
    (make-instance 'cylinder
-                  :axis x-axis
+                  :axis +x+
                   :translate (v 0.0 -5.0 0.0)
                   :shader (make-instance 'phong-shader :color yellow))
    (make-instance 'cylinder
@@ -687,7 +687,7 @@
                   (make-instance 'phong-shader
                                  :color (make-instance 'gradient-pattern
                                                        :type :color
-                                                       :axis x-axis
+                                                       :axis +x+
                                                        :map `((0.0 ,blue)
                                                               (1.0 ,green)))))
    (make-instance 'sphere
@@ -775,7 +775,7 @@
                                (make-instance 'solid-shader
                                               :color green)))))
   (:lights
-   (make-instance 'solar-light :direction y-axis))
+   (make-instance 'solar-light :direction +y+))
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
@@ -801,7 +801,7 @@
                                (make-instance 'solid-shader
                                               :color blue)))))
   (:lights
-   (make-instance 'solar-light :direction y-axis))
+   (make-instance 'solar-light :direction +y+))
   (:ambient-light white)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
@@ -884,7 +884,7 @@
                     :shader (make-instance 'solid-shader :color purple)))))
   (:lights
    #+nil
-   (make-instance 'solar-light :direction y-axis)
+   (make-instance 'solar-light :direction +y+)
    (make-instance 'point-light :location (v 0 200 0)))
   (:ambient-light white)
   (:adaptive-limit 0.01)
@@ -1114,7 +1114,7 @@
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid-shader :color red))
    (make-instance 'plane
-                  :normal x-axis
+                  :normal +x+
                   :location (v -1 0 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
@@ -1131,7 +1131,7 @@
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid-shader :color green))
    (make-instance 'plane
-                  :normal y-axis
+                  :normal +y+
                   :location (v 0 -1 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
@@ -1148,7 +1148,7 @@
   (:objects
    (make-instance 'sphere :shader (make-instance 'solid-shader :color blue))
    (make-instance 'plane
-                  :normal z-axis
+                  :normal +z+
                   :location (v 0 0 -1)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
@@ -1167,7 +1167,7 @@
    (make-instance 'sphere
                   :shader (make-instance 'solid-shader :color blue)
                   :translate (v 0 2 0)
-                  :matrix (rotate-around z-axis 1.5))
+                  :matrix (rotate-around +z+ 1.5))
    (make-instance 'plane
                   :location (v 0 -1 0)
                   :shader (make-instance 'checker-pattern
@@ -1199,7 +1199,7 @@
                             (make-instance 'plane
                                            :normal (v 0 1 0)
                                            :location (v 0 -1 0)
-                                           :matrix (rotate-around z-axis (/ +pi+ -4))
+                                           :matrix (rotate-around +z+ (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
                                                                   :map (list (make-instance 'phong-shader :color black)
@@ -1228,7 +1228,7 @@
                             (make-instance 'plane
                                            :normal (v 0 1 0)
                                            :location (v 0 -1 0)
-                                           :matrix (rotate-around z-axis (/ +pi+ -4))
+                                           :matrix (rotate-around +z+ (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
                                                                   :scale 5
@@ -1244,7 +1244,7 @@
                                                                              (make-instance 'phong-shader :color white :ambient 0.1))))))
    (make-instance 'csg
                   :type 'difference
-                  :matrix (rotate-around x-axis (/ +pi+ 4))
+                  :matrix (rotate-around +x+ (/ +pi+ 4))
                   :objects (list
                             (make-instance 'sphere
                                            :radius 4.0
@@ -1316,13 +1316,13 @@
                   :radius 4.0
                   :location (v 0 3 0)
                   :matrix-list (list
-                              (rotate-around x-axis (/ +pi+ 4))
+                              (rotate-around +x+ (/ +pi+ 4))
                               (translate* -4.0 0.0 -2.0))
                   :shader *bright-red*
                   :name "control")
    (make-instance 'csg
                   :type 'difference
-                  :matrix (rotate-around x-axis (/ +pi+ 4))
+                  :matrix (rotate-around +x+ (/ +pi+ 4))
                   :objects (list
                             (make-instance 'sphere
                                            :radius 4.0
@@ -1406,7 +1406,7 @@
 
 (defun test-math ()
   (test math.1
-	(transform-point y-axis (reorient y-axis (v 1 1 1)))
+	(transform-point +y+ (reorient +y+ (v 1 1 1)))
 	(normalize (v 1 1 1)))
   (test math.2 (vec 1.0 2.0 4.654) (v 1 2 4.654)))
 
@@ -1459,35 +1459,35 @@
 		 (ray-extent ray)
 		 -1.0))))
     (let ((s (make-sphere 1.0 +origin+)))
-      (test sphere.1.1 (intersect s (v 0 0 -2) z-axis)
+      (test sphere.1.1 (intersect s (v 0 0 -2) +z+)
 	    1.0)
-      (test sphere.1.2 (intersect s (v 1 0 -2) z-axis)
+      (test sphere.1.2 (intersect s (v 1 0 -2) +z+)
 	    2.0)
-      (test sphere.1.3 (intersect s (v 1 0.001 -2) z-axis)
+      (test sphere.1.3 (intersect s (v 1 0.001 -2) +z+)
 	    -1.0)
       (test sphere.1.4
             (let* ((o (v 0 0 -2))
-		   (d (intersect s o z-axis)))
-	      (normal s (vec+ o (vec* z-axis d))))
+		   (d (intersect s o +z+)))
+	      (normal s (vec+ o (vec* +z+ d))))
 	    (v 0 0 -1)))
     (let ((s (make-sphere 0.5 +origin+)))
-      (test sphere.2.1 (intersect s (v 0 0 -2) z-axis)
+      (test sphere.2.1 (intersect s (v 0 0 -2) +z+)
 	    1.5)
-      (test sphere.2.2 (intersect s (v 0 0 -1) z-axis)
+      (test sphere.2.2 (intersect s (v 0 0 -1) +z+)
 	    0.5)
       (test sphere.2.3
 	    (let* ((o (v 0 0 -2))
-		   (d (intersect s o z-axis)))
-	      (normal s (vec+ o (vec* z-axis d))))
+		   (d (intersect s o +z+)))
+	      (normal s (vec+ o (vec* +z+ d))))
 	    (v 0 0 -1)))
     (let ((s (make-sphere 1.0 (v 1 0 0))))
-      (test sphere.3.1 (intersect s (v -0.001 0 0) z-axis)
+      (test sphere.3.1 (intersect s (v -0.001 0 0) +z+)
 	    -1.0))
 
     (let* ((s (make-sphere 1.0 (v 0 -1 0)))
 	   (o (v 0 -1 -2))
-	   (dist (intersect s o z-axis))
-	   (pos (vec+ o (vec* z-axis dist))))
+	   (dist (intersect s o +z+))
+	   (pos (vec+ o (vec* +z+ dist))))
       (test sphere.4.1 dist 1.0)
       (test sphere.4.2 pos (v 0 -1 -1))
       (test sphere.4.3 (normal s pos) (v 0 0 -1)))
@@ -1496,8 +1496,8 @@
 			  :matrix (scale (v 2 1 1))))
 	  (x-neg (v -3 1 0))
 	  (y-neg (v 0 -1 0)))
-      (test sphere.5.1 (intersect s x-neg x-axis) 1.0)
-      (test sphere.5.2 (intersect s y-neg y-axis) 1.0))))
+      (test sphere.5.1 (intersect s x-neg +x+) 1.0)
+      (test sphere.5.2 (intersect s y-neg +y+) 1.0))))
 
 (defun test-plane ()
   (flet ((make-plane (n v)
@@ -1511,7 +1511,7 @@
 	     (if (intersect x ray)
 		 (ray-extent ray)
 		 -1.0))))
-    (let ((p (make-plane y-axis +origin+)))
+    (let ((p (make-plane +y+ +origin+)))
       (test plane.1.1
 	    (intersect p (v 0 1 0) (v 0 -1 0))
 	    1.0))

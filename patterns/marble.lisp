@@ -4,7 +4,7 @@
   ())
 
 (defmethod compute-interpolated-pattern-function ((pattern marble-pattern) transform)
-  (let ((inverse (inverse-matrix (matrix* transform (reorient (axis-of pattern) z-axis)))))
+  (let ((inverse (inverse-matrix (matrix* transform (reorient (axis-of pattern) +z+)))))
     (interpolated-pattern-lambda marble-pattern (point)
       (declare (optimize speed))
       (let ((p (transform-point point inverse)))

@@ -104,11 +104,11 @@
     (unless (and up right)
       (unless sky
         (if (= 0 (aref direction 0) (aref direction 2))
-            (setf sky z-axis)
-            (setf sky y-axis)))
+            (setf sky +z+)
+            (setf sky +y+)))
       (unless aspect-ratio
         (setf aspect-ratio (/ 4.0 3.0)))
-      (let* ((n-sky (if sky (normalize sky) y-axis))
+      (let* ((n-sky (if sky (normalize sky) +y+))
              (n-right (cross-product n-sky normalized-direction)))
         (setf right (vec* n-right aspect-ratio)
               up (normalize (cross-product normalized-direction n-right))))))

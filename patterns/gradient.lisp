@@ -8,7 +8,7 @@
 
 (defmethod compute-interpolated-pattern-function ((pattern gradient-pattern) transform)
   (let ((inverse (inverse-matrix
-                  (matrix* transform (reorient (axis-of pattern) z-axis)))))
+                  (matrix* transform (reorient (axis-of pattern) +z+)))))
     (if (smoothp pattern)
         (interpolated-pattern-lambda smooth-gradient-pattern (point)
           (declare (optimize speed))

@@ -33,7 +33,7 @@
         (setf (slot-value cylinder 'axis)
               (if (and start end)
                   (vec- end start)
-                  z-axis)))))
+                  +z+)))))
 
 (defmethod initialize-instance :before ((cylinder cylinder) &key start end axis)
   ;; Error checking
@@ -51,13 +51,13 @@
         (values (matrix* ;; translate start from origin
                          (translate start)
                          ;; align with desired axis
-                         (reorient z-axis axis)
+                         (reorient +z+ axis)
                          ;; scale for radius
                          (scale* r r 1.0))
                 (when end (vec-length axis))
                 t)
         (values (matrix* ;; align with desired axis
-                         (reorient z-axis axis)
+                         (reorient +z+ axis)
                          ;; scale for radius
                          (scale* r r 1.0))
                 nil
@@ -88,7 +88,7 @@
            (end-cap (when (and (not shading-object) length (end-cap-p cylinder))
                       (compile-scene-object
                        (make-instance 'plane
-                                      :normal z-axis
+                                      :normal +z+
                                       :location (vec 0.0 0.0 length)
                                       :shader (or (end-cap-shader cylinder) shader))
                        scene m :shading-object cylinder))))

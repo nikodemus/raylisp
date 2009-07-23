@@ -60,10 +60,6 @@
 
 ;;;## Vectors
 
-(defun @ (x y z)
-  "Convenience vector constructor for interactive use."
-  (vec (float x) (float y) (float z)))
-
 (defun v (x y z)
   (vec (float x) (float y) (float z)))
 
@@ -92,9 +88,9 @@
 	     `(define-constant ,name (vec ,r ,g ,b)
                 :test #'vec=)))
   (def +origin+ 0.0 0.0 0.0)
-  (def x-axis 1.0 0.0 0.0)
-  (def y-axis 0.0 1.0 0.0)
-  (def z-axis 0.0 0.0 1.0)
+  (def +x+ 1.0 0.0 0.0)
+  (def +y+ 0.0 1.0 0.0)
+  (def +z+ 0.0 0.0 1.0)
   (def black  0.0 0.0 0.0)
   (def white  1.0 1.0 1.0)
   (def red    1.0 0.0 0.0)

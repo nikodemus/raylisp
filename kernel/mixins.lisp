@@ -67,7 +67,7 @@
 
 (defclass axis-mixin ()
   ((axis
-    :initform z-axis
+    :initform +z+
     :initarg :axis
     :reader axis-of)))
 
@@ -91,7 +91,7 @@
 
 (defclass direction-mixin ()
   ((direction
-    :initform z-axis :initarg :direction
+    :initform +z+ :initarg :direction
     :accessor direction-of)))
 
 ;;;## Shader Mixins

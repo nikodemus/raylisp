@@ -160,4 +160,6 @@
                      (,thunk ,r1 ,r2))
                    ;; total internal reflection
                    ;; FIXME: the second dummy ray here seems like an ugly hack
-                   (,thunk ,r1 (load-time-value (make-ray :origin +origin+ :direction x-axis :weight 0.0)))))))))))
+                   (,thunk ,r1 (load-time-value
+                                (make-ray :origin +origin+ :direction +x+
+                                          :weight 0.0)))))))))))
