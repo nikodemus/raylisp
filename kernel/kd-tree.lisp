@@ -416,11 +416,29 @@
 (defgeneric kd-object-min (object set))
 (defgeneric kd-object-max (object set))
 
-(defstruct event
-  (type (required-argument :type) :type (integer 0 2))
-  (id (required-argument :id) :type (unsigned-byte 32))
-  (e (required-argument :e) :type single-float)
-  (k (required-argument :k) :type (integer 0 2)))
+(defstruct (event (:constructor %make-event (data e)))
+  (data (required-argument :id) :type (unsigned-byte 32))
+  (e (required-argument :e) :type single-float))
+
+(declaim (inline make-event))
+(defun make-event (&key type id k e)
+  (declare (type (unsigned-byte 28) id)
+           (type (unsigned-byte 2) type k))
+  (%make-event
+   (logior (ash id 4)
+           (ash type 2)
+           k)
+   e))
+
+(declaim (inline event-type event-id event-k))
+(defun event-k (event)
+  (ldb (byte 2 0) (event-data event)))
+(defun event-type (event)
+  (ldb (byte 2 2) (event-data event)))
+(defun event-id (event)
+  (ldb (byte 28 4) (event-data event)))
+
+
 
 ;;; Start, parellel, and end events.
 (defconstant .e+ 0)
@@ -443,10 +461,12 @@
 
 (defparameter *kd-traversal-cost* 0.2)
 (defparameter *intersection-cost* 0.05)
+(defparameter *kd-gc-threshold* (* 1024 1024 256))
 
 (defun build-kd-tree (set min max &key verbose (name "KD-tree") (type "objects"))
   (let ((size (kd-set-size set))
-        (tree nil))
+        (tree nil)
+        (gc-threshold (sb-ext:bytes-consed-between-gcs)))
     (flet ((build-it ()
              (labels ((rec (n events min max)
                         (multiple-value-bind (e k side cost) (find-plane n events min max)
@@ -467,23 +487,31 @@
                                            :left (rec nl left-events lmin lmax)
                                            :right (rec nr right-events rmin rmax)))))))))
                (setf tree (rec size (build-events size set) min max)))))
-      (cond (verbose
-             (format t "~&Building ~A for ~A ~A~%" name size type)
-             (finish-output t)
-             (fresh-line t)
-             (sb-ext:call-with-timing
-              (lambda (&rest timings)
-                (format t "  Tree depth: ~A~%" (kd-depth tree))
-                (format t "  Real: ~,2F, User: ~,2F System: ~,2F seconds~%  ~
+      (unwind-protect
+           (progn
+             ;; Building large KD trees conses much more than we'd really like,
+             ;; but this stops us from tenuring temporary objects too deep, and
+             ;; ensures that GC time doesn't overwhelm us.
+             (when (< gc-threshold *kd-gc-threshold*)
+               (setf (sb-ext:bytes-consed-between-gcs) *kd-gc-threshold*))
+             (cond (verbose
+                   (format t "~&Building ~A for ~A ~A~%" name size type)
+                   (finish-output t)
+                   (fresh-line t)
+                   (sb-ext:call-with-timing
+                    (lambda (&rest timings)
+                      (format t "  Tree depth: ~A~%" (kd-depth tree))
+                      (format t "  Real: ~,2F, User: ~,2F System: ~,2F seconds~%  ~
                              GC: ~,2F seconds, ~,2F Mb consed~%"
-                        (real-time-seconds timings)
-                        (user-run-time-seconds timings)
-                        (system-run-time-seconds timings)
-                        (gc-run-time-seconds timings)
-                        (gc-mb-consed timings)))
-              #'build-it))
-            (t
-             (build-it))))))
+                              (real-time-seconds timings)
+                              (user-run-time-seconds timings)
+                              (system-run-time-seconds timings)
+                              (gc-run-time-seconds timings)
+                              (gc-mb-consed timings)))
+                    #'build-it))
+                  (t
+                   (build-it))))
+        (setf (sb-ext:bytes-consed-between-gcs) gc-threshold)))))
 
 (defun build-events (size set)
   ;; 3 dimensions, max 2 events per object
