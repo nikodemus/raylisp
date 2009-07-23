@@ -41,7 +41,7 @@
            (if matrixp
                (warn "Ignoring secondary matrix:~%   ~A" val)
                (apply-transform val))
-           (setf listp t))
+           (setf matrixp t))
           (:matrix-list
            (if matrix-listp
                (warn "Ignoring secondary matrix list:~%  ~A" val)

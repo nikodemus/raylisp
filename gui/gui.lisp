@@ -4,8 +4,8 @@
 (defpackage "RAYLISP-GUI"
   (:use "CLIM-LISP" "CLIM")
   (:import-from "RAYLISP"
-                "@"
-                "ORIGIN")
+                "V"
+                "+ORIGIN+")
   (:export "RUN"))
 
 (in-package "RAYLISP-GUI")

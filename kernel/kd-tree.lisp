@@ -16,16 +16,12 @@
       2
       (1- axis)))
 
-(defstruct (kd-node  (:constructor nil))
+(defstruct (kd-node  (:constructor nil)
+                     (:conc-name "KD-")
+                     (:predicate nil)
+                     (:copier nil))
   (min (required-argument) :type vec)
   (max (required-argument) :type vec))
-
-(declaim (inline kd-min kd-max))
-
-(defun kd-min (kd-node)
-  (kd-node-min kd-node))
-(defun kd-max (kd-node)
-  (kd-node-max kd-node))
 
 (declaim (inline make-kd-interior-node))
 (defstruct (kd-interior-node (:include kd-node))
@@ -33,6 +29,10 @@
   (right (required-argument :right) :type kd-node)
   (axis (required-argument :axis) :type axis)
   (plane-position (required-argument :plane-position) :type single-float))
+
+(declaim (inline make-kd-leaf-node))
+(defstruct (kd-leaf-node (:include kd-node) (:predicate kd-leaf-p))
+  objects)
 
 (declaim (inline kd-left kd-right kd-axis kd-plane-position kd-depth))
 
@@ -55,10 +55,6 @@
                           (rec (kd-interior-node-right node))))
                  1)))
     (rec kd-node)))
-
-(declaim (inline make-kd-leaf-node))
-(defstruct (kd-leaf-node (:include kd-node) (:predicate kd-leaf-p))
-  objects)
 
 (declaim (inline kd-objects))
 
@@ -120,41 +116,78 @@
 ;;;;
 ;;;; Binary format:
 ;;;;
-;;;; HEADER
+;;;; GENERIC HEADER
+;;;;   #x4dee75ee (magic bytes)
+;;;;   ub32 (format version, currently zero)
+;;;; FORMAT 0 HEADER
 ;;;;   ub32 (total number of nodes)
 ;;;; NODE START
 ;;;;   ub32 (node number, odd = leaf, even = interior)
 ;;;;   single,single,single (node min)
 ;;;;   single,single,single (node max)
+;;;;   ub8 (axis 0-2 for interior nodes, #xf for child nodes)
 ;;;;   IF LEAF
 ;;;;     ub32 (number of objects in node)
 ;;;;     ub32,ub32,ub32... (specified number of object ids)
 ;;;;   ELSE
 ;;;;     ub32 (left child id)
 ;;;;     ub32 (right child id)
-;;;;     ub8 (axis)
 ;;;;     single (plane position)
 ;;;; NODE END
 ;;;;
 ;;;;   node 0 is the root, and always last. child nodes always
 ;;;;   come before their parents.
 
+(defconstant +kd-tree-magic-bytes+ #x4dee75ee)
+(defconstant +kd-tree-format-version+ #x0)
+(defconstant +kd-tree-leaf-mark+ #xf)
+
+(defun read-word (stream)
+  (macrolet ((one ()
+               `(the (unsigned-byte 8) (read-byte stream))))
+    (logior (one)
+            (ash (one) 8)
+            (ash (one) 16)
+            (ash (one) 24))))
+
+(defun write-word (word stream)
+  (declare (type (unsigned-byte 32) word))
+  (macrolet ((one (byte)
+               `(write-byte ,byte stream)))
+    (one (ldb (byte 8 0) word))
+    (one (ldb (byte 8 8) word))
+    (one (ldb (byte 8 16) word))
+    (one (ldb (byte 8 24) word)))
+  word)
+
+(defun write-single (single stream)
+  (declare (single-float single))
+  (write-word (logand #xffffffff (sb-kernel:single-float-bits single))
+              stream))
+
+(defun read-single (stream)
+  (let ((word (read-word stream)))
+    (sb-kernel:make-single-float
+     (if (logtest #x80000000 word)
+         (logeqv  #xffffffff word)
+         word))))
+
 (defun save-kd-tree (tree pathname &key (if-exists :error))
   (assert (member if-exists '(:error :supersede)))
   (let ((nodes (make-hash-table))
-        (in -1)
-        (leaf -1))
+        (n -1))
     (with-open-file (f pathname
                        :element-type '(unsigned-byte 8)
                        :direction :output
                        :if-exists if-exists)
+      (write-word +kd-tree-magic-bytes+ f)
+      (write-word +kd-tree-format-version+ f)
+      ;; Number of nodes to dumped -- patched in after we're done
+      (write-word 0 f)
       (macrolet ((inc (x)
                    `(setf ,x (logand #xffffffff (+ ,x 1)))))
         (labels ((number-node (node)
-                   (setf (gethash node nodes)
-                         (if (kd-leaf-p node)
-                             (1+ (* (inc leaf) 2))
-                             (* (inc in) 2))))
+                   (setf (gethash node nodes) (inc n)))
                  (write-node (node)
                    (write-word (gethash node nodes) f)
                    (let ((min (kd-min node))
@@ -166,15 +199,16 @@
                      (write-single (aref max 1) f)
                      (write-single (aref max 2) f)
                      (cond ((kd-leaf-p node)
+                            (write-byte +kd-tree-leaf-mark+ f)
                             (let* ((objects (kd-objects node))
                                    (n (length objects)))
                               (write-word (length objects) f)
                               (dotimes (i n)
                                 (write-word (aref objects i) f))))
                            (t
+                            (write-byte (kd-axis node) f)
                             (write-word (gethash (kd-left node) nodes) f)
                             (write-word (gethash (kd-right node) nodes) f)
-                            (write-byte (kd-axis node) f)
                             (write-single (kd-plane-position node) f)))))
                  (walk (node)
                    (number-node node)
@@ -185,18 +219,27 @@
                           (walk (kd-right node))
                           (write-node node)))))
           (walk tree)
+          ;; Patch the number of nodes to header.
+          (file-position f (* 4 2))
+          (write-word (hash-table-count nodes) f)
           tree)))))
 
 (defun load-kd-tree (pathname)
   (with-open-file (f pathname :element-type '(unsigned-byte 8))
-    (loop
-      (let* ((n-nodes (read-word f))
-             (nodes (make-array n-nodes)))
+    (unless (= +kd-tree-magic-bytes+ (read-word f))
+      (error "Not a Raylisp KD-tree file: ~S" pathname))
+    (let ((version (read-word f)))
+      (unless (= +kd-tree-format-version+ version)
+        (error "Unknown KD-tree format version: ~S" version)))
+    (let* ((n-nodes (read-word f))
+           (nodes (make-array n-nodes)))
+      (loop
         (let ((node-number (read-word f))
               (min (vec (read-single f) (read-single f) (read-single f)))
-              (max (vec (read-single f) (read-single f) (read-single f))))
+              (max (vec (read-single f) (read-single f) (read-single f)))
+              (axis-or-leaf-mark (read-byte f)))
           (setf (aref nodes node-number)
-                (if (oddp node-number)
+                (if (= +kd-tree-leaf-mark+ axis-or-leaf-mark)
                     (let ((n-objects (read-word f)))
                       (make-kd-leaf-node
                        :min min
@@ -212,7 +255,7 @@
                      :max max
                      :left (aref nodes (read-word f))
                      :right (aref nodes (read-word f))
-                     :axis (read-byte f)
+                     :axis axis-or-leaf-mark
                      :plane-position (read-single f))))
           (when (zerop node-number)
             (return-from load-kd-tree (aref nodes 0))))))))

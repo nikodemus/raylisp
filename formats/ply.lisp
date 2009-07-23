@@ -144,23 +144,21 @@
        (ascii-get-element ply element properties)))))
 
 (defun ascii-get-element (ply element properties)
+  (declare (optimize speed)
+           (list properties))
   (let* ((stream (ply-stream ply))
-         (position (element-position element))
          (all-properties (element-properties element))
          (pcount (length properties))
          (count (element-count element))
-         (element (make-array count))
+         (element (make-array (the integer count)))
          (allocator (make-component-allocator properties)))
-    (file-position stream (ply-data-offset ply))
-    ;; Scan to the start of element
-    (loop repeat position
-          do (read-line stream))
+    (declare (function allocator))
     (dotimes (i count)
       (let ((words (read-words stream)))
         (let ((comp (funcall allocator pcount)))
           (dolist (p all-properties)
             (assert words)
-            (let ((j (position p properties)))
+            (let ((j (position p properties :test #'eq)))
               (multiple-value-bind (values rest) (parse-property p words)
                 (setf words rest)
                 (when j

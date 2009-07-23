@@ -58,11 +58,9 @@
 ;;; The Stanford meshes need to be scaled up on load: otherwise we get
 ;;; numerical artifacts trying to intersect tiny triangles -- esp. with
 ;;; transformed rays!
-(defparameter *stanford-bunny*
+(defvar *stanford-bunny*
   (load-mesh "models/stanford-bunny.ply" :scale 30))
-
-#+nil
-(defparameter *stanford-dragon*
+(defvar *stanford-dragon*
   (load-mesh "models/stanford-dragon.ply" :scale 30))
 
 (defparameter *utah-teapot*
@@ -87,8 +85,6 @@
                          :look-at (v 2 2.5 0)
                          :focal-length 3.0)))
 
-;;;; Disabled as building the KD-tree for the dragon takes over a minute!
-#+nil
 (defscene test-dragon
   (:objects
    (flet ((marble (color1 color2 &optional (matrix (identity-matrix)))

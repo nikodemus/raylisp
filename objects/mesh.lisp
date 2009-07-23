@@ -66,7 +66,7 @@
     (funcall function i)))
 
 (defmethod make-kd-subset (subset (mesh mesh))
-  (let ((result (make-array (length subset) :element-type 'fixnum))
+  (let ((result (make-array (length subset) :element-type '(unsigned-byte 32)))
         (p -1))
     (dolist (elt subset)
       (setf (aref result (incf p)) elt))
@@ -88,6 +88,14 @@
          (v3 (%mesh-vertex index 2 indices vertices)))
     (vec-max v1 v2 v3)))
 
+(defun build-mesh-kd-tree (mesh)
+  (build-kd-tree mesh
+                 (slot-value mesh 'min)
+                 (slot-value mesh 'max)
+                 :verbose t
+                 :name "mesh bounding tree"
+                 :type "faces"))
+
 (defconstant +mesh-epsilon+ 0.000001)
 
 (defmethod compute-object-properties ((model model) scene transform &key shading-object)
@@ -95,16 +103,12 @@
   (let* ((mesh (model-mesh model))
          (inverse (inverse-matrix transform))
          (kd-tree (or (mesh-kd-tree mesh)
-                      (setf (mesh-kd-tree mesh)
-                            (build-kd-tree mesh (slot-value mesh 'min) (slot-value mesh 'max)
-                                           :verbose t
-                                           :name "mesh bounding tree"
-                                           :type "triangles"))))
+                      (setf (mesh-kd-tree mesh) (build-mesh-kd-tree mesh))))
          (vertices (slot-value mesh 'vertices))
          (indices (sb-ext:array-storage-vector (slot-value mesh 'indices)))
          ;; KLUDGE -- we don't have a better way to pass normals around right now.
          (normal black))
-    (declare (type (simple-array fixnum (*)) indices)
+    (declare (type (simple-array (unsigned-byte 32) (*)) indices)
              (type (simple-array vec (*)) vertices))
     (declare (optimize speed))
     (list
@@ -114,7 +118,7 @@
        (lambda (ray)
          (with-transformed-ray (local ray inverse)
            (flet ((mesh-intersect (triangles start end)
-                    (declare (type (simple-array fixnum (*)) triangles)
+                    (declare (type (simple-array (unsigned-byte 32) (*)) triangles)
                              (type (or null single-float) start end))
                     (let* ((ext (ray-extent local))
                            (end (if end (min (+ end epsilon) ext) ext))
@@ -184,7 +188,7 @@
   (let* ((transform (parse-transform-arguments args))
          (n-triangles (* 2 (- x-samples 1) (- z-samples 1)))
          (n-vertices (* x-samples z-samples))
-         (indices (make-array (list n-triangles 3) :element-type 'fixnum))
+         (indices (make-array (list n-triangles 3) :element-type '(unsigned-byte 32)))
          (vertices (make-array n-vertices))
          (sx (/ (- (float x-samples) 1.0) (float width)))
          (sz (/ (- (float z-samples) 1.0) (float depth)))
@@ -242,12 +246,21 @@
                           (or format (error "Filetype not apparent, please specify :FORMAT")))))
     (multiple-value-bind (vertices faces)
         (funcall (find-mesh-loader mesh-format) pathname)
-      (build-mesh vertices faces (parse-transform-arguments initargs)))))
+      (let ((mesh (build-mesh vertices faces (parse-transform-arguments initargs)))
+            (kd-file (make-pathname :type "kd" :defaults pathname)))
+        (cond ((probe-file kd-file)
+               (setf (mesh-kd-tree mesh)
+                     (load-kd-tree kd-file)))
+              (t
+               (let ((tree (build-mesh-kd-tree mesh)))
+                 (setf (mesh-kd-tree mesh) tree)
+                 (save-kd-tree tree kd-file))))
+        mesh))))
 
 (defun build-mesh (vertices faces matrix)
   (declare (simple-vector vertices faces))
   (let ((map (make-hash-table :test #'equalp))
-        (indices (make-array (list (length faces) 3) :element-type 'fixnum))
+        (indices (make-array (list (length faces) 3) :element-type '(unsigned-byte 32)))
         (p 0)
         (max (vec float-negative-infinity float-negative-infinity float-negative-infinity))
         (min (vec float-positive-infinity float-positive-infinity float-positive-infinity)))
