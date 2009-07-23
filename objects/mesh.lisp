@@ -384,3 +384,7 @@
                     (build-mesh-kd-tree mesh)
                     (read-kd-tree f)))
           mesh)))))
+
+(defun convert-mesh (source target &rest keys &key translate scale rotate matrix matrix-list)
+  (declare (ignore translate scale rotate matrix matrix-list))
+  (save-mesh (apply #'load-mesh source keys) target))

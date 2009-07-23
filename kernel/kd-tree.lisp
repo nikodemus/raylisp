@@ -700,14 +700,8 @@
            (c.p->l (split-cost pl pr (+ nl np) nr))
            (c.p->r (split-cost pl pr nl (+ nr np))))
       (if (and (< c.p->l c.p->r) (< pl 1.0))
-          (progn
-            (when (and (or (= 0 nl) (plusp np)) (= 1.0 pl))
-              (break "oops1 ~S, ~S" c.p->l c.p->r))
-            (values c.p->l :left))
-          (progn
-            (when (and (or (= 0 nr) (plusp np)) (= 1.0 pr))
-              (break "oops2 ~S, ~S" c.p->l c.p->r))
-            (values c.p->r :right))))))
+          (values c.p->l :left)
+          (values c.p->r :right)))))
 
 (defun split-cost (pl pr nl nr)
   (if (or (and (= 1.0 pl) (= 0 nr))

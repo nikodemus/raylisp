@@ -55,9 +55,26 @@
   (:camera
    *view*))
 
-(defparameter *stanford-bunny* (load-mesh "models/stanford-bunny.mesh"))
-(defparameter *stanford-dragon* (load-mesh "models/stanford-dragon.mesh"))
-(defparameter *utah-teapot*  (load-mesh "models/utah-teapot.mesh"))
+;;; One-time conversion to create meshes that load fast
+(flet ((conv (path name)
+         (let ((target (merge-pathnames name "models/")))
+           (unless (probe-file target)
+             (convert-mesh (merge-pathnames path "models/stanford/")
+                           target
+                           ;; The stanford models are quite small, so scale them up!
+                           :scale 50)))))
+  (conv "bunny/reconstruction/bun_zipper.ply" "stanford-bunny.mesh")
+  (conv "happy_recon/happy_vrip.ply" "stanford-buddha.mesh")
+  (conv "drill/reconstruction/drill_shaft_vrip.ply" "stanford-drill-1.mesh")
+  (conv "drill/reconstruction/drill_shaft_zip.ply" "stanford-drill-2.mesh")
+  (conv "dragon_recon/dragon_vrip.ply" "stanford-dragon.mesh"))
+
+(defvar *stanford-bunny* (load-mesh "models/stanford-bunny.mesh"))
+(defvar *stanford-dragon* (load-mesh "models/stanford-dragon.mesh"))
+(defvar *stanford-buddha* (load-mesh "models/stanford-buddha.mesh"))
+
+(defvar *utah-teapot*
+  (load-mesh "models/utah-teapot.obj" :rotate (v (deg -90) 0 0)))
 
 (defscene test-bunny
   (:objects
