@@ -16,7 +16,8 @@
 * TODO Need RAY-MIN in addition to RAY-EXTENT
   Otherwise %FIND-INTERSECTION* can find intersections closer than
   it wants. This is probably also good for shadow rays, as the
-  existing ray can be modified to walk it. Maybe rename RAY-START and RAY-END.
+  existing ray can be modified to walk it. Maybe rename RAY-START and
+  RAY-END. Need to build a test-case, though!
 * TODO Now that light groups are in place there is no need for SCENE to be a defstruct
   Previously SCENE-COMPILED-SCENE needed to be fast. Well, it still
   does, since it is still used in a few places during rendering: those

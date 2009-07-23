@@ -110,4 +110,3 @@
   (let ((inverse (inverse-matrix matrix)))
     (values inverse
 	    (transpose-matrix inverse))))
-

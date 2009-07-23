@@ -51,6 +51,20 @@
      (declare (dynamic-extent ,var))
      ,@forms))
 
+(defmacro with-transformed-ray ((new original matrix) &body body)
+  (with-gensyms (new-origin new-direction)
+    (once-only (original matrix)
+      `(let ((,new-origin (transform-point (ray-origin ,original) ,matrix))
+             (,new-direction (transform-direction (ray-direction ,original) ,matrix)))
+         (declare (dynamic-extent ,new-origin ,new-direction))
+         (with-ray (,new :origin ,new-origin
+                         :direction ,new-direction
+                         :extent (ray-extent ,original)
+                         :weight (ray-weight ,original)
+                         :depth (ray-depth ,original)
+                         :environment (ray-environment ,original))
+           ,@body)))))
+
 ;;; Spawning new rays. The SPAWN-RAYS is quite ugly and should be fixed.
 
 (declaim (inline reflected-ray-direction))
