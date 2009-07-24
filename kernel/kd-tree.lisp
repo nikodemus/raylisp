@@ -1,3 +1,21 @@
+;;;; by Nikodemus Siivola <nikodemus@random-state.net>, 2009.
+;;;;
+;;;; Permission is hereby granted, free of charge, to any person
+;;;; obtaining a copy of this software and associated documentation files
+;;;; (the "Software"), to deal in the Software without restriction,
+;;;; including without limitation the rights to use, copy, modify, merge,
+;;;; publish, distribute, sublicense, and/or sell copies of the Software,
+;;;; and to permit persons to whom the Software is furnished to do so,
+;;;; subject to the following conditions:
+;;;;
+;;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+;;;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+;;;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+;;;; IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+;;;; CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+;;;; TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+;;;; SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 (in-package :raylisp)
 
 (deftype axis ()
@@ -471,29 +489,35 @@
 (defparameter *kd-gc-threshold* (* 1024 1024 256))
 
 (defun build-kd-tree (set min max &key verbose (name "KD-tree") (type "objects"))
-  (let ((size (kd-set-size set))
-        (tree nil)
-        (gc-threshold (sb-ext:bytes-consed-between-gcs)))
+  (let* ((size (kd-set-size set))
+         ;; The INFO vector is used by SPLIT-EVENTS to record object information.
+         ;; The INFO-TAG is a semi-unique 29-bit ID for the build-round.
+         (info (make-array size :element-type '(unsigned-byte 32)))
+         (info-tag 0)
+         (tree nil)
+         (gc-threshold (sb-ext:bytes-consed-between-gcs)))
     (flet ((build-it ()
              (labels ((rec (n events min max)
-                        (multiple-value-bind (e k side cost) (find-plane n events min max)
-                          (if (> cost (* *intersection-cost* n))
-                              (make-kd-leaf-node :min min :max max
-                                                 :objects (when (plusp (length events))
-                                                            (events->subset events set)))
-                              (multiple-value-bind (left-events right-events nl nr)
-                                  (split-events size events e k side)
-                                #+nil
-                                (break "split ~S:~S, ~S/~S" k e nl nr)
-                                (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
-                                  (values (make-kd-interior-node
-                                           :plane-position e
-                                           :axis k
-                                           :min min
-                                           :max max
-                                           :left (rec nl left-events lmin lmax)
-                                           :right (rec nr right-events rmin rmax)))))))))
-               (setf tree (rec size (build-events size set) min max)))))
+                        (macrolet ((inc/29 (x)
+                                     `(setf ,x (ldb (byte 29 0) (1+ ,x)))))
+                          (multiple-value-bind (e k side cost) (find-plane n events min max)
+                            (if (> cost (* *intersection-cost* n))
+                                (make-kd-leaf-node :min min :max max
+                                                   :objects (when (plusp (length events))
+                                                              (events->subset events set)))
+                                (multiple-value-bind (left-events right-events nl nr)
+                                    (split-events events e k side info (inc/29 info-tag))
+                                  #+nil
+                                  (break "split ~S:~S, ~S/~S" k e nl nr)
+                                  (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
+                                    (values (make-kd-interior-node
+                                             :plane-position e
+                                             :axis k
+                                             :min min
+                                             :max max
+                                             :left (rec nl left-events lmin lmax)
+                                             :right (rec nr right-events rmin rmax))))))))))
+             (setf tree (rec size (build-events size set) min max)))))
       (unwind-protect
            (progn
              ;; Building large KD trees conses much more than we'd really like,
@@ -514,7 +538,8 @@
                               (user-run-time-seconds timings)
                               (system-run-time-seconds timings)
                               (gc-run-time-seconds timings)
-                              (gc-mb-consed timings)))
+                              (gc-mb-consed timings))
+                      (finish-output t))
                     #'build-it))
                   (t
                    (build-it))))
@@ -523,7 +548,6 @@
 (defun build-events (size set)
   ;; 3 dimensions, max 2 events per object
   (let ((events (make-array (* 6 size)))
-        (id 0)
         (p 0))
     (declare (fixnum p))
     (map-kd-set (lambda (id)
@@ -544,28 +568,51 @@
                                (make .e!))
                               (t
                                (make .e+)
-                               (make .e-))))))
-                  (incf id))
+                               (make .e-)))))))
                 set)
     (sort (sb-kernel:%shrink-vector events p) #'event<)))
 
-(defconstant +left-only+  #b001)
-(defconstant +right-only+ #b010)
-(defconstant +counted+    #b100)
+(defconstant +kd-left-only+  #b001)
+(defconstant +kd-right-only+ #b010)
+(defconstant +kd-counted+    #b100)
+(defconstant +kd-class-mask+ #b111)
 
-(defun split-events (size events e k side)
+;;; We use the 29 high bits of each element of the INFO-vector to store
+;;; the seminunique TAG. If TAG is zero, it may have rolled over and we
+;;; need to zap the whole INFO -- otherwise we can use lazy updates.
+;;;
+;;; The 3 low bits of each element are the classification: left/right/both,
+;;; and counted/uncounted.
+(defun split-events (events e k side info tag)
   (declare (simple-vector events)
-           (fixnum size k)
            (single-float e)
+           (fixnum k)
+           (type (simple-array (unsigned-byte 32) (*)) info)
+           (type (unsigned-byte 29) tag)
            (optimize speed))
-  (let ((info (make-array size :element-type '(unsigned-byte 3)))
+  (when (zerop tag)
+    ;; Tag has rolled over, need to clear the whole info.
+    (fill info 0))
+  (let ((tag3 (ash tag 3))
         (n-events (length events))
+        ;; COMMON tells us if all events seem to be on the same side.
         (common 0))
-    (declare (fixnum common)
-             (sb-int:truly-dynamic-extent info))
+    (declare (fixnum common))
     (flet ((classify (event class)
-             (setf (aref info (event-id event)) class
-                   common (logior common class))))
+             ;; Update COMMON, and store info.
+             (setf common (logior common class)
+                   (aref info (event-id event)) (logior tag3 class))
+             class)
+           (ensure-classification (event)
+             (let* ((id (event-id event))
+                    (event-info (aref info id)))
+               ;; If tag is valid, we're good. Otherwise this is as-of yet
+               ;; unclassified: update INFO, return zero.
+               (cond ((= tag3 (logandc2 event-info +kd-class-mask+))
+                      (logand +kd-class-mask+ event-info))
+                     (t
+                      (setf (aref info id) tag3)
+                      0)))))
       ;; Sweep 1: Classify along K
       (dotimes (i n-events)
         (let ((event (aref events i)))
@@ -573,18 +620,18 @@
             (let ((type (event-type event))
                   (ee (event-e event)))
               (cond ((= .e- type)
-                     (when (<= ee e) (classify event +left-only+)))
+                     (when (<= ee e) (classify event +kd-left-only+)))
                     ((= .e+ type)
-                     (when (>= ee e) (classify event +right-only+)))
+                     (when (>= ee e) (classify event +kd-right-only+)))
                     ;; The rest are for .e! types.
                     ((or (< ee e) (and (= ee e) (eq :left side)))
-                     (classify event +left-only+))
+                     (classify event +kd-left-only+))
                     ((or (> ee e) (and (= ee e) (eq :right side)))
-                     (classify event +right-only+)))))))
+                     (classify event +kd-right-only+)))))))
       ;; Sweep 2: split into left and right -- including other Ks
-      (let ((left-list (when (logtest common +left-only+)
+      (let ((left-list (when (logtest common +kd-left-only+)
                          (make-array n-events)))
-            (right-list (when (logtest common +right-only+)
+            (right-list (when (logtest common +kd-right-only+)
                           (make-array n-events)))
             (left 0) (right 0) (pl 0) (pr 0))
         (declare (fixnum left right pl pr))
@@ -592,7 +639,7 @@
                      `(setf ,x (logand most-positive-fixnum (+ ,x 1)))))
           (dotimes (i n-events)
             (let* ((event (aref events i))
-                   (mask (aref info (event-id event))))
+                   (class (ensure-classification event)))
               (macrolet ((handle-event (&key left-side right-side)
                            `(progn
                               ,@(when left-side
@@ -603,13 +650,13 @@
                                       `((unless right-list
                                           (setf right-list (make-array n-events)))
                                         (setf (aref right-list (1- (inc pr))) event)))
-                              (unless (logtest mask +counted+)
+                              (unless (logtest class +kd-counted+)
                                 ,@(when left-side `((inc left)))
                                 ,@(when right-side `((inc right)))
-                                (classify event (logior +counted+ mask))))))
-                (cond ((logtest mask +left-only+)
+                                (classify event (logior +kd-counted+ class))))))
+                (cond ((logtest class +kd-left-only+)
                        (handle-event :left-side t))
-                      ((logtest mask +right-only+)
+                      ((logtest class +kd-right-only+)
                        (handle-event :right-side t))
                       (t
                        (handle-event :left-side t :right-side t)))))))

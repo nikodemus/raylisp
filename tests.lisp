@@ -59,7 +59,7 @@
 (flet ((conv (path name)
          (let ((target (merge-pathnames name "models/")))
            (unless (probe-file target)
-             (convert-mesh (merge-pathnames path "models/stanford/")
+             (convert-mesh (merge-pathnames path "models/originals/")
                            target
                            ;; The stanford models are quite small, so scale them up!
                            :scale 50)))))
