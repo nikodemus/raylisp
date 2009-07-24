@@ -83,16 +83,36 @@
    (make-instance 'model
                   :mesh *stanford-bunny*
                   :shader (make-instance 'phong-shader :color white)
-                  :rotate (v 0.0 -3.0 0.0)))
+                  :rotate (v 0.0 -3.0 0.0)
+                  :translate (v 0.0 -2.0 0.0)))
   (:lights
    (make-instance 'spotlight
-                  :location (v -10 10 -10)
+                  :location (v -20 20 -20)
                   :point-at +origin+))
   (:camera
    (make-instance 'pinhole-camera
-                         :location (v 0 10 -15)
-                         :look-at (v 2 2.5 0)
+                         :location (v 0 20 -25)
+                         :look-at (v 2 3 0)
                          :focal-length 4.0)))
+
+(defscene test-buddha
+  (:objects
+   (make-instance 'plane
+                  :shader (make-instance 'texture-shader :pigment white))
+   (make-instance 'model
+                  :mesh *stanford-buddha*
+                  :shader (make-instance 'phong-shader :color white)
+                  :rotate (v 0 (deg 180) 0)
+                  :translate (v -2.0 -3.0 -4)))
+  (:lights
+   (make-instance 'spotlight
+                  :location (v -20 20 -20)
+                  :point-at (v 0 3 0)))
+  (:camera
+   (make-instance 'pinhole-camera
+                         :location (v 0 7 -15)
+                         :look-at (v 2 3.9 0)
+                         :focal-length 2.0)))
 
 (defscene test-dragon
   (:objects
@@ -121,6 +141,7 @@
                                                   :reflection refl
                                                   :pigment c
                                                   :fresnel f)
+                           :scale 0.6
                            :matrix-list (list r
                                               (translate* -2.0 -1.8 0.0)
                                               m
@@ -150,7 +171,7 @@
   (:camera
    (make-instance 'pinhole-camera
                   :location (v -15 10 -25)
-                  :look-at (v 0.5 1 0)
+                  :look-at (v -0.5 1 0)
                   :focal-length 6.0)))
 
 ;;; Generating a mesh patch from an arbitrary function.

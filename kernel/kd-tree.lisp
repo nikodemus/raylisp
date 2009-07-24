@@ -74,6 +74,28 @@
                  1)))
     (rec kd-node)))
 
+(defun kd-leaf-info (kd-node)
+  (let ((empty 0)
+        (non-empty nil))
+    (labels ((rec (node)
+               (cond ((kd-leaf-p node)
+                      (let ((objects (kd-objects node)))
+                        (if objects
+                            (push (length objects) non-empty)
+                            (incf empty))))
+                     (t
+                      (rec (kd-left node))
+                      (rec (kd-right node))))))
+      (rec kd-node)
+      (let* ((n (length non-empty))
+             (total (+ empty n)))
+        (list :total total
+              :empty (float (/ empty total))
+              :mean (float (mean non-empty))
+              :median (float (median non-empty))
+              :max (reduce #'max non-empty)
+              :min (reduce #'min non-empty))))))
+
 (declaim (inline kd-objects))
 
 (defun kd-objects (kd-node)
@@ -90,7 +112,7 @@
                     (setf kd-stack-node) (setf kd-stack-distance)
                     (setf kd-stack-point) (setf kd-stack-prev)))
 
-(defun make-kd-stack (kd-node)
+(defun make-kd-stack ()
   (make-array (* +kd-stack-entry-size+ 50)))
 
 (defun kd-stack-node (stack pointer)
@@ -297,7 +319,7 @@
         (let ((objects (kd-objects root)))
           (return-from kd-traverse
             (when objects (funcall function objects nil nil)))))
-      (let ((stack (make-kd-stack root))
+      (let ((stack (make-kd-stack))
             (current-node root)
             (entry-pointer 0)
             (ray-origin (ray-origin ray))
@@ -529,7 +551,7 @@
             (event-e vector i)
             (event-data-id data))))
 
-(defun print-events (vector &optional (stream *standard-output*) &key (start 0) end)
+(defun print-events (vector &key (start 0) end (stream *standard-output*))
   (unless end
     (setf end (event-count vector)))
   (flet ((print-it (s)
@@ -551,11 +573,35 @@
              ;; Pivot on the middle.
              (let ((p left)
                    (pivot (truncate (+ left right) 2)))
-               (swap-events vector pivot right)
-               (loop for i from left below right
-                     when (vector-event< vector i right)
-                     do (swap-events vector i p)
-                        (setf p (logand most-positive-fixnum (1+ p))))
+               ;; This bit of ugliness lifts the references to pivot values
+               ;; from the loop, and open codes EVENT< and SWAP-EVENTS to
+               ;; minimize memory traffic. Eugh.
+               ;;
+               ;;   when (vector-event< vector i right)
+               ;;   do (swap-events vector i p)
+               ;;      (setf p (logand most-positive-fixnum (1+ p))))
+               ;;
+               ;; is what is going on in the loop.
+               (let ((pivot-e (event-e vector pivot))
+                     (pivot-type (event-data-type (event-data vector pivot))))
+                 ;; Put pivot out of the way.
+                 (swap-events vector pivot right)
+                 (loop for i from left below right
+                       do (let* ((j (* 2 i))
+                                 (i-data (aref vector j))
+                                 (i-ep (aref vector (1+ j)))
+                                 (i-e (unpack-single i-ep)))
+                           (when (or (< i-e pivot-e)
+                                     (and (= i-e pivot-e)
+                                          (< (event-data-type i-data) pivot-type)))
+                             (let* ((k (* 2 p))
+                                    (p-data (aref vector k))
+                                    (p-ep (aref vector (1+ k))))
+                               (setf (aref vector k) i-data
+                                     (aref vector (1+ k)) i-ep)
+                               (setf (aref vector j) p-data
+                                     (aref vector (1+ j)) p-ep))
+                             (setf p (logand most-positive-fixnum (1+ p)))))))
                ;; Replace pivot
                (swap-events vector p right)
                p))
@@ -574,6 +620,7 @@
       (pushnew (event-data-id (event-data events i)) ids))
     (make-kd-subset ids set)))
 
+(declaim (single-float *kd-traversal-cost* *intersection-cost*))
 (defparameter *kd-traversal-cost* 0.2)
 (defparameter *intersection-cost* 0.05)
 (defparameter *kd-gc-threshold* (* 1024 1024 256))
@@ -817,38 +864,37 @@
                  (setf (aref np k) 0))))
     (values best-e best-k best-side best-cost)))
 
-(defun surface-area (min max)
-  (declare (type vec min max))
-  (let ((x (- (aref max 0) (aref min 0)))
-        (y (- (aref max 1) (aref min 1)))
-        (z (- (aref max 2) (aref min 2))))
-    (+ (* x y) (* x z) (* y z))))
-
-(defun split-voxel (min max e k)
-  (declare (vec min max) (single-float e))
-  (let ((l-max (copy-vec max))
-        (r-min (copy-vec min)))
-    (setf (aref l-max k) e
-          (aref r-min k) e)
-    (values min l-max r-min max)))
-
 (defun surface-area-heuristic (min max e k nl nr np)
-  (multiple-value-bind (l-min l-max r-min r-max) (split-voxel min max e k)
-    (let* ((area (surface-area min max))
-           (pl (/ (surface-area l-min l-max) area))
-           (pr (/ (surface-area r-min r-max) area))
-           (c.p->l (split-cost pl pr (+ nl np) nr))
-           (c.p->r (split-cost pl pr nl (+ nr np))))
-      (if (and (< c.p->l c.p->r) (< pl 1.0))
-          (values c.p->l :left)
-          (values c.p->r :right)))))
+  (declare (optimize speed)
+           (fixnum nl nr np))
+  (flet  ((surface-area (min max)
+            (declare (type vec min max))
+            (let ((x (- (aref max 0) (aref min 0)))
+                  (y (- (aref max 1) (aref min 1)))
+                  (z (- (aref max 2) (aref min 2))))
+              (+ (* x y) (* x z) (* y z))))
+          (split-cost (pl pr nl nr)
+            (if (or (and (= 1.0 pl) (= 0 nr))
+                    (and (= 1.0 pr) (= 0 nl)))
+                #.sb-ext:single-float-positive-infinity
+                (* (if (or (= 0 nl) (= 0 nr))
+                       0.8
+                       1.0)
+                   (+ *kd-traversal-cost*
+                      (* *intersection-cost* (+ (* pl nl) (* pr nr))))))))
+    ;; Split the voxel
+    (let ((l-max (copy-vec max))
+          (r-min (copy-vec min)))
+      (declare (dynamic-extent l-max r-min))
+      (setf (aref l-max k) e
+            (aref r-min k) e)
+      ;; The bound are now min, l-max, r-min, max
+      (let* ((area (surface-area min max))
+             (pl (/ (surface-area min l-max) area))
+             (pr (/ (surface-area r-min max) area))
+             (c.p->l (split-cost pl pr (logand most-positive-fixnum (+ nl np)) nr))
+             (c.p->r (split-cost pl pr nl (logand most-positive-fixnum (+ nr np)))))
+        (if (and (< c.p->l c.p->r) (< pl 1.0))
+            (values c.p->l :left)
+            (values c.p->r :right))))))
 
-(defun split-cost (pl pr nl nr)
-  (if (or (and (= 1.0 pl) (= 0 nr))
-          (and (= 1.0 pr) (= 0 nl)))
-      #.sb-ext:single-float-positive-infinity
-      (* (if (or (= 0 nl) (= 0 nr))
-             0.8
-             1.0)
-         (+ *kd-traversal-cost*
-            (* *intersection-cost* (+ (* pl nl) (* pr nr)))))))
