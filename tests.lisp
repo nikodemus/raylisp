@@ -55,6 +55,28 @@
   (:camera
    *view*))
 
+(defscene test-normal
+  (:objects
+   (make-instance 'plane
+                  :shader (make-instance 'texture-shader
+                                         :pigment white))
+   (make-instance 'sphere
+                  :location (v 0.0 1.0 0.0)
+                  :shader (make-instance 'texture-shader
+                                         :pigment red
+                                         :translate (v 1 0 0)
+                                         :normal (make-instance 'bump-normal
+                                                                :height 0.5
+                                                                :scale 0.2))))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -10 10 -20)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :location (v 0 2 -15)
+                  :look-at (v 0 1 0)
+                  :focal-length 7.0)))
+
 ;;; One-time conversion to create meshes that load fast -- or to test KD-tree
 ;;; contruction speed, delete the .mesh files. The models can be found at:
 ;;; http://graphics.stanford.edu/data/3Dscanrep/ -- this assumes that they
@@ -402,21 +424,6 @@
    (make-instance 'panoramic-camera
                   :location (v 5 3 -4)
                   :look-at (v 0 2 0))))
-
-(defscene test-bumps
-  (:objects
-   *floor*
-   (make-instance 'sphere
-                  :location (v 0.0 1.0 0.0)
-                  :shader (make-instance 'bump-shader
-                                         :color red)))
-  (:lights
-   (make-instance 'point-light
-                  :location (v -10 10 -20)))
-  (:camera
-   (make-instance 'pinhole-camera
-                  :location (v 3 5 -5)
-                  :focal-length 2.0)))
 
 (defscene test-cylinder
   (:objects

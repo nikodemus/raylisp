@@ -19,6 +19,9 @@
   `(function (color point vec single-float ray counter-vector)
              (values color &optional)))
 
+(deftype perturbation-function ()
+  `(function (vec vec point) (values vec &optional)))
+
 (deftype background-shader-function ()
   `(function (color ray) (values color &optional)))
 

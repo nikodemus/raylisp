@@ -17,6 +17,7 @@
                          (:file "scene")
                          (:file "shader")
                          (:file "pigment")
+                         (:file "normal")
                          (:file "pattern")
                          (:file "object")
                          (:file "protocol")
@@ -54,10 +55,13 @@
                          (:file "noise")
                          (:file "tile")
                          (:file "wood")))
+   ;; FIXME: Maybe these should be in shaders as well?
+   (:module "normals"
+            :depends-on ("kernel")
+            :components ((:file "bump")))
    (:module "shaders"
             :depends-on ("kernel")
-            :components ((:file "bump")
-                         (:file "composite")
+            :components ((:file "composite")
                          (:file "flat")
                          (:file "phong")
                          (:file "raytrace")

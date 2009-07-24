@@ -59,13 +59,16 @@
    (fresnel
     :initarg :fresnel
     :initform 0.8
-    :reader fresnel-of)))
+    :reader fresnel-of)
+   (normal
+    :initarg :normal
+    :initform nil
+    :reader normal-of)))
 
 (defmethod compute-shader-function ((shader texture-shader) object scene transform)
   (let* (#+nil (inverse (inverse-matrix transform))
          (pigment-fun (compute-pigment-function (pigment-of shader) transform))
-         #+nil
-         (normal-fun (compute-pertubation-function (normal-of shader)))
+         (normal-fun (compute-perturbation-function (normal-of shader) transform))
          (light-group (compute-light-group object scene))
          (d-co (the (single-float 0.0 1.0) (diffuse-of shader)))
          (brilliance (the (single-float 1.0) (brilliance-of shader)))
@@ -75,15 +78,17 @@
          (reflection (reflection-of shader))
          (fresnel (fresnel-of shader))
          (1-fresnel (- 1.0 fresnel)))
-    (declare (function pigment-fun #+nil normal-fun)
+    (declare (type pigment-function pigment-fun #+nil normal-fun)
+             (type perturbation-function normal-fun)
              (single-float d-co specular reflection 1/roughness fresnel 1-fresnel))
     (shader-lambda shade-texture (result point normal n.d ray counters)
       (declare (optimize speed))
       (let* ((point2 point #+nil (transform-point point inverse))
-             (tmp (alloc-vec))
-             (pigment (funcall pigment-fun tmp point2))
-             (normal2 #+nil (funcall normal-fun point2) normal))
-        (declare (dynamic-extent #+nil point2 #+nil normal2 tmp))
+             (tmp-pigment (alloc-vec))
+             (tmp-normal (alloc-vec))
+             (pigment (funcall pigment-fun tmp-pigment point2))
+             (normal2 (funcall normal-fun tmp-normal normal point2)))
+        (declare (dynamic-extent #+nil point2 #+nil normal2 tmp-pigment tmp-normal))
         (%copy-vec result black)
         ;; For all lights...
         (dolist (light (light-group-lights light-group))

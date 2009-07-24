@@ -3,6 +3,9 @@
 #+STARTUP: odd
 #+STARTUP: oddeven
 
+* TODO Apparent discontinueties in noise
+  TEST-NORMAL, remove translation from the normal -- note
+  the sharp line at x=0.0.
 * TODO Backtraces broken from type errors
   1. Test with x86 -- I hope this is a backend bug!
   2. Reduce a test-case and post to sbcl-devel.
@@ -62,14 +65,6 @@
       
 
 *** TODO Integrate pertubated normals into general shader framework
-    As a subprotocol, maybe: shaders inheriting from NORMAL-SHADER
-    could have extra magic applied to them -- or at least the normal
-    frobbing stuff easily available. Alternatively move normals to
-    same level of privilege as transformations, so that everyone
-    gets them for "free".
-
-    Assuming TEXTURE-SHADER is becoming the new default, how do I
-    specify normal pertubation in there?
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference
     images would be golden, along with some sort of timings.
