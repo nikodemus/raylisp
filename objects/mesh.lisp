@@ -225,11 +225,13 @@
                   (aref indices (incf n) 0) upper-right
                   (aref indices n 1) upper-left
                   (aref indices n 2) lower-left)))))
-    (make-instance 'mesh
-                   :vertices vertices
-                   :indices indices
-                   :min min
-                   :max max)))
+    (let ((mesh (make-instance 'mesh
+                               :vertices vertices
+                               :indices indices
+                               :min min
+                               :max max)))
+      (setf (mesh-kd-tree mesh) (build-mesh-kd-tree mesh))
+      mesh)))
 
 ;;;; LOADING MESHES
 

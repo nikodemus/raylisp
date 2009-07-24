@@ -180,15 +180,10 @@
 
 (defun write-single (single stream)
   (declare (single-float single))
-  (write-word (logand #xffffffff (sb-kernel:single-float-bits single))
-              stream))
+  (write-word (pack-single single) stream))
 
 (defun read-single (stream)
-  (let ((word (read-word stream)))
-    (sb-kernel:make-single-float
-     (if (logtest #x80000000 word)
-         (logeqv  #xffffffff word)
-         word))))
+  (unpack-single (read-word stream)))
 
 (defun map-kd-tree (function tree)
   (declare (function function))
@@ -441,47 +436,142 @@
 (defgeneric kd-object-min (object set))
 (defgeneric kd-object-max (object set))
 
-(defstruct (event (:constructor %make-event (data e)))
-  (data (required-argument :id) :type (unsigned-byte 32))
-  (e (required-argument :e) :type single-float))
-
-(declaim (inline make-event))
-(defun make-event (&key type id k e)
-  (declare (type (unsigned-byte 28) id)
-           (type (unsigned-byte 2) type k))
-  (%make-event
-   (logior (ash id 4)
-           (ash type 2)
-           k)
-   e))
-
-(declaim (inline event-type event-id event-k))
-(defun event-k (event)
-  (ldb (byte 2 0) (event-data event)))
-(defun event-type (event)
-  (ldb (byte 2 2) (event-data event)))
-(defun event-id (event)
-  (ldb (byte 28 4) (event-data event)))
-
-
+;;;; SPLIT EVENTS
+;;;;
+;;;; Pack them into a vector of ub32: less memory indirection, less work
+;;;; for the GC (no pointers), less space taken up.
 
 ;;; Start, parellel, and end events.
 (defconstant .e+ 0)
 (defconstant .e! 1)
 (defconstant .e- 2)
 
-(defun event< (a b)
-  (let ((ae (event-e a))
-        (be (event-e b)))
-    (or (< ae be)
-        (and (= ae be)
-             (< (event-type a) (event-type b))))))
+(declaim (inline make-events))
+(defun make-events (n)
+  (make-array (* 2 n) :element-type '(unsigned-byte 32)))
+
+(defun no-events ()
+  (load-time-value (make-array 0 :element-type '(unsigned-byte 32)) t))
+
+(declaim (inline %shrink-events))
+(defun %shrink-events (vector n)
+  (sb-kernel:%shrink-vector vector (* 2 n)))
+
+(declaim (inline event-count))
+(defun event-count (vector)
+  (truncate (length vector) 2))
+
+(declaim (inline save-event))
+(defun save-event (vector n &key type id k e)
+  (let ((p (* 2 n)))
+    (setf (aref vector p) (logior (ash id 4) (ash type 2) k)
+          (aref vector (1+ p)) (pack-single e))
+    n))
+
+(declaim (inline event-data))
+(defun event-data (vector n)
+  (aref vector (* 2 n)))
+
+(declaim (inline event-e event-packed-e))
+(defun event-packed-e (vector n)
+  (aref vector (1+ (* 2 n))))
+(defun event-e (vector n)
+  (unpack-single (event-packed-e vector n)))
+
+(declaim (inline event-data-k event-data-type event-data-id))
+(defun event-data-k (data)
+  (ldb (byte 2 0) data))
+(defun event-data-type (data)
+  (ldb (byte 2 2) data))
+(defun event-data-id (data)
+  (ldb (byte 28 4) data))
+
+(declaim (inline swap-events))
+(defun swap-events (vector i j)
+  (let* ((ni (* 2 i))
+         (nj (* 2 j))
+         (i-data (aref vector ni))
+         (i-e (aref vector (1+ ni)))
+         (j-data (aref vector nj))
+         (j-e (aref vector (1+ nj))))
+    (setf (aref vector ni) j-data
+          (aref vector (1+ ni)) j-e)
+    (setf (aref vector nj) i-data
+          (aref vector (1+ nj)) i-e)
+    vector))
+
+(declaim (inline set-event))
+(defun set-event (vector i data packed-e)
+  (let ((p (* 2 i)))
+    (setf (aref vector p) data
+          (aref vector (1+ p)) packed-e)
+    vector))
+
+(declaim (inline vector-event<))
+(defun vector-event< (vector i j)
+  (let* ((ni (* 2 i))
+         (nj (* 2 j))
+         (ie (unpack-single (aref vector (1+ ni))))
+         (je (unpack-single (aref vector (1+ nj)))))
+    (or (< ie je)
+        (and (= ie je)
+             (< (event-data-type (aref vector ni))
+                (event-data-type (aref vector nj)))))))
+
+(defun print-event (vector i &optional (stream *standard-output*))
+  (let ((data (event-data vector i)))
+    (format stream "~A ~A:~A(~S)"
+            (ecase (event-data-type data)
+              (#..e+ '+)
+              (#..e! '!)
+              (#..e- '-))
+            (event-data-k data)
+            (event-e vector i)
+            (event-data-id data))))
+
+(defun print-events (vector &optional (stream *standard-output*) &key (start 0) end)
+  (unless end
+    (setf end (event-count vector)))
+  (flet ((print-it (s)
+           (loop for i from start below end
+                 do (format s "(~A)  " i)
+                    (print-event vector i s)
+                    (terpri s))))
+    (if stream
+        (print-it stream)
+        (with-output-to-string (s)
+          (print-it s)))))
+
+(defun sort-events (vector)
+  (declare (type (simple-array (unsigned-byte 32) (*)) vector)
+           (optimize speed))
+  (labels ((partition (left right)
+             (declare (fixnum left right)
+                      (optimize (safety 0)))
+             ;; Pivot on the middle.
+             (let ((p left)
+                   (pivot (truncate (+ left right) 2)))
+               (swap-events vector pivot right)
+               (loop for i from left below right
+                     when (vector-event< vector i right)
+                     do (swap-events vector i p)
+                        (setf p (logand most-positive-fixnum (1+ p))))
+               ;; Replace pivot
+               (swap-events vector p right)
+               p))
+           (quicksort (left right)
+             (if (< left right)
+                 (let ((pivot (partition left right)))
+                   (quicksort left (1- pivot))
+                   (quicksort (1+ pivot) right)))))
+    (quicksort 0 (- (event-count vector) 1))
+    vector))
 
 (defun events->subset (events set)
-  (declare (simple-vector events))
+  (declare (type (simple-array (unsigned-byte 32) (*)) events))
   (let (ids)
-    (dotimes (i (length events))
-      (pushnew (event-id (aref events i)) ids))
+    (dotimes (i (event-count events))
+      (pushnew (event-data-id (event-data events i)) ids))
     (make-kd-subset ids set)))
 
 (defparameter *kd-traversal-cost* 0.2)
@@ -547,7 +637,7 @@
 
 (defun build-events (size set)
   ;; 3 dimensions, max 2 events per object
-  (let ((events (make-array (* 6 size)))
+  (let ((events (make-events (* 6 size)))
         (p 0))
     (declare (fixnum p))
     (map-kd-set (lambda (id)
@@ -555,14 +645,13 @@
                         (max (kd-object-max id set)))
                     (dotimes (k 3)
                       (flet ((make (type)
-                               (setf (aref events p)
-                                     (make-event
-                                      :id id
-                                      :type type
-                                      :e (if (= .e- type)
-                                             (aref max k)
-                                             (aref min k))
-                                      :k k))
+                               (save-event events p
+                                           :id id
+                                           :type type
+                                           :e (if (= .e- type)
+                                                  (aref max k)
+                                                  (aref min k))
+                                           :k k)
                                (incf p)))
                         (cond ((= (aref min k) (aref max k))
                                (make .e!))
@@ -570,7 +659,7 @@
                                (make .e+)
                                (make .e-)))))))
                 set)
-    (sort (sb-kernel:%shrink-vector events p) #'event<)))
+    (sort-events (%shrink-events events p))))
 
 (defconstant +kd-left-only+  #b001)
 (defconstant +kd-right-only+ #b010)
@@ -584,7 +673,7 @@
 ;;; The 3 low bits of each element are the classification: left/right/both,
 ;;; and counted/uncounted.
 (defun split-events (events e k side info tag)
-  (declare (simple-vector events)
+  (declare (type (simple-array (unsigned-byte 32) (*)) events)
            (single-float e)
            (fixnum k)
            (type (simple-array (unsigned-byte 32) (*)) info)
@@ -594,17 +683,17 @@
     ;; Tag has rolled over, need to clear the whole info.
     (fill info 0))
   (let ((tag3 (ash tag 3))
-        (n-events (length events))
+        (n-events (event-count events))
         ;; COMMON tells us if all events seem to be on the same side.
         (common 0))
     (declare (fixnum common))
-    (flet ((classify (event class)
+    (flet ((classify (event-data class)
              ;; Update COMMON, and store info.
              (setf common (logior common class)
-                   (aref info (event-id event)) (logior tag3 class))
+                   (aref info (event-data-id event-data)) (logior tag3 class))
              class)
-           (ensure-classification (event)
-             (let* ((id (event-id event))
+           (ensure-classification (event-data)
+             (let* ((id (event-data-id event-data))
                     (event-info (aref info id)))
                ;; If tag is valid, we're good. Otherwise this is as-of yet
                ;; unclassified: update INFO, return zero.
@@ -615,64 +704,67 @@
                       0)))))
       ;; Sweep 1: Classify along K
       (dotimes (i n-events)
-        (let ((event (aref events i)))
-          (when (= k (event-k event))
-            (let ((type (event-type event))
-                  (ee (event-e event)))
+        (let ((data (event-data events i)))
+          (when (= k (event-data-k data))
+            (let ((type (event-data-type data))
+                  (ee (event-e events i)))
               (cond ((= .e- type)
-                     (when (<= ee e) (classify event +kd-left-only+)))
+                     (when (<= ee e) (classify data +kd-left-only+)))
                     ((= .e+ type)
-                     (when (>= ee e) (classify event +kd-right-only+)))
+                     (when (>= ee e) (classify data +kd-right-only+)))
                     ;; The rest are for .e! types.
                     ((or (< ee e) (and (= ee e) (eq :left side)))
-                     (classify event +kd-left-only+))
+                     (classify data +kd-left-only+))
                     ((or (> ee e) (and (= ee e) (eq :right side)))
-                     (classify event +kd-right-only+)))))))
+                     (classify data +kd-right-only+)))))))
       ;; Sweep 2: split into left and right -- including other Ks
       (let ((left-list (when (logtest common +kd-left-only+)
-                         (make-array n-events)))
+                         (make-events n-events)))
             (right-list (when (logtest common +kd-right-only+)
-                          (make-array n-events)))
+                          (make-events n-events)))
             (left 0) (right 0) (pl 0) (pr 0))
-        (declare (fixnum left right pl pr))
+        (declare (fixnum left right pl pr)
+                 (type (or null (simple-array (unsigned-byte 32) (*))) left-list right-list))
         (macrolet ((inc (x)
-                     `(setf ,x (logand most-positive-fixnum (+ ,x 1)))))
+                     `(1- (setf ,x (logand most-positive-fixnum (+ ,x 1))))))
           (dotimes (i n-events)
-            (let* ((event (aref events i))
-                   (class (ensure-classification event)))
+            (let* ((data (event-data events i))
+                   (class (ensure-classification data)))
               (macrolet ((handle-event (&key left-side right-side)
                            `(progn
                               ,@(when left-side
                                       `((unless left-list
-                                          (setf left-list (make-array n-events)))
-                                        (setf (aref left-list (1- (inc pl))) event)))
+                                          (setf left-list (make-events n-events)))
+                                        (set-event left-list (inc pl) data (event-packed-e events i))))
                               ,@(when right-side
                                       `((unless right-list
-                                          (setf right-list (make-array n-events)))
-                                        (setf (aref right-list (1- (inc pr))) event)))
+                                          (setf right-list (make-events n-events)))
+                                        (set-event right-list (inc pr) data (event-packed-e events i))))
                               (unless (logtest class +kd-counted+)
                                 ,@(when left-side `((inc left)))
                                 ,@(when right-side `((inc right)))
-                                (classify event (logior +kd-counted+ class))))))
+                                (classify data (logior +kd-counted+ class))))))
                 (cond ((logtest class +kd-left-only+)
                        (handle-event :left-side t))
                       ((logtest class +kd-right-only+)
                        (handle-event :right-side t))
                       (t
                        (handle-event :left-side t :right-side t)))))))
-        (when left-list
-          (sb-kernel:%shrink-vector left-list pl))
-        (when right-list
-          (sb-kernel:%shrink-vector right-list pr))
-        (values (or left-list #()) (or right-list #()) left right)))))
+        (if left-list
+            (%shrink-events left-list pl)
+            (setf left-list (no-events)))
+        (if right-list
+            (%shrink-events right-list pr)
+            (setf right-list (no-events)))
+        (values left-list right-list left right)))))
 
 (defun find-plane (n events min max)
-  (declare (simple-vector events)
+  (declare (type (simple-array (unsigned-byte 32) (*)) events)
            (optimize speed))
   (let* ((nl (make-array 3 :element-type 'fixnum))
          (np (make-array 3 :element-type 'fixnum))
          (nr (make-array 3 :element-type 'fixnum :initial-contents (list n n n)))
-         (n-events (length events))
+         (n-events (event-count events))
          (best-side nil)
          (best-cost #.sb-ext:single-float-positive-infinity)
          (best-e #.sb-ext:single-float-positive-infinity)
@@ -686,18 +778,18 @@
                  `(setf ,x (logand most-positive-fixnum (- ,x ,d)))))
       (loop with i fixnum = 0
             while (< i n-events)
-            do (let* ((event (aref events i))
-                      (e (event-e event))
-                      (k (event-k event))
+            do (let* ((data (event-data events i))
+                      (e (event-packed-e events i))
+                      (k (event-data-k data))
                       (p+ 0)
                       (p- 0)
                       (p! 0))
                  (declare (fixnum p+ p- p!))
                  (flet ((event-ok (i type)
                           (and (< i n-events)
-                               (= k (event-k (setf event (aref events i))))
-                               (= e (event-e event))
-                               (= type (event-type event)))))
+                               (= k (event-data-k (setf data (event-data events i))))
+                               (= type (event-data-type data))
+                               (= e (event-packed-e events i)))))
                    (declare (inline event-ok))
                    (loop while (event-ok i .e-)
                          do (inc p-)
@@ -711,14 +803,15 @@
                  (setf (aref np k) p!)
                  (dec (aref nr k) p!)
                  (dec (aref nr k) p-)
-                 (multiple-value-bind (cost side)
-                     (surface-area-heuristic min max e k (aref nl k) (aref nr k) (aref np k))
-                   (declare (single-float cost))
-                   (when (< cost best-cost)
-                     (setf best-cost cost
-                           best-e e
-                           best-k k
-                           best-side side)))
+                 (let ((e (unpack-single e)))
+                   (multiple-value-bind (cost side)
+                       (surface-area-heuristic min max e k (aref nl k) (aref nr k) (aref np k))
+                     (declare (single-float cost))
+                     (when (< cost best-cost)
+                       (setf best-cost cost
+                             best-e e
+                             best-k k
+                             best-side side))))
                  (inc (aref nl k) p+)
                  (inc (aref nl k) p!)
                  (setf (aref np k) 0))))

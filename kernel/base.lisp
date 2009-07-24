@@ -56,6 +56,18 @@
 (defun positive-infinity-vec ()
   (vec float-positive-infinity float-positive-infinity float-positive-infinity))
 
+;;; Damned inconvenient that SBCL insists on using (SIGNED-BYTE 32) for these!
+(declaim (inline pack-single unpack-single))
+(defun pack-single (single)
+  (declare (single-float single))
+  (logand #xffffffff (sb-kernel:single-float-bits single)))
+(defun unpack-single (word)
+  (declare (type (unsigned-byte 32) word))
+  (sb-kernel:make-single-float
+   (if (logtest #x80000000 word)
+       (logeqv  #xffffffff word)
+       word)))
+
 ;;;# Utilities
 ;;;
 ;;; Note: RAYLISP shadows VECTOR and SIMPLE-VECTOR; we set up things
