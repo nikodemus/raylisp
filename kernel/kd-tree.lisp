@@ -567,51 +567,37 @@
 (defun sort-events (vector)
   (declare (type (simple-array (unsigned-byte 32) (*)) vector)
            (optimize speed))
-  (labels ((partition (left right)
-             (declare (fixnum left right)
-                      (optimize (safety 0)))
-             ;; Pivot on the middle.
-             (let ((p left)
-                   (pivot (truncate (+ left right) 2)))
-               ;; This bit of ugliness lifts the references to pivot values
-               ;; from the loop, and open codes EVENT< and SWAP-EVENTS to
-               ;; minimize memory traffic. Eugh.
-               ;;
-               ;;   when (vector-event< vector i right)
-               ;;   do (swap-events vector i p)
-               ;;      (setf p (logand most-positive-fixnum (1+ p))))
-               ;;
-               ;; is what is going on in the loop.
-               (let ((pivot-e (event-e vector pivot))
-                     (pivot-type (event-data-type (event-data vector pivot))))
-                 ;; Put pivot out of the way.
-                 (swap-events vector pivot right)
-                 (loop for i from left below right
-                       do (let* ((j (* 2 i))
-                                 (i-data (aref vector j))
-                                 (i-ep (aref vector (1+ j)))
-                                 (i-e (unpack-single i-ep)))
-                           (when (or (< i-e pivot-e)
-                                     (and (= i-e pivot-e)
-                                          (< (event-data-type i-data) pivot-type)))
-                             (let* ((k (* 2 p))
-                                    (p-data (aref vector k))
-                                    (p-ep (aref vector (1+ k))))
-                               (setf (aref vector k) i-data
-                                     (aref vector (1+ k)) i-ep)
-                               (setf (aref vector j) p-data
-                                     (aref vector (1+ j)) p-ep))
-                             (setf p (logand most-positive-fixnum (1+ p)))))))
-               ;; Replace pivot
-               (swap-events vector p right)
-               p))
-           (quicksort (left right)
-             (if (< left right)
-                 (let ((pivot (partition left right)))
-                   (quicksort left (1- pivot))
-                   (quicksort (1+ pivot) right)))))
-    (quicksort 0 (- (event-count vector) 1))
-    vector))
+  (let ((scratch (make-array (length vector) :element-type '(unsigned-byte 32))))
+    (labels ((mergesort (left right)
+               (declare (fixnum left right) (optimize (safety 0)))
+               (unless (= right (1+ left))
+                 (let* ((size (- right left))
+                        (middle (logand most-positive-fixnum (+ left (truncate size 2)))))
+                   (declare (fixnum size))
+                   ;; Sort both halves
+                   (mergesort left middle)
+                   (mergesort middle right)
+                   ;; Merge the results
+                   (let ((left-pointer left)
+                         (right-pointer middle))
+                     (declare (fixnum left-pointer right-pointer))
+                     (loop for i from 0 below size
+                           for 2i = (logand most-positive-fixnum (ash i 1))
+                           when (and (< left-pointer middle)
+                                      (or (>= right-pointer right)
+                                          (vector-event< vector left-pointer right-pointer)))
+                           do (let ((p (* 2 left-pointer)))
+                                (setf (aref scratch 2i) (aref vector p)
+                                      (aref scratch (1+ 2i)) (aref vector (1+ p)))
+                                (incf left-pointer 1))
+                           else
+                           do (let ((p (* 2 right-pointer)))
+                                (setf (aref scratch 2i) (aref vector p)
+                                      (aref scratch (1+ 2i)) (aref vector (1+ p)))
+                                (incf right-pointer 1)))
+                     (replace vector scratch :start1 (* 2 left) :start2 0 :end2 (* 2 size)))))))
+      (mergesort 0 (event-count vector))
+      vector)))
 
 (defun events->subset (events set)
   (declare (type (simple-array (unsigned-byte 32) (*)) events))
@@ -646,14 +632,18 @@
                                     (split-events events e k side info (inc/29 info-tag))
                                   #+nil
                                   (break "split ~S:~S, ~S/~S" k e nl nr)
-                                  (multiple-value-bind (lmin lmax rmin rmax) (split-voxel min max e k)
-                                    (values (make-kd-interior-node
-                                             :plane-position e
-                                             :axis k
-                                             :min min
-                                             :max max
-                                             :left (rec nl left-events lmin lmax)
-                                             :right (rec nr right-events rmin rmax))))))))))
+                                  ;; Split the voxel.
+                                  (let ((lmax (copy-vec max))
+                                        (rmin (copy-vec min)))
+                                    (setf (aref lmax k) e
+                                          (aref rmin k) e)
+                                    (make-kd-interior-node
+                                     :plane-position e
+                                     :axis k
+                                     :min min
+                                     :max max
+                                     :left (rec nl left-events min lmax)
+                                     :right (rec nr right-events rmin max)))))))))
              (setf tree (rec size (build-events size set) min max)))))
       (unwind-protect
            (progn
@@ -897,4 +887,3 @@
         (if (and (< c.p->l c.p->r) (< pl 1.0))
             (values c.p->l :left)
             (values c.p->r :right))))))
-

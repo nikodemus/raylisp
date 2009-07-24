@@ -55,7 +55,10 @@
   (:camera
    *view*))
 
-;;; One-time conversion to create meshes that load fast
+;;; One-time conversion to create meshes that load fast -- or to test KD-tree
+;;; contruction speed, delete the .mesh files. The models can be found at:
+;;; http://graphics.stanford.edu/data/3Dscanrep/ -- this assumes that they
+;;; are under models/originals/.
 (flet ((conv (path name)
          (let ((target (merge-pathnames name "models/")))
            (unless (probe-file target)
@@ -64,10 +67,8 @@
                            ;; The stanford models are quite small, so scale them up!
                            :scale 50)))))
   (conv "bunny/reconstruction/bun_zipper.ply" "stanford-bunny.mesh")
-  (conv "happy_recon/happy_vrip.ply" "stanford-buddha.mesh")
-  (conv "drill/reconstruction/drill_shaft_vrip.ply" "stanford-drill-1.mesh")
-  (conv "drill/reconstruction/drill_shaft_zip.ply" "stanford-drill-2.mesh")
-  (conv "dragon_recon/dragon_vrip.ply" "stanford-dragon.mesh"))
+  (conv "dragon_recon/dragon_vrip.ply" "stanford-dragon.mesh")
+  (conv "happy_recon/happy_vrip.ply" "stanford-buddha.mesh"))
 
 (defvar *stanford-bunny* (load-mesh "models/stanford-bunny.mesh"))
 (defvar *stanford-dragon* (load-mesh "models/stanford-dragon.mesh"))
