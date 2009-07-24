@@ -226,3 +226,34 @@ site."
             (error "~@<~S is a function of type ~S, but a ~S must be of type ~S.~:@>"
                    function real-type type-name target-type)))))
   function)
+
+(defmacro define-named-lambda (name result-type typed-lambda-list &key (safe t))
+  (with-gensyms (whole)
+    (let ((lambda-name (make-symbol "NAME")))
+      `(defmacro ,name (&whole ,whole ,lambda-name ,(mapcar #'car typed-lambda-list) &body body)
+         (expand-named-lambda ',result-type ',(mapcar #'second typed-lambda-list)
+                              ,lambda-name
+                              (list ,@(mapcar #'car typed-lambda-list))
+                              body
+                              ,whole
+                              ,safe)))))
+
+(defun expand-named-lambda (result-type arg-types name lambda-vars body whole safe)
+  (multiple-value-bind (forms declarations doc)
+      (parse-body body :documentation t :whole whole)
+    `(sb-int:named-lambda ,name (,@lambda-vars)
+       ,@(when doc (list doc))
+       (declare ,@(mapcar (lambda (type arg) `(type ,type ,arg))
+                          arg-types
+                          lambda-vars)
+                (optimize (sb-c::recognize-self-calls 0)
+                          (sb-c::type-check ,(if safe 1 0))
+                          (sb-c::verify-arg-count ,(if safe 1 0))))
+       (the ,result-type
+         (values
+          (block ,name
+            (locally
+                (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
+              (let ,(mapcar #'list lambda-vars lambda-vars)
+                ,@declarations
+                ,@forms))))))))

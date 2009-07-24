@@ -101,26 +101,9 @@
 (defmethod compute-interpolated-pattern-function :around ((pattern transformable) matrix)
   (call-next-method pattern (matrix* matrix (transform-of pattern))))
 
-(defun expand-pattern-lambda (result-type name point body whole)
-  (multiple-value-bind (forms declarations doc)
-      (parse-body body :documentation t :whole whole)
-    `(sb-int:named-lambda ,name (,point)
-       ,@(when doc (list doc))
-       (declare (type point ,point)
-                (optimize (sb-c::recognize-self-calls 0)
-                          (sb-c::type-check 0)
-                          (sb-c::verify-arg-count 0)))
-       (the ,result-type
-         (values
-          (block ,name
-            (locally
-                (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
-              (let ((,point ,point))
-                ,@declarations
-                ,@forms))))))))
-
-(defmacro interpolated-pattern-lambda (&whole form name (point) &body body)
-  (expand-pattern-lambda '(single-float 0.0 1.0) name point body form))
+(define-named-lambda interpolated-pattern-lambda (single-float 0.0 1.0)
+  ((point vec))
+  :safe nil)
 
 (defun compile-interpolated-pattern (pattern value-function)
   (declare (function value-function))
@@ -221,8 +204,8 @@
 (defmethod compute-index-pattern-function :around ((pattern transformable) matrix)
   (call-next-method pattern (matrix* matrix (transform-of pattern))))
 
-(defmacro indexed-pattern-lambda (&whole form name (point) &body body)
-  (expand-pattern-lambda 'array-index name point body form))
+(define-named-lambda indexed-pattern-lambda array-index ((point vec))
+                     :safe nil)
 
 (defmethod compile-indexed-pattern (pattern value-function)
   (declare (function value-function))

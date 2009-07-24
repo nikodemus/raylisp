@@ -37,25 +37,7 @@
 (defmethod compute-pigment-function :around ((pigment transformable) matrix)
   (call-next-method pigment (matrix* matrix (transform-of pigment))))
 
-(defmacro pigment-lambda (&whole form name lambda-list &body body)
-  (destructuring-bind (color point) lambda-list
-    (multiple-value-bind (forms declarations doc)
-        (parse-body body :documentation t :whole form)
-      `(sb-int:named-lambda ,name ,lambda-list
-         ,@(when doc (list doc))
-         (declare (type color ,color)
-                  (type vec ,point)
-                  (optimize (sb-c::recognize-self-calls 0)
-                            (sb-c::type-check 0)
-                            (sb-c::verify-arg-count 0)))
-         (the color
-           (values
-            (block ,name
-              (locally
-                  (declare (optimize (sb-c::type-check 1) (sb-c::verify-arg-count 1)))
-                (let ,(mapcar (lambda (arg) (list arg arg)) lambda-list)
-                 ,@declarations
-                 ,@forms)))))))))
+(define-named-lambda pigment-lambda color ((result color) (point vec)) :safe nil)
 
 (defvar *constant-pigments*
   (make-hash-table :test #'vec= :hash-function #'sxhash-vec))
