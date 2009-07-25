@@ -10,7 +10,7 @@
 
 (defparameter *default-values*
   (list :adaptive-limit 0.05
-	:ambient 0.05
+	:ambient 0.025
 	:ambient-light white
 	:background black
         :diffuse 0.9

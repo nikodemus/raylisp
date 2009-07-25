@@ -58,7 +58,7 @@
     :reader reflection-of)
    (fresnel
     :initarg :fresnel
-    :initform 0.8
+    :initform 1.0
     :reader fresnel-of)
    (normal
     :initarg :normal
@@ -66,8 +66,7 @@
     :reader normal-of)))
 
 (defmethod compute-shader-function ((shader texture-shader) object scene transform)
-  (let* (#+nil (inverse (inverse-matrix transform))
-         (pigment-fun (compute-pigment-function (pigment-of shader) transform))
+  (let* ((pigment-fun (compute-pigment-function (pigment-of shader) transform))
          (normal-fun (compute-perturbation-function (normal-of shader) transform))
          (ambient-term (vec* (scene-ambient-light scene) (ambient-of shader)))
          (light-group (compute-light-group object scene))
@@ -128,7 +127,7 @@
         ;; Specular reflection
         (when (plusp reflection)
           (unless (weak-ray-p ray scene)
-            (let ((weight (if metallic
+            (let ((weight (if (> 1.0 fresnel)
                               (* reflection (+ fresnel (* 1-fresnel (power (- 1.0 (abs n.d)) 5))))
                               reflection)))
               (with-reflected-ray (ray :point point :normal normal :dot-product n.d

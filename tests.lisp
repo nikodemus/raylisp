@@ -55,26 +55,105 @@
   (:camera
    *view*))
 
+(defscene tmp
+  (:objects
+   (let (all)
+     (dolist (i (iota 200 :start 0.0 :step 0.1))
+       (push (make-instance 'sphere
+                            :radius 0.2
+                            :location (v i (cycloidal i) 0)
+                            :shader (make-instance 'texture-shader
+                                                   :pigment white))
+             all))
+     all))
+  (:lights
+   (make-instance 'point-light
+                  :location (v -100 100 -100)))
+  (:camera
+   (make-instance 'pinhole-camera
+                  :location (v 0 0 -10))))
+
 (defscene test-normal
   (:objects
    (make-instance 'plane
                   :shader (make-instance 'texture-shader
-                                         :pigment white))
+                                         :pigment white
+                                         :ambient 0.3))
    (make-instance 'sphere
-                  :location (v 0.0 1.0 0.0)
+                  :location (v -2 1 -0.5)
                   :shader (make-instance 'texture-shader
-                                         :pigment red
+                                         :pigment yellow
                                          :normal (make-instance 'bump-normal
-                                                                :height 0.5
-                                                                :scale 0.2))))
+                                                                :height 0.3
+                                                                :scale 0.2)))
+   (make-instance 'sphere
+                  :location (v 0.5 1 0)
+                  :shader (make-instance 'texture-shader
+                                         :pigment green
+                                         :normal (make-instance 'wrinkle-normal
+                                                                :octaves 4
+                                                                :height 0.3
+                                                                :scale 0.2)))
+   ;; Bowl
+   (make-instance 'csg
+                  :type 'difference
+                  :scale (v 2.0 1.0 2.0)
+                  :objects
+                  (list (make-instance 'csg
+                                       :type 'intersection
+                                       :objects
+                                       (list
+                                        (make-instance 'sphere
+                                                       :location (v 2 1 0)
+                                                       :shader (make-instance 'texture-shader
+                                                                              :pigment red))
+                                        (make-instance 'plane
+                                                       :location (v 0 1 0)
+                                                       :shader (make-instance 'texture-shader
+                                                                              :pigment red))))
+                        (make-instance 'sphere
+                                       :radius 0.9
+                                       :location (v 2 1 0)
+                                       :shader (make-instance 'texture-shader
+                                                              :pigment red))))
+   ;; Cheap liquid
+   (make-instance 'csg
+                  :type 'intersection
+                  :scale (v 2.0 1.0 2.0)
+                  :objects
+                  (list (make-instance 'sphere
+                                       :radius 0.91
+                                       :location (v 2 1 0))
+                        (make-instance 'plane
+                                       :location (v 0 0.8 0)
+                                       :shader
+                                       (make-instance 'texture-shader
+                                                      :pigment (v 0.5 0.6 1.0)
+                                                      :reflection 0.3
+                                                      :specular 1.0
+                                                      :roughness 0.5
+                                                      :diffuse 0.7
+                                                      :fresnel 0.8
+                                                      :normal
+                                                      (make-instance 'ripple-normal
+                                                                     :height 0.3
+                                                                     :scale 0.2))))))
+  (:background
+   (make-instance 'sky-sphere-shader
+                  :pigment (make-instance 'noise-pattern
+                                          :type :pigment
+                                          :map `((0.0 ,white)
+                                                 (1.0 ,blue)))))
   (:lights
-   (make-instance 'point-light
-                  :location (v -10 10 -20)))
+   (make-instance 'spotlight
+                  :location (v -10 10 -20)
+                  :point-at (v 1 1 0)
+                  :aperture 0.97))
   (:camera
    (make-instance 'pinhole-camera
-                  :location (v 0 2 -15)
-                  :look-at (v 0 1 0)
-                  :focal-length 7.0)))
+                  :location (v -5 5 -15)
+                  :look-at (v 1.25 1 0)
+                  :focal-length 6.0)))
 
 ;;; One-time conversion to create meshes that load fast -- or to test KD-tree
 ;;; contruction speed, delete the .mesh files. The models can be found at:

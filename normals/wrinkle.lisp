@@ -18,22 +18,31 @@
 
 (in-package :raylisp)
 
-(defclass bump-normal (normal)
-  ())
+(defclass wrinkle-normal (normal)
+  ((octaves
+    :initform 10
+    :initarg :octaves
+    :reader octaves-of)))
 
-(defmethod compute-perturbation-function ((normal bump-normal) transform)
+(defmethod compute-perturbation-function ((normal wrinkle-normal) transform)
   (let ((inverse (inverse-matrix transform))
-        (height (normal-height normal)))
-    (declare (single-float height))
+        (height (normal-height normal))
+        (octaves (octaves-of normal)))
+    (declare (single-float height)
+             (fixnum octaves))
     (perturbation-lambda bump-normal (result normal point)
       (declare (optimize speed))
       ;; FIXME: since noise is pretty uniform, full transform seems pointless:
       ;; just extract the scale, maybe?
       (let ((p2 (transform-point point inverse))
-            (noise (alloc-vec)))
-        (declare (dynamic-extent p2 noise))
-        (%noise-vec noise p2)
-        (%vec* noise noise height)
-        (%vec+ result normal noise)
-        (%normalize result result)
-        result))))
+            (tmp (alloc-vec))
+            (turb (alloc-vec))
+            (scale 1.0))
+        (loop repeat octaves
+              do (%vec* tmp p2 scale)
+                 (%abs-noise-vec tmp tmp)
+                 (%vec/ tmp tmp scale)
+                 (%vec+ turb turb tmp)
+                 (setf scale (+ scale scale)))
+        (%adjust-vec result normal turb height)
+        (%normalize result result)))))

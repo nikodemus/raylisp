@@ -21,7 +21,13 @@
 ;;;; SURFACE NORMAL PERTURBATION
 
 (defclass normal (transformable)
-  ())
+  ((height
+    :initarg :height
+    :initform 1.0
+    :reader normal-height)))
+
+(defmethod normal-height :around ((normal normal))
+  (coerce (call-next-method) 'single-float))
 
 (declaim (ftype (function (t matrix) perturbation-function)
                 compute-perturbation-function))

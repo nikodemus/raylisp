@@ -162,6 +162,16 @@
           (aref result 2) (noise3 x y z **perlin-noise-vector-2**))
     result))
 
+(declaim (ftype (function (vec vec) (values vec &optional)) %abs-noise-vec))
+(defun %abs-noise-vec (result vec)
+  (let ((x (aref vec 0))
+        (y (aref vec 1))
+        (z (aref vec 2)))
+    (setf (aref result 0) (abs (noise3 x y z **perlin-noise-vector-0**))
+          (aref result 1) (abs (noise3 x y z **perlin-noise-vector-1**))
+          (aref result 2) (abs (noise3 x y z **perlin-noise-vector-2**)))
+    result))
+
 (declaim (ftype (function (vec) (values vec &optional)) noise-vec)
          (inline noise-vec))
 (defun noise-vec (vec)
