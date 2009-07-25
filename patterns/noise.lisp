@@ -34,15 +34,14 @@
        (interpolated-pattern-lambda scale-noise-pattern (point)
          (let ((p (transform-point point inverse)))
            (declare (dynamic-extent p))
-           (* 0.5 (+ 1.0 (vector-noise p))))))
+           (* 0.5 (+ 1.0 (noise p))))))
       (:abs
        (interpolated-pattern-lambda abs-noise-pattern (point)
          (let ((p (transform-point point inverse)))
            (declare (dynamic-extent p))
-           (abs (vector-noise p)))))
+           (abs (noise p)))))
       (:clamp
        (interpolated-pattern-lambda clamp-noise-pattern (point)
          (let ((p (transform-point point inverse)))
            (declare (dynamic-extent p))
-           (clamp (vector-noise p) 0.0 1.0)))))))
-
+           (clamp (noise p) 0.0 1.0)))))))

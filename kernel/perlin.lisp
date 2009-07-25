@@ -1,35 +1,49 @@
-(in-package :raylisp)
+;;;; by Nikodemus Siivola <nikodemus@random-state.net>, 2009.
+;;;;
+;;;; Permission is hereby granted, free of charge, to any person
+;;;; obtaining a copy of this software and associated documentation files
+;;;; (the "Software"), to deal in the Software without restriction,
+;;;; including without limitation the rights to use, copy, modify, merge,
+;;;; publish, distribute, sublicense, and/or sell copies of the Software,
+;;;; and to permit persons to whom the Software is furnished to do so,
+;;;; subject to the following conditions:
+;;;;
+;;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+;;;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+;;;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+;;;; IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+;;;; CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+;;;; TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+;;;; SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(declaim (ftype (function (vec) (values float &optional)) vector-noise))
-(declaim (ftype (function (vec) (values vec &optional)) vector-dnoise))
-(declaim (ftype (function (vec float float) (values float &optional)) turbulence))
-(declaim (ftype (function (vec sb-int:index float) (values float &optional)) perlin-noise))
+(in-package :raylisp)
 
 (deftype noise-vector ()
   `(simple-array (unsigned-byte 8) (512)))
 
 ;;; Generate a noise vector from a given seed: the noise vector repeats all values
-;;; from 0 to 255 twice in random order.
+;;; from 0 to 255 in random order twice (same order both times.)
 (eval-when (:compile-toplevel :load-toplevel)
   (defun generate-noise-vector (seed)
     (let ((*random-state* (sb-kernel::%make-random-state
                            :state (sb-kernel::init-random-state seed)))
           (vector (make-array 512 :element-type '(unsigned-byte 8))))
-      ;; Fill the vector with numbers 0-255 twice
+      ;; Fill the low half
       (dotimes (i 256)
-        (setf (aref vector i) i
-              (aref vector (+ i 256)) i))
-      vector
+        (setf (aref vector i) i))
       ;; Shuffle it
-      (shuffle vector))))
+      (shuffle vector :start 0 :end 256)
+      ;; Copy to upper half
+      (replace vector vector :start1 256 :start2 0)
+      vector)))
 
 (declaim (type noise-vector
-               +perlin-noise-vector-0+
-               +perlin-noise-vector-1+
-               +perlin-noise-vector-2+))
-;;; This is the same noise vector Mr. Perlin uses -- generating a random one
-;;; to use instead would be rank heresy!
-(define-constant +perlin-noise-vector-0+
+               **perlin-noise-vector-0**
+               **perlin-noise-vector-1**
+               **perlin-noise-vector-2**))
+;;; This is the same noise vector Perlin uses -- generating a random one to
+;;; use instead would be rank heresy. :)
+(sb-ext:defglobal **perlin-noise-vector-0**
     (coerce '(151 160 137 91 90 15 131 13 201 95 96 53 194 233 7 225
               140 36 103 30 69 142 8 99 37 240 21 10 23 190 6 148 247
               120 234 75 0 26 197 62 94 252 219 203 117 35 11 32 57
@@ -64,163 +78,132 @@
               214 31 181 199 106 157 184 84 204 176 115 121 50 45 127
               4 150 254 138 236 205 93 222 114 67 29 24 72 243 141
               128 195 78 66 215 61 156 180)
-            '(simple-array (unsigned-byte 8) (*)))
-  :test #'equalp)
+            '(simple-array (unsigned-byte 8) (*))))
 
-(define-constant +perlin-noise-vector-1+ (generate-noise-vector 1124211)
-  :test #'equalp)
-(define-constant +perlin-noise-vector-2+ (generate-noise-vector 9082143)
-  :test #'equalp)
+(sb-ext:defglobal **perlin-noise-vector-1** (generate-noise-vector 2398239827))
+(sb-ext:defglobal **perlin-noise-vector-2** (generate-noise-vector 1001412303))
 
-(locally (declare (optimize speed))
-  (labels
-     ((lerp (v a b)
-        (declare (type float v a b))
-        (+ a (* v (- b a))))
-      (%%truncate (f)
-        (declare (type float f))
-        (let ((res (sb-kernel:%unary-truncate f)))
-              (values res (- f res))))
-      (%truncate (f)
-        (declare (type float f))
-        (if (< #.(float most-negative-fixnum) f #.(float most-positive-fixnum))
-            (let ((res (sb-ext:truly-the fixnum (sb-kernel:%unary-truncate f))))
-              (values res (- f res)))
-            (%%truncate f)))
-      (%floor (f)
-        (declare (type float f))
-        (multiple-value-bind (tru rem) (%truncate f)
-          (if (and (not (zerop rem)) (minusp f))
-              (values (1- tru) (1+ rem))
-              (values tru rem))))
-      (noise1 (i noise)
-        (declare (type (integer 0 512) i)
-                 (type (simple-array (unsigned-byte 8) (512)) noise)
-                 (optimize (safety 0)))
-        (aref noise i))
-      (noise3 (x y z noise)
-        (declare (float x y z))
-        (let-values
-            ;; Compute unit cube: CX, CY, CZ, and the relative point
-            ;; within that cube: X, Y, and Z.
-            (((cx x) (%floor x))
-             ((cy y) (%floor y))
-             ((cz z) (%floor z)))
-          (declare (type (signed-byte 32) cx cy cz))
-          (let ((cx (logand cx 255))
-                (cy (logand cy 255))
-                (cz (logand cz 255)))
-            (declare (type (unsigned-byte 16) cx cy cz))
-            (flet ((fade (e)
-                     (declare (float e))
-                     ;; Fade curve
-                     (+ (* 6 (power e 5))
-                        (* -15 (power e 4))
-                        (* 10 (power e 3))))
-                   (grad (hash x y z)
-                     (declare (type (unsigned-byte 16) hash)
-                              (type float x y z))
-                     ;; Low 4bits hash code
-                     ;; into 12 grad.dirs
-                     (let* ((h (logand hash 15))
-                            (u (if (or (< h 8) (= h 12) (= h 13))
-                                   x
-                                   y))
-                            (v (if (or (< h 4) (= h 12) (= h 13))
-                                   y
-                                   z)))
-                       (+ (if (= 0 (logand h 1)) u (- u))
-                          (if (= 0 (logand h 2)) v (- v))))))
-              (declare (inline grad))
-              (let ((u (fade x))        ; Fade curves
-                    (v (fade y))        ; for each main axis
-                    (w (fade z)))
-                (declare (type float u v w))
-                (let* ((A  (+ (noise1 cx noise) cy))   ; Hash coordinates
-                       (AA (+ (noise1 A noise) cz))    ; for cube corners
-                       (AB (+ (noise1 (1+ A) noise) cz))
-                       (B  (+ (noise1 (1+ cx) noise) cy))
-                       (BA (+ (noise1 B noise) cz))
-                       (BB (+ (noise1 (1+ B) noise) cz)))
-                  ;; Blend and add results from corners
-                  (lerp
-                   w
-                   (lerp
-                    v
-                    (lerp
-                     u
-                     (grad (noise1 AA noise) x y z)
-                     (grad (noise1 BA noise) (- x 1) y z))
-                    (lerp
-                     u
-                     (grad (noise1 AB noise) x (- y 1) z)
-                     (grad (noise1 BB noise) (- x 1) (- y 1) z)))
-                   (lerp
-                    v
-                    (lerp
-                     u
-                     (grad (noise1 (1+ AA) noise) x y (- z 1))
-                     (grad (noise1 (1+ BA) noise) (- x 1) y (- z 1)))
-                    (lerp
-                     u
-                     (grad (noise1 (1+ AB) noise) x (- y 1) (- z 1))
-                     (grad (noise1 (1+ BB) noise) (- x 1) (- y 1) (- z 1))))))))))))
-   (declare (ftype (function (float float float noise-vector) (values float &optional)) noise3))
-   (declare (inline %floor %truncate))
+(declaim (inline fade-noise))
+(defun fade-noise (f)
+  (declare (single-float f))
+  (* f f f (+ (* f (- (* f 6) 15)) 10)))
 
-   (defun vector-noise (v)
-     "3-dimensional noise. Implementation based on Ken Perlin's paper
-'Improving Noise' (http://mrl.nyu.edu/~perlin/paper445.pdf) and his reference
-implementation (http://mrl.nyu.edu/~perlin/noise). An interesting property --
-not a bug -- of this implementation is that noise *seems* to be 0.0 at each
-point on a unit-cube lattice."
-     (with-arrays (v)
-       (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-0+)))
+(declaim (inline noise-grad))
+(defun noise-grad (hash x y z)
+  (let* ((h (logand hash 15))
+         (u (if (< h 8) x y))
+         (v (if (< h 4) y (if (or (= h 12) (= h 14)) x z))))
+    (+ (if (logtest h 1)
+           (- u)
+           u)
+       (if (logtest h 2)
+           (- v)
+           v))))
 
-   (defun vector-dnoise (v)
-     (with-arrays (v)
-       (vec (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-0+)
-            (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-1+)
-            (noise3 (v 0) (v 1) (v 2) +perlin-noise-vector-2+))))
+;;; 3-dimensional noise. Implementation based on Ken Perlin's paper 'Improving
+;;; Noise' (http://mrl.nyu.edu/~perlin/paper445.pdf) and his reference
+;;; implementation (http://mrl.nyu.edu/~perlin/noise).
+(declaim (inline noise3))
+(defun noise3 (x y z &optional (noise **perlin-noise-vector-0**))
+  (declare (single-float x y z)
+           (type noise-vector noise)
+           (optimize speed))
+  (macrolet ((%floor (f) `(locally (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+                            (floor ,f))))
+    (let-values
+        ;; Compute unit cube: CX, CY, CZ, and the relative point
+        ;; within that cube: X, Y, and Z.
+        (((cx x) (%floor x))
+         ((cy y) (%floor y))
+         ((cz z) (%floor z)))
+      (declare (type (signed-byte 32) cx cy cz))
+      (let ((cx (logand cx 255))
+            (cy (logand cy 255))
+            (cz (logand cz 255)))
+        (declare (type (unsigned-byte 16) cx cy cz))
+        (let ((u (fade-noise x))        ; Fade curves
+              (v (fade-noise y))        ; for each main axis
+              (w (fade-noise z)))
+          (declare (type float u v w))
+          (let* ((A  (+ (aref noise cx) cy)) ; Hash coordinates
+                 (AA (+ (aref noise A) cz))  ; for cube corners
+                 (AB (+ (aref noise (1+ A)) cz))
+                 (B  (+ (aref noise (1+ cx)) cy))
+                 (BA (+ (aref noise B) cz))
+                 (BB (+ (aref noise (1+ B)) cz)))
+            ;; Blend and add results from corners
+            (lerp w
+                  (lerp v
+                        (lerp u
+                              (grad (aref noise AA) x y z)
+                              (grad (aref noise BA) (- x 1) y z))
+                        (lerp u
+                              (grad (aref noise AB) x (- y 1) z)
+                              (grad (aref noise BB) (- x 1) (- y 1) z)))
+                  (lerp v
+                        (lerp u
+                              (grad (aref noise (1+ AA)) x y (- z 1))
+                              (grad (aref noise (1+ BA)) (- x 1) y (- z 1)))
+                        (lerp u
+                              (grad (aref noise (1+ AB)) x (- y 1) (- z 1))
+                              (grad (aref noise (1+ BB)) (- x 1) (- y 1) (- z 1)))))))))))
 
-   (defun turbulence (v lo hi)
-     "Turbulance function. Based on Ken Perlin's SIGGRAPH 92 course notes."
-     (declare (type float lo hi))
-     (with-arrays (v)
-       (let ((x (v 0))
-             (y (v 1))
-             (z (v 2))
-             (r 0.0))
-         (declare (type float x y z r))
-         (labels ((recurse (freq)
-                    (declare (type float freq))
-                    (cond ((< freq hi)
-                           (setf r (+ r (/ (abs (noise3 x y z +perlin-noise-vector-0+)) freq))
-                                 x (+ x x)
-                                 y (+ y y)
-                                 z (+ z z))
-                           (recurse (+ freq freq)))
-                          (t
-                           r))))
-           (recurse lo)))))
+(declaim (ftype (function (vec) (values single-float &optional)) noise))
+(defun noise (vec)
+  (noise3 (aref vec 0) (aref vec 1) (aref vec 2)))
 
-   (defun perlin-noise (v octaves persistence)
-     (declare (type vec v)
-              (type sb-int:index octaves)
-              (type single-float persistence))
-     (with-arrays (v)
-       (let ((total 0.0)
-             (x (v 0))
-             (y (v 1))
-             (z (v 2)))
-         (declare (single-float total))
-         (do ((n octaves (1- n))
-              ;; freq = (expt 2.0 i)
-              (freq 1.0 (+ freq freq))
-              ;; ampl = (expt persistence i)
-              (ampl 1.0 (* ampl persistence)))
-             ((<= n 0) total)
-           (declare (type sb-int:index n))
-           (declare (float freq ampl))
-           (incf total (* ampl (noise3 (* x freq) (* y freq) (* z freq)
-                                       +perlin-noise-vector-0+)))))))))
+(declaim (ftype (function (vec vec) (values vec &optional)) %noise-vec))
+(defun %noise-vec (result vec)
+  (let ((x (aref vec 0))
+        (y (aref vec 1))
+        (z (aref vec 2)))
+    (setf (aref result 0) (noise3 x y z **perlin-noise-vector-0**)
+          (aref result 1) (noise3 x y z **perlin-noise-vector-1**)
+          (aref result 2) (noise3 x y z **perlin-noise-vector-2**))
+    result))
+
+(declaim (ftype (function (vec) (values vec &optional)) noise-vec)
+         (inline noise-vec))
+(defun noise-vec (vec)
+  (%noise-vec (alloc-vec) vec))
+
+(declaim (ftype (function (vec single-float single-float) (values single-float &optional))
+                turbulence))
+(defun turbulence (vec lo hi)
+  "Turbulance function. Based on Ken Perlin's SIGGRAPH 92 course notes."
+  (declare (type float lo hi))
+  (let ((x (aref vec 0))
+        (y (aref vec 1))
+        (z (aref vec 2))
+        (r 0.0))
+    (declare (type float x y z r))
+    (labels ((recurse (freq)
+               (declare (type float freq))
+               (cond ((< freq hi)
+                      (setf r (+ r (/ (abs (noise3 x y z)) freq))
+                            x (+ x x)
+                            y (+ y y)
+                            z (+ z z))
+                      (recurse (+ freq freq)))
+                     (t
+                      r))))
+      (recurse lo))))
+
+(declaim (ftype (function (vec (and fixnum unsigned-byte) single-float)
+                          (values single-float &optional))
+                perlin-noise))
+(defun perlin-noise (vec octaves persistence)
+  (declare (optimize speed))
+  (let ((total 0.0)
+        (x (aref vec 0))
+        (y (aref vec 1))
+        (z (aref vec 2)))
+    (declare (single-float total))
+    (do ((n octaves (1- n))
+         ;; freq = (expt 2.0 i)
+         (freq 1.0 (+ freq freq))
+         ;; ampl = (expt persistence i)
+         (ampl 1.0 (* ampl persistence)))
+        ((<= n 0) total)
+      (declare (single-float freq ampl))
+      (incf total (* ampl (noise3 (* x freq) (* y freq) (* z freq)))))))

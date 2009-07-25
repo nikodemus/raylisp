@@ -64,7 +64,6 @@
                   :location (v 0.0 1.0 0.0)
                   :shader (make-instance 'texture-shader
                                          :pigment red
-                                         :translate (v 1 0 0)
                                          :normal (make-instance 'bump-normal
                                                                 :height 0.5
                                                                 :scale 0.2))))
@@ -202,7 +201,7 @@
   (:objects
    (make-instance 'model
                   :mesh (generate-mesh-field (lambda (x z)
-                                               (+ (vector-noise (vec x 0.0 z))
+                                               (+ (noise3 x 0.0 z)
                                                   (sin z)
                                                   (sin (+ z x))))
                                              20.0 200 20.0 200

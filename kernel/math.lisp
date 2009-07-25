@@ -20,7 +20,7 @@
       (mod f r)))
 
 (declaim (inline ifloor))
-(defun ifloor (f r)
+(defun ifloor (f &optional (r 1.0))
   (declare (float f r)
            (inline mod))
   (if (< #.(float most-negative-fixnum) f #.(float most-positive-fixnum))
