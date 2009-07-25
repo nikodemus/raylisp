@@ -63,10 +63,8 @@
             :depends-on ("kernel")
             :components ((:file "composite")
                          (:file "flat")
-                         (:file "phong")
                          (:file "raytrace")
                          (:file "sky-sphere")
-                         (:file "solid")
                          (:file "texture")))
    (:module "models"
             :components ((:static-file "teapot.obj")))

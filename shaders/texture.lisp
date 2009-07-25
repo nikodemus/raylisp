@@ -31,7 +31,7 @@
 ;;;; 2. Compute normal at point.
 ;;;; 3. Collect light according to surface properties.
 
-(defclass texture-shader (shader diffuse-shader-mixin)
+(defclass texture-shader (shader diffuse-shader-mixin ambient-shader-mixin)
   ((pigment
     :initarg :pigment
     :initform white
@@ -69,6 +69,7 @@
   (let* (#+nil (inverse (inverse-matrix transform))
          (pigment-fun (compute-pigment-function (pigment-of shader) transform))
          (normal-fun (compute-perturbation-function (normal-of shader) transform))
+         (ambient-term (vec* (scene-ambient-light scene) (ambient-of shader)))
          (light-group (compute-light-group object scene))
          (d-co (the (single-float 0.0 1.0) (diffuse-of shader)))
          (brilliance (the (single-float 1.0) (brilliance-of shader)))
@@ -89,7 +90,7 @@
              (pigment (funcall pigment-fun tmp-pigment point2))
              (normal2 (funcall normal-fun tmp-normal normal point2)))
         (declare (dynamic-extent #+nil point2 #+nil normal2 tmp-pigment tmp-normal))
-        (%copy-vec result black)
+        (%hadamard-product result pigment ambient-term)
         ;; For all lights...
         (dolist (light (light-group-lights light-group))
           (let* ((lv (light-vector light point))

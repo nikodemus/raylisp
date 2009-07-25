@@ -110,7 +110,7 @@
     (setf (compiled-scene-background c-scene)
           (compute-background-shader-function (scene-background scene) scene))
     (let ((c-objs (mapcar (lambda (obj)
-                            (compile-scene-object obj scene (identity-matrix)))
+                            (compile-scene-object obj scene +identity-matrix+))
                           (scene-objects scene))))
       (if *use-kd-tree*
           (multiple-value-bind (kd unbounded) (make-scene-tree c-objs)

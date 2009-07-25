@@ -9,7 +9,7 @@
   ((%matrix)))
 
 (defun parse-transform-arguments (plist)
-  (let ((matrix (identity-matrix))
+  (let ((matrix +identity-matrix+)
         (rotatep nil)
         (translatep nil)
         (scalep nil)

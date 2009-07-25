@@ -258,7 +258,7 @@
         (multiple-value-bind (vertices faces)
             (funcall (find-mesh-loader mesh-format) pathname)
           (let ((mesh (build-mesh vertices faces matrix)))
-            (if (matrix= matrix (identity-matrix))
+            (if (matrix= matrix +identity-matrix+)
                 ;; If we did not transform on load, we can reuse an old
                 ;; KD-tree -- if we have one. If not, build and save one.
                 (let ((kd-file (make-pathname :type "kd" :defaults pathname)))
@@ -345,7 +345,7 @@
 
 (defun load-builtin-mesh (pathname matrix)
   (let ((pathname (merge-pathnames pathname (make-pathname :type "mesh")))
-        (transformp (not (matrix= matrix (identity-matrix)))))
+        (transformp (not (matrix= matrix +identity-matrix+))))
     (with-open-file (f pathname
                        :element-type '(unsigned-byte 8)
                        :if-does-not-exist :error)

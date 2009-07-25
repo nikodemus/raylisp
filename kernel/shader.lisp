@@ -118,8 +118,7 @@
              (type vec point normal)
              (type single-float n.d))
     (flet ((%shade (n)
-             (declare (type vec n)
-                      (dynamic-extent n))
+             (declare (type vec n))
              (values (funcall (object-shader object)
                               result
                               point
@@ -128,5 +127,7 @@
                               ray
                               counters))))
       (if (plusp n.d)
-          (%shade (vec* normal -1.0))
+          (let ((n2 (vec* normal -1.0)))
+            (declare (dynamic-extent n2))
+            (%shade n2))
           (%shade normal)))))

@@ -29,7 +29,6 @@
   (let* ((scene (compile-scene scene))
 	 (camera (compute-camera-function camera))
          (counters (make-counters))
-         (start (get-internal-run-time))
          (result (alloc-vec)))
     (let ((rx (- (/ (* 2 x) width) 1.0))
           (ry (- 1.0 (/ (* 2 y) height)))
@@ -116,7 +115,7 @@
     (%vec* result apparent-color (ray-weight ray))))
 
 (defun %find-intersection (ray all-objects min max counters shadowp)
-  (declare (optimize speed))
+  (declare (optimize speed) (type (or null single-float) max))
   (let ((old (ray-extent ray))
         (hit nil))
     (labels ((recurse (objects x)

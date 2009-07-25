@@ -38,15 +38,12 @@
            ,@body)))
 
 (define-pattern-type :shader (object)
-  ;; SHADER objects are obviously good. PATTERN-FUNCTION for a COLOR returns a
-  ;; function that always returns that color for any number of arguments. A
-  ;; pattern of type :SHADER is also cosher, of course.
   (or (typep object '(or shader color))
       (and (typep object 'pattern) (eq :shader (pattern-type object)))))
 
-(define-pattern-type :color (object)
+(define-pattern-type :pigment (object)
   (or (typep object 'color)
-      (and (typep object 'pattern) (eq :color (pattern-type object)))))
+      (and (typep object 'pattern) (eq :pigment (pattern-type object)))))
 
 ;;;; Check that the contents of the map match the promised type, and also give
 ;;;; the keys a once-over.
@@ -142,7 +139,7 @@
            value mapkeys)))
 
 (defmethod compute-pigment-function ((pattern interpolated-pattern) matrix)
-  (assert (eq :color (pattern-type pattern)))
+  (assert (eq :pigment (pattern-type pattern)))
   (let ((pat (compute-interpolated-pattern-function pattern matrix)))
     (declare (interpolated-pattern-function pat))
     (multiple-value-bind (mapkeys mapvalues)

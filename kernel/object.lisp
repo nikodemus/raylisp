@@ -36,7 +36,7 @@
 (defmethod compute-object-properties :around ((obj scene-object) scene transform
                                               &key shading-object)
   (if (bounding-box-only-p obj)
-      (multiple-value-bind (min max) (compute-object-extents obj (identity-matrix))
+      (multiple-value-bind (min max) (compute-object-extents obj +identity-matrix+)
         (compute-object-properties (make-instance 'box
                                                   :min min
                                                   :max max

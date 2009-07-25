@@ -102,7 +102,7 @@
 
 ;;; 3-dimensional noise. Implementation based on Ken Perlin's paper 'Improving
 ;;; Noise' (http://mrl.nyu.edu/~perlin/paper445.pdf) and his reference
-;;; implementation (http://mrl.nyu.edu/~perlin/noise).
+;;; implementation (http://mrl.nyu.edu/~perlin/noise)
 (declaim (inline noise3))
 (defun noise3 (x y z &optional (noise **perlin-noise-vector-0**))
   (declare (single-float x y z)
@@ -135,18 +135,18 @@
             (lerp w
                   (lerp v
                         (lerp u
-                              (grad (aref noise AA) x y z)
-                              (grad (aref noise BA) (- x 1) y z))
+                              (noise-grad (aref noise AA) x y z)
+                              (noise-grad (aref noise BA) (- x 1) y z))
                         (lerp u
-                              (grad (aref noise AB) x (- y 1) z)
-                              (grad (aref noise BB) (- x 1) (- y 1) z)))
+                              (noise-grad (aref noise AB) x (- y 1) z)
+                              (noise-grad (aref noise BB) (- x 1) (- y 1) z)))
                   (lerp v
                         (lerp u
-                              (grad (aref noise (1+ AA)) x y (- z 1))
-                              (grad (aref noise (1+ BA)) (- x 1) y (- z 1)))
+                              (noise-grad (aref noise (1+ AA)) x y (- z 1))
+                              (noise-grad (aref noise (1+ BA)) (- x 1) y (- z 1)))
                         (lerp u
-                              (grad (aref noise (1+ AB)) x (- y 1) (- z 1))
-                              (grad (aref noise (1+ BB)) (- x 1) (- y 1) (- z 1)))))))))))
+                              (noise-grad (aref noise (1+ AB)) x (- y 1) (- z 1))
+                              (noise-grad (aref noise (1+ BB)) (- x 1) (- y 1) (- z 1)))))))))))
 
 (declaim (ftype (function (vec) (values single-float &optional)) noise))
 (defun noise (vec)
