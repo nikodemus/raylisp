@@ -36,6 +36,6 @@
   (let* ((width  (or width (array-dimension array 1)))
          (height (or height (array-dimension array 0))))
     (with-clx-graphics (medium)
-      (xlib:image-z-pixarray (xlib:get-image mirror :x x :y y
+      (xlib:image-z-pixarray (xlib:get-image mirror :x x :y y :data array
                                              :width width :height height
                                              :format :z-pixmap)))))

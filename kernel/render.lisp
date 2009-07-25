@@ -64,7 +64,7 @@
     (declare (function callback camera)
              (single-float fheight fwidth))
     (when verbose
-      (format verbose "~&Rendering ~S @ ~S x ~S~%" (scene-name scene) width height)
+      (format verbose "~&Rendering ~A @ ~S x ~S~%" (scene-name scene) width height)
       (finish-output verbose))
     (let (timing)
       (sb-ext:call-with-timing

@@ -19,7 +19,7 @@
 (defun raster-width (raster)
   (array-dimension raster 1))
 
-(defun vector-rgba (vector)
+(defun vec-rgba (vector)
   (declare (type raylisp::vec vector) (optimize speed))
   (flet ((dim (i)
            (floor (* 255 (raylisp::clamp (aref vector i) 0.0 1.0)))))
@@ -28,12 +28,16 @@
           (b (dim 2)))
       (logior (ash r 16) (ash g 8) b))))
 
+(defun rgba-vec (rgba)
+  (v (/ (ldb (byte 8 16) rgba) 255.0)
+     (/ (ldb (byte 8 8) rgba) 255.0)
+     (/ (ldb (byte 8 0) rgba) 255.0)))
+
 (defparameter *canvas-height* 400)
 (defparameter *canvas-width* 600)
 
 (define-application-frame raylisp-frame ()
-  ((image :initform (make-rgba-raster *canvas-height* *canvas-width*)
-          :accessor frame-image))
+  ()
   (:panes
    (canvas :application :display-time nil
            :height *canvas-height* :width *canvas-width*)
@@ -60,31 +64,24 @@
                                 (type fixnum x y)
                                 (optimize speed))
                        ;; FIXME: Gamma...
-                       (setf (aref row-data x) (vector-rgba color))
+                       (setf (aref row-data x) (vec-rgba color))
                        (when (= x end)
                          (medium-draw-pixels* sheet row 0 y)))
                      :normalize-camera t
                      :verbose (find-pane-named *application-frame* 'repl))))
 
-(let ((m (make-array 12))
-      (m2 (make-array '(3 4)))
-      (n 0))
-  (dotimes (x 4)
-    (dotimes (y 3)
-      (setf (aref m (+ x (* y 4)))  (cons y x))
-      (setf (aref m2 y x) (cons y x))))
-  (list m (sb-ext:array-storage-vector m2)))
-
 (defun shoot-ray-into-scene (scene sheet x y)
   (let* ((region (sheet-region sheet))
          (width (bounding-rectangle-width region))
          (height (bounding-rectangle-height region))
-         (old (aref (frame-image (pane-frame sheet)) y x)))
-    (format t "~&Shooting ray into ~S @~Sx~S point ~S,~S~%" (raylisp::scene-name scene) width height x y)
+         (old (canvas-color sheet x y)))
+    (format t "~&Shooting ray into ~A @~Sx~S point ~S,~S~%" (raylisp::scene-name scene) width height x y)
     (let ((color (raylisp::shoot-ray scene (raylisp::scene-default-camera scene)
                                x y width height
                                :normalize-camera t)))
-      (format t "~&Previous color: #x~X, current color: #x~X~%" old (vector-rgba color)))))
+      (format t "~&Previous color: #x~X, current color: #x~X~%"
+              (ldb (byte 24 0) old)
+              (ldb (byte 24 0) (vec-rgba color))))))
 
 (defmethod frame-standard-output ((frame raylisp-frame))
   (find-pane-named frame 'repl))
@@ -158,8 +155,14 @@
     ()
   (loop
     (maphash (lambda (name scene)
+               (declare (ignore name))
                (render-scene scene (find-pane-named *application-frame* 'canvas)))
              raylisp::*scenes*)))
+
+(defun canvas-color (canvas x y)
+  (with-sheet-medium (medium canvas)
+    (aref (medium-get-pixels* medium nil x y :width 1 :height 1)
+          0 0)))
 
 (define-raylisp-frame-command (com-shoot-ray :name t)
     ()
@@ -178,6 +181,19 @@
            (if name
                (format t "Oops: scene ~S seems to have vanished!~%" name)
                (format t "No last scene to shoot a ray into!~%"))))))
+
+(define-raylisp-frame-command (pick-color :name t)
+    ()
+  (let ((canvas (find-pane-named *application-frame* 'canvas)))
+    (block point
+      (format t "~&Click on canvas to select a color, outside to stop.")
+      (tracking-pointer (*standard-output*)
+        (:pointer-button-press (event x y)
+                               (if (eq canvas (event-sheet event))
+                                   (let ((rgba (canvas-color canvas x y)))
+                                     (format t "~&#x~X = ~S" (ldb (byte 24 0) rgba) (rgba-vec rgba)))
+                                   (return-from point nil)))))
+    t))
 
 (define-raylisp-frame-command (com-toggle-kd :name t)
     ()
