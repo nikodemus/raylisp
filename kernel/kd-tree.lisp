@@ -101,304 +101,103 @@
 (defun kd-objects (kd-node)
   (kd-leaf-node-objects kd-node))
 
-(defconstant +kd-stack-node-index+     0)
-(defconstant +kd-stack-distance-index+ 1)
-(defconstant +kd-stack-point-index+    2)
-(defconstant +kd-stack-prev-index+     3)
-(defconstant +kd-stack-entry-size+     4)
+(defconstant +kd-stack-depth+ 50)
 
-(declaim (inline make-kd-stack
-                    kd-stack-node kd-stack-distance kd-stack-point kd-stack-prev
-                    (setf kd-stack-node) (setf kd-stack-distance)
-                    (setf kd-stack-point) (setf kd-stack-prev)))
+(defconstant +kd-pointer-stack-node-offset+ 0)
+(defconstant +kd-pointer-stack-prev-offset+ 1)
+(defconstant +kd-pointer-stack-entry-size+  2)
 
-(defun make-kd-stack ()
-  (make-array (* +kd-stack-entry-size+ 50)))
+(defconstant +kd-float-stack-distance-offset+ 0)
+(defconstant +kd-float-stack-point-offset+    1) ; and 2, 3
+(defconstant +kd-float-stack-entry-size+      4)
 
-(defun kd-stack-node (stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-node-index+)))
+(declaim (inline make-kd-float-stack make-kd-pointer-stack))
+(defun make-kd-float-stack ()
+  ;; 0 for the distance, 1-3 for the point
+  (make-array (* 4 +kd-stack-depth+) :element-type 'single-float))
+(defun make-kd-pointer-stack ()
+  ;; 0 for node index, 1 for prev index, 2 for entry index.
+  (make-array (* 3 +kd-stack-depth+) :element-type 't))
 
-(defun (setf kd-stack-node) (node stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (setf (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-node-index+)) node))
+(declaim (inline push-kd-root-entry))
+(defun push-kd-root-entry (pointer-stack float-stack entry-distance exit-distance
+                           origin direction)
+  ;; Entry information
+  (setf (aref float-stack +kd-float-stack-distance-offset+) entry-distance)
+  (if (>= entry-distance 0.0)
+      (macrolet ((dim (n)
+                   `(setf (aref float-stack (+ , n +kd-float-stack-point-offset+))
+                          (+ (aref origin ,n) (* (aref direction ,n) entry-distance)))))
+        (dim 0)
+        (dim 1)
+        (dim 2))
+      (macrolet ((dim (n)
+                   `(setf (aref float-stack (+ , n +kd-float-stack-point-offset+))
+                          (aref origin ,n))))
+        (dim 0)
+        (dim 1)
+        (dim 2)))
+  ;; Exit information
+  (setf (aref float-stack (+ +kd-float-stack-distance-offset+
+                             +kd-float-stack-entry-size+))
+        exit-distance)
+  (macrolet ((dim (n)
+               `(setf (aref float-stack (+ ,n
+                                           +kd-float-stack-point-offset+
+                                           +kd-float-stack-entry-size+))
+                      (+ (aref origin ,n) (* (aref direction ,n) exit-distance)))))
+    (dim 0)
+    (dim 1)
+    (dim 2))
+  (setf (aref pointer-stack (+ +kd-pointer-stack-node-offset+ +kd-pointer-stack-entry-size+))
+        nil))
 
-(defun kd-stack-distance (stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-distance-index+)))
+(declaim (inline push-kd-traversal))
+(defun push-kd-traversal (pointer-stack float-stack pointer prev node distance origin direction axis split)
+  (let ((base (* pointer +kd-pointer-stack-entry-size+)))
+    (setf (aref pointer-stack (+ +kd-pointer-stack-prev-offset+ base)) prev
+          (aref pointer-stack (+ +kd-pointer-stack-node-offset+ base)) node))
+  (let ((base (* pointer +kd-float-stack-entry-size+)))
+    (setf (aref float-stack (+ +kd-float-stack-distance-offset+ base)) distance)
+    (let ((next-axis (next-axis axis))
+          (prev-axis (prev-axis axis))
+          (point-base (+ +kd-float-stack-point-offset+ base)))
+      (setf (aref float-stack (+ point-base axis)) split)
+      (setf (aref float-stack (+ point-base next-axis))
+            (+ (aref origin next-axis) (* distance (aref direction next-axis))))
+      (setf (aref float-stack (+ point-base prev-axis))
+            (+ (aref origin prev-axis) (* distance (aref direction prev-axis)))))))
 
-(defun (setf kd-stack-distance) (distance stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (setf (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-distance-index+)) distance))
+(declaim (inline kd-stack-projection))
+(defun kd-stack-projection (float-stack pointer axis)
+  (aref float-stack (+ axis
+                       +kd-float-stack-point-offset+
+                       (* pointer +kd-float-stack-entry-size+))))
 
-(defun kd-stack-point (stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-point-index+)))
+(declaim (inline kd-stack-distance))
+(defun kd-stack-distance (float-stack pointer)
+  (let ((base (* pointer +kd-float-stack-entry-size+)))
+    (aref float-stack (+ +kd-float-stack-distance-offset+ base))))
 
-(defun (setf kd-stack-point) (point stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (setf (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-point-index+)) point))
+(declaim (inline kd-stack-node))
+(defun kd-stack-node (pointer-stack pointer)
+  (let ((base (* pointer +kd-pointer-stack-entry-size+)))
+    (aref pointer-stack (+ +kd-pointer-stack-node-offset+ base))))
 
-(defun kd-stack-prev (stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-prev-index+)))
-
-(defun (setf kd-stack-prev) (prev stack pointer)
-  (declare (simple-vector stack) (fixnum pointer))
-  (setf (aref stack (+ (* pointer +kd-stack-entry-size+) +kd-stack-prev-index+)) prev))
+(declaim (inline kd-stack-prev))
+(defun kd-stack-prev (pointer-stack pointer)
+  (let ((base (* pointer +kd-pointer-stack-entry-size+)))
+    (aref pointer-stack (+ +kd-pointer-stack-prev-offset+ base))))
 
 (defun find-intersection-in-kd-tree (ray root counters shadowp)
   (flet ((kd-intersect (objects min max)
            (%find-intersection ray objects min max counters shadowp)))
+    (declare (dynamic-extent #'kd-intersect))
     (kd-traverse #'kd-intersect ray root)))
-
-;;;; SAVING KD-TREES ON DISK
-;;;;
-;;;; Binary format:
-;;;;
-;;;; GENERIC HEADER
-;;;;   #x4dee75ee (magic bytes)
-;;;;   ub32 (format version, currently zero)
-;;;; FORMAT 0 HEADER
-;;;;   ub32 (total number of nodes)
-;;;; NODE START
-;;;;   ub32 (node number, odd = leaf, even = interior)
-;;;;   single,single,single (node min)
-;;;;   single,single,single (node max)
-;;;;   ub8 (axis 0-2 for interior nodes, #xf for child nodes)
-;;;;   IF LEAF
-;;;;     ub32 (number of objects in node)
-;;;;     ub32,ub32,ub32... (specified number of object ids)
-;;;;   ELSE
-;;;;     ub32 (left child id)
-;;;;     ub32 (right child id)
-;;;;     single (plane position)
-;;;; NODE END
-;;;;
-;;;;   child nodes always come before their parents -- the last
-;;;;   node is the root.
-
-(defconstant +kd-tree-magic-bytes+ #x4dee75ee)
-(defconstant +kd-tree-format-version+ #x0)
-(defconstant +kd-tree-leaf-mark+ #xf)
-
-(defun read-word (stream)
-  (macrolet ((one ()
-               `(the (unsigned-byte 8) (read-byte stream))))
-    (logior (one)
-            (ash (one) 8)
-            (ash (one) 16)
-            (ash (one) 24))))
-
-(defun write-word (word stream)
-  (declare (type (unsigned-byte 32) word))
-  (macrolet ((one (byte)
-               `(write-byte ,byte stream)))
-    (one (ldb (byte 8 0) word))
-    (one (ldb (byte 8 8) word))
-    (one (ldb (byte 8 16) word))
-    (one (ldb (byte 8 24) word)))
-  word)
-
-(defun write-single (single stream)
-  (declare (single-float single))
-  (write-word (pack-single single) stream))
-
-(defun read-single (stream)
-  (unpack-single (read-word stream)))
-
-(defun map-kd-tree (function tree)
-  (declare (function function))
-  (labels ((walk (node)
-             (unless (kd-leaf-p node)
-               (walk (kd-left node))
-               (walk (kd-right node)))
-             (funcall function node)))
-    (walk tree)))
-
-(defun load-kd-tree (pathname)
-  (let ((pathname (merge-pathnames pathname (make-pathname :type "kd"))))
-    (with-open-file (f pathname :element-type '(unsigned-byte 8))
-      (read-kd-tree f))))
-
-(defun save-kd-tree (tree pathname)
-  (let ((pathname (merge-pathnames pathname (make-pathname :type "kd"))))
-    (with-open-file (f pathname
-                       :element-type '(unsigned-byte 8)
-                       :direction :output)
-      (write-kd-tree tree f))))
-
-(defun write-kd-tree (tree stream)
-  (let ((nodes (make-hash-table))
-        (last -1))
-    ;; Number the nodes
-    (map-kd-tree (lambda (node)
-                   (setf (gethash node nodes)
-                         (hash-table-count nodes)))
-                 tree)
-    ;; Write header
-    (write-word +kd-tree-magic-bytes+ stream)
-    (write-word +kd-tree-format-version+ stream)
-    (write-word (hash-table-count nodes) stream)
-    (flet ((write-node (node)
-             (write-word (setf last (gethash node nodes)) stream)
-             (let ((min (kd-min node))
-                   (max (kd-max node)))
-               (write-single (aref min 0) stream)
-               (write-single (aref min 1) stream)
-               (write-single (aref min 2) stream)
-               (write-single (aref max 0) stream)
-               (write-single (aref max 1) stream)
-               (write-single (aref max 2) stream)
-               (cond ((kd-leaf-p node)
-                      (write-byte +kd-tree-leaf-mark+ stream)
-                      (let* ((objects (kd-objects node))
-                             (n (length objects)))
-                        (write-word (length objects) stream)
-                        (dotimes (i n)
-                          (write-word (aref objects i) stream))))
-                     (t
-                      (write-byte (kd-axis node) stream)
-                      (write-word (gethash (kd-left node) nodes) stream)
-                      (write-word (gethash (kd-right node) nodes) stream)
-                      (write-single (kd-plane-position node) stream))))))
-      (map-kd-tree #'write-node tree)
-      tree)))
-
-(defun read-kd-tree (stream)
-  (assert (equal '(unsigned-byte 8) (stream-element-type stream)))
-  (unless (= +kd-tree-magic-bytes+ (read-word stream))
-    (error "Not a serialized Raylisp KD-tree: ~S" (pathname stream)))
-  (let ((version (read-word stream)))
-    (unless (= +kd-tree-format-version+ version)
-      (error "Unknown KD-tree format version: ~S" version)))
-  (let* ((n-nodes (read-word stream))
-         (nodes (make-array n-nodes))
-         (root (1- n-nodes)))
-    (loop
-      (let ((node-number (read-word stream))
-            (min (vec (read-single stream) (read-single stream) (read-single stream)))
-            (max (vec (read-single stream) (read-single stream) (read-single stream)))
-            (axis-or-leaf-mark (read-byte stream)))
-        (setf (aref nodes node-number)
-              (if (= +kd-tree-leaf-mark+ axis-or-leaf-mark)
-                  (let ((n-objects (read-word stream)))
-                    (make-kd-leaf-node
-                     :min min
-                     :max max
-                     :objects
-                     (when (plusp n-objects)
-                       (let ((objects (make-array n-objects :element-type '(unsigned-byte 32))))
-                         (dotimes (i n-objects)
-                           (setf (aref objects i) (read-word stream)))
-                         objects))))
-                  (make-kd-interior-node
-                   :min min
-                   :max max
-                   :left (aref nodes (read-word stream))
-                   :right (aref nodes (read-word stream))
-                   :axis axis-or-leaf-mark
-                   :plane-position (read-single stream))))
-        (when (= node-number root)
-          (return-from read-kd-tree (aref nodes root)))))))
 
 ;;;; TRAVERSING A KD-TREE
 
-;;; RayTravAlgRECB from Appendix C.
-(defun kd-traverse (function ray root)
-  (declare (kd-node root)
-           (function function)
-           (ray ray)
-           (optimize speed))
-  (multiple-value-bind (entry-distance exit-distance)
-      (ray/box-intersections ray (kd-min root) (kd-max root))
-    (declare (type (or null float) entry-distance)
-             (float exit-distance))
-    (when entry-distance
-      (unless (kd-interior-node-p root)
-        (let ((objects (kd-objects root)))
-          (return-from kd-traverse
-            (when objects (funcall function objects nil nil)))))
-      (let ((stack (make-kd-stack))
-            (current-node root)
-            (entry-pointer 0)
-            (ray-origin (ray-origin ray))
-            (ray-direction (ray-direction ray)))
-        (declare (dynamic-extent stack))
-        (setf (kd-stack-distance stack entry-pointer) entry-distance
-              (kd-stack-point stack entry-pointer)
-              (if (>= entry-distance 0.0)
-                  (adjust-vec ray-origin ray-direction entry-distance)
-                  ray-origin))
-        (let ((exit-pointer 1)
-              (far-child nil))
-          (declare (fixnum exit-pointer))
-          (setf (kd-stack-distance stack exit-pointer) exit-distance)
-          (setf (kd-stack-point stack exit-pointer)
-                (adjust-vec ray-origin ray-direction exit-distance))
-          (setf (kd-stack-node stack exit-pointer) nil)
-          (loop while current-node
-                do (loop until (kd-leaf-p current-node)
-                         do (tagbody
-                               (let* ((split (kd-plane-position current-node))
-                                      (axis (kd-axis current-node))
-                                      (entry-projection
-                                       (aref (the vec (kd-stack-point stack entry-pointer)) axis))
-                                      (exit-projection
-                                       (aref (the vec (kd-stack-point stack  exit-pointer)) axis)))
-                                 (cond ((<= entry-projection split)
-                                        (cond ((<= exit-projection split)
-                                               (setf current-node (kd-left current-node))
-                                               (go :cont))
-                                              ((= exit-projection split)
-                                               (setf current-node (kd-right current-node))
-                                               (go :cont))
-                                              (t
-                                               (setf far-child (kd-right current-node)
-                                                     current-node (kd-left current-node)))))
-                                       ((< split exit-projection)
-                                        (setf current-node (kd-right current-node))
-                                        (go :cont))
-                                       (t
-                                        (setf far-child (kd-left current-node)
-                                              current-node (kd-right current-node))))
-                                 (let ((distance (/ (- split (aref ray-origin axis)) (aref ray-direction axis)))
-                                       (tmp exit-pointer))
-                                   (incf-fixnum exit-pointer)
-                                   (when (= exit-pointer entry-pointer)
-                                     (incf-fixnum exit-pointer))
-                                   ;; FIXME: seem better to either use explicit recursion, or
-                                   ;; at least split the stack into several: one stack per object
-                                   ;; type, so we don't need to cons up vectors to store there...
-                                   (setf (kd-stack-prev stack exit-pointer) tmp
-                                         (kd-stack-distance stack exit-pointer) distance
-                                         (kd-stack-node stack exit-pointer) far-child
-                                         (kd-stack-point stack exit-pointer)
-                                         (let ((point (make-array 3 :element-type 'float))
-                                               (next-axis (next-axis axis))
-                                               (prev-axis (prev-axis axis)))
-                                           (setf (aref point axis) split)
-                                           (setf (aref point next-axis)
-                                                 (+ (aref ray-origin next-axis)
-                                                    (* distance (aref ray-direction next-axis))))
-                                           (setf (aref point prev-axis)
-                                                 (+ (aref ray-origin prev-axis)
-                                                    (* distance (aref ray-direction prev-axis))))
-                                           point))))
-                             :cont))
-                   (when current-node
-                     (let ((objects (kd-objects current-node)))
-                       (when objects
-                         (multiple-value-bind (result info)
-                             (funcall function objects
-                                      (kd-stack-distance stack entry-pointer)
-                                      (kd-stack-distance stack exit-pointer))
-                           (when result
-                             (return-from kd-traverse (values result info)))))))
-                (setf entry-pointer exit-pointer
-                      current-node (kd-stack-node stack exit-pointer)
-                      exit-pointer (kd-stack-prev stack entry-pointer))))))))
-
+(declaim (inline ray/box-intersections))
 (defun ray/box-intersections (ray bmin bmax)
   (declare (type vec bmin bmax)
            (optimize speed))
@@ -428,6 +227,82 @@
              (if (> t1 t2)
                  (values nil 0.0)
                  (values t1 t2)))))))))
+
+;;; RayTravAlgRECB from Appendix C.
+(defun kd-traverse (function ray root)
+  (declare (kd-node root)
+           (function function)
+           (ray ray)
+           (optimize speed))
+  (multiple-value-bind (entry-distance exit-distance)
+      (ray/box-intersections ray (kd-min root) (kd-max root))
+    (declare (type (or null float) entry-distance)
+             (float exit-distance))
+    (when entry-distance
+      (unless (kd-interior-node-p root)
+        (let ((objects (kd-objects root)))
+          (return-from kd-traverse
+            (when objects (funcall function objects nil nil)))))
+      (let ((float-stack (make-kd-float-stack))
+            (pointer-stack (make-kd-pointer-stack))
+            (current-node root)
+            (entry-pointer 0)
+            (exit-pointer 1)
+            (far-child nil)
+            (ray-origin (ray-origin ray))
+            (ray-direction (ray-direction ray)))
+        (declare (dynamic-extent float-stack pointer-stack)
+                 (fixnum entry-pointer exit-pointer))
+        (push-kd-root-entry pointer-stack float-stack
+                            entry-distance exit-distance ray-origin ray-direction)
+        (loop while current-node
+              do (loop until (kd-leaf-p current-node)
+                       do (tagbody
+                             (let* ((split (kd-plane-position current-node))
+                                    (axis (kd-axis current-node))
+                                    (entry-projection
+                                     (kd-stack-projection float-stack entry-pointer axis))
+                                    (exit-projection
+                                     (kd-stack-projection float-stack exit-pointer axis)))
+                               (cond ((<= entry-projection split)
+                                      (cond ((<= exit-projection split)
+                                             (setf current-node (kd-left current-node))
+                                             (go :cont))
+                                            ((= exit-projection split)
+                                             (setf current-node (kd-right current-node))
+                                             (go :cont))
+                                            (t
+                                             (setf far-child (kd-right current-node)
+                                                   current-node (kd-left current-node)))))
+                                     ((< split exit-projection)
+                                      (setf current-node (kd-right current-node))
+                                      (go :cont))
+                                     (t
+                                      (setf far-child (kd-left current-node)
+                                            current-node (kd-right current-node))))
+                               (let ((distance (/ (- split (aref ray-origin axis))
+                                                  (aref ray-direction axis)))
+                                     (prev-pointer exit-pointer))
+                                 (incf-fixnum exit-pointer)
+                                 (when (= exit-pointer entry-pointer)
+                                   (incf-fixnum exit-pointer))
+                                 (push-kd-traversal pointer-stack float-stack exit-pointer
+                                                    prev-pointer far-child
+                                                    distance ray-origin ray-direction
+                                                    axis split)))
+                           :cont))
+                 (when current-node
+                   (let ((objects (kd-objects current-node)))
+                     (when objects
+                       (multiple-value-bind (result info)
+                           (funcall function objects
+                                    (kd-stack-distance float-stack entry-pointer)
+                                    (kd-stack-distance float-stack exit-pointer))
+                         (when result
+                           (return-from kd-traverse (values result info)))))))
+                 (setf entry-pointer exit-pointer
+                       current-node (kd-stack-node pointer-stack exit-pointer)
+                       exit-pointer (kd-stack-prev pointer-stack entry-pointer)))))))
 
 ;;;; KD TREE BUILDING in O(N log N)
 ;;;;
@@ -887,3 +762,153 @@
         (if (and (< c.p->l c.p->r) (< pl 1.0))
             (values c.p->l :left)
             (values c.p->r :right))))))
+
+;;;; SAVING KD-TREES ON DISK
+;;;;
+;;;; Binary format:
+;;;;
+;;;; GENERIC HEADER
+;;;;   #x4dee75ee (magic bytes)
+;;;;   ub32 (format version, currently zero)
+;;;; FORMAT 0 HEADER
+;;;;   ub32 (total number of nodes)
+;;;; NODE START
+;;;;   ub32 (node number, odd = leaf, even = interior)
+;;;;   single,single,single (node min)
+;;;;   single,single,single (node max)
+;;;;   ub8 (axis 0-2 for interior nodes, #xf for child nodes)
+;;;;   IF LEAF
+;;;;     ub32 (number of objects in node)
+;;;;     ub32,ub32,ub32... (specified number of object ids)
+;;;;   ELSE
+;;;;     ub32 (left child id)
+;;;;     ub32 (right child id)
+;;;;     single (plane position)
+;;;; NODE END
+;;;;
+;;;;   child nodes always come before their parents -- the last
+;;;;   node is the root.
+
+(defconstant +kd-tree-magic-bytes+ #x4dee75ee)
+(defconstant +kd-tree-format-version+ #x0)
+(defconstant +kd-tree-leaf-mark+ #xf)
+
+(defun read-word (stream)
+  (macrolet ((one ()
+               `(the (unsigned-byte 8) (read-byte stream))))
+    (logior (one)
+            (ash (one) 8)
+            (ash (one) 16)
+            (ash (one) 24))))
+
+(defun write-word (word stream)
+  (declare (type (unsigned-byte 32) word))
+  (macrolet ((one (byte)
+               `(write-byte ,byte stream)))
+    (one (ldb (byte 8 0) word))
+    (one (ldb (byte 8 8) word))
+    (one (ldb (byte 8 16) word))
+    (one (ldb (byte 8 24) word)))
+  word)
+
+(defun write-single (single stream)
+  (declare (single-float single))
+  (write-word (pack-single single) stream))
+
+(defun read-single (stream)
+  (unpack-single (read-word stream)))
+
+(defun map-kd-tree (function tree)
+  (declare (function function))
+  (labels ((walk (node)
+             (unless (kd-leaf-p node)
+               (walk (kd-left node))
+               (walk (kd-right node)))
+             (funcall function node)))
+    (walk tree)))
+
+(defun load-kd-tree (pathname)
+  (let ((pathname (merge-pathnames pathname (make-pathname :type "kd"))))
+    (with-open-file (f pathname :element-type '(unsigned-byte 8))
+      (read-kd-tree f))))
+
+(defun save-kd-tree (tree pathname)
+  (let ((pathname (merge-pathnames pathname (make-pathname :type "kd"))))
+    (with-open-file (f pathname
+                       :element-type '(unsigned-byte 8)
+                       :direction :output)
+      (write-kd-tree tree f))))
+
+(defun write-kd-tree (tree stream)
+  (let ((nodes (make-hash-table))
+        (last -1))
+    ;; Number the nodes
+    (map-kd-tree (lambda (node)
+                   (setf (gethash node nodes)
+                         (hash-table-count nodes)))
+                 tree)
+    ;; Write header
+    (write-word +kd-tree-magic-bytes+ stream)
+    (write-word +kd-tree-format-version+ stream)
+    (write-word (hash-table-count nodes) stream)
+    (flet ((write-node (node)
+             (write-word (setf last (gethash node nodes)) stream)
+             (let ((min (kd-min node))
+                   (max (kd-max node)))
+               (write-single (aref min 0) stream)
+               (write-single (aref min 1) stream)
+               (write-single (aref min 2) stream)
+               (write-single (aref max 0) stream)
+               (write-single (aref max 1) stream)
+               (write-single (aref max 2) stream)
+               (cond ((kd-leaf-p node)
+                      (write-byte +kd-tree-leaf-mark+ stream)
+                      (let* ((objects (kd-objects node))
+                             (n (length objects)))
+                        (write-word (length objects) stream)
+                        (dotimes (i n)
+                          (write-word (aref objects i) stream))))
+                     (t
+                      (write-byte (kd-axis node) stream)
+                      (write-word (gethash (kd-left node) nodes) stream)
+                      (write-word (gethash (kd-right node) nodes) stream)
+                      (write-single (kd-plane-position node) stream))))))
+      (map-kd-tree #'write-node tree)
+      tree)))
+
+(defun read-kd-tree (stream)
+  (assert (equal '(unsigned-byte 8) (stream-element-type stream)))
+  (unless (= +kd-tree-magic-bytes+ (read-word stream))
+    (error "Not a serialized Raylisp KD-tree: ~S" (pathname stream)))
+  (let ((version (read-word stream)))
+    (unless (= +kd-tree-format-version+ version)
+      (error "Unknown KD-tree format version: ~S" version)))
+  (let* ((n-nodes (read-word stream))
+         (nodes (make-array n-nodes))
+         (root (1- n-nodes)))
+    (loop
+      (let ((node-number (read-word stream))
+            (min (vec (read-single stream) (read-single stream) (read-single stream)))
+            (max (vec (read-single stream) (read-single stream) (read-single stream)))
+            (axis-or-leaf-mark (read-byte stream)))
+        (setf (aref nodes node-number)
+              (if (= +kd-tree-leaf-mark+ axis-or-leaf-mark)
+                  (let ((n-objects (read-word stream)))
+                    (make-kd-leaf-node
+                     :min min
+                     :max max
+                     :objects
+                     (when (plusp n-objects)
+                       (let ((objects (make-array n-objects :element-type '(unsigned-byte 32))))
+                         (dotimes (i n-objects)
+                           (setf (aref objects i) (read-word stream)))
+                         objects))))
+                  (make-kd-interior-node
+                   :min min
+                   :max max
+                   :left (aref nodes (read-word stream))
+                   :right (aref nodes (read-word stream))
+                   :axis axis-or-leaf-mark
+                   :plane-position (read-single stream))))
+        (when (= node-number root)
+          (return-from read-kd-tree (aref nodes root)))))))
