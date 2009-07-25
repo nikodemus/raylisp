@@ -63,7 +63,15 @@
    (normal
     :initarg :normal
     :initform nil
-    :reader normal-of)))
+    :reader normal-of)
+   (transmit
+    :initarg :transmit
+    :initform 0.0
+    :reader transmit-of)
+   (ior
+    :initarg :ior
+    :initform 1.0
+    :reader ior-of)))
 
 (defmethod compute-shader-function ((shader texture-shader) object scene transform)
   (let* ((pigment-fun (compute-pigment-function (pigment-of shader) transform))
@@ -72,6 +80,8 @@
          (light-group (compute-light-group object scene))
          (d-co (the (single-float 0.0 1.0) (diffuse-of shader)))
          (brilliance (the (single-float 1.0) (brilliance-of shader)))
+         (transmit (the (single-float 0.0 1.0) (transmit-of shader)))
+         (ior (the (single-float 0.0) (ior-of shader)))
          (specular (specular-of shader))
          (1/roughness (/ 1.0 (roughness-of shader)))
          (metallic (metallic-p shader))
@@ -124,20 +134,35 @@
                                (* specular (expt h.n 1/roughness))
                                hilite)
                         (%vec+ result result hilite)))))))))
-        ;; Specular reflection
-        (when (plusp reflection)
-          (unless (weak-ray-p ray scene)
-            (let ((weight (if (> 1.0 fresnel)
-                              (* reflection (+ fresnel (* 1-fresnel (power (- 1.0 (abs n.d)) 5))))
-                              reflection)))
-              (with-reflected-ray (ray :point point :normal normal :dot-product n.d
-                                       :incident-ray ray :specular weight :counters counters)
-                (let ((reflected-color (alloc-vec)))
-                  (declare (dynamic-extent reflected-color))
-                  (setf reflected-color (raytrace reflected-color ray scene counters))
-                  (if metallic
-                      (let ((metallic-reflection (hadamard-product pigment reflected-color)))
-                        (declare (dynamic-extent metallic-reflection))
-                        (%vec+ result result metallic-reflection))
-                      (%vec+ result result reflected-color)))))))
+        (when (and (not (weak-ray-p ray scene))
+                   (or (plusp reflection)
+                       (plusp transmit)))
+          (let ((n.d2 (dot-product normal2 (ray-direction ray))))
+            (when (plusp n.d)
+              (setf n.d2 (* n.d2 -1.0)))
+            ;; Specular reflection
+            (when (plusp reflection)
+              (unless (weak-ray-p ray scene)
+                (let ((weight
+                       (if (> 1.0 fresnel)
+                           (* reflection (+ fresnel (* 1-fresnel (power (- 1.0 (abs n.d)) 5))))
+                           reflection)))
+                  (with-reflected-ray (ray :point point :normal normal2 :dot-product n.d2
+                                           :incident-ray ray :specular weight :counters counters)
+                    (let ((reflected-color (alloc-vec)))
+                      (declare (dynamic-extent reflected-color))
+                      (setf reflected-color (raytrace reflected-color ray scene counters))
+                      (if metallic
+                          (let ((metallic-reflection (hadamard-product pigment reflected-color)))
+                            (declare (dynamic-extent metallic-reflection))
+                            (%vec+ result result metallic-reflection))
+                          (%vec+ result result reflected-color)))))))
+          ;; Refraction
+          (when (plusp transmit)
+            (with-refracted-ray (ray :point point :normal normal2 :dot-product n.d
+                                     :incident-ray ray :transmit transmit :ior ior
+                                     :counters counters)
+              (let ((tmp (alloc-vec)))
+                (declare (dynamic-extent tmp))
+                (%vec+ result result (raytrace tmp ray scene counters)))))))
         result))))

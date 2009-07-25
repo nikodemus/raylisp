@@ -58,15 +58,16 @@
    ;; FIXME: Maybe these should be in shaders as well?
    (:module "normals"
             :depends-on ("kernel")
-            :components ((:file "bump")))
+            :components ((:file "bump")
+                         (:file "wrinkle")
+                         (:file "ripple")))
    (:module "shaders"
             :depends-on ("kernel")
             :components ((:file "composite")
                          (:file "flat")
-                         (:file "raytrace")
                          (:file "sky-sphere")
                          (:file "texture")))
    (:module "models"
             :components ((:static-file "teapot.obj")))
    (:file "tests" :depends-on
-          ("kernel"  "cameras" "lights" "objects" "patterns" "shaders"))))
+          ("kernel"  "cameras" "lights" "objects" "patterns" "shaders" "normals"))))

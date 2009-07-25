@@ -108,6 +108,9 @@
 *** TODO Real colors. (Wavelength based rendering.)
 
 * TODO SCENE COMPONENTS
+*** TODO Pattern stuff
+***** TODO :wave, :frequency and :phase as a general keyword to interpolated patterns
+***** TODO warps
 *** TODO Area lights
 ***** TODO Line-light needs :start and :end keywords
 ***** TODO Circular area light

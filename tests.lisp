@@ -55,24 +55,6 @@
   (:camera
    *view*))
 
-(defscene tmp
-  (:objects
-   (let (all)
-     (dolist (i (iota 200 :start 0.0 :step 0.1))
-       (push (make-instance 'sphere
-                            :radius 0.2
-                            :location (v i (cycloidal i) 0)
-                            :shader (make-instance 'texture-shader
-                                                   :pigment white))
-             all))
-     all))
-  (:lights
-   (make-instance 'point-light
-                  :location (v -100 100 -100)))
-  (:camera
-   (make-instance 'pinhole-camera
-                  :location (v 0 0 -10))))
-
 (defscene test-normal
   (:objects
    (make-instance 'plane
@@ -833,37 +815,52 @@
 
 (defscene test-2
   (:objects
-   (make-instance 'sphere
-                  :shader
-                  (make-instance
-                   'composite-shader
-                   :shaders
-                   (list
-                    (make-instance 'raytrace-shader
-                                   :specular 0.1
-                                   :transmit 0.9
-                                   :ior 1.6)
-                    (make-instance 'texture-shader
-                                   :specular 0.5
-                                   :roughness 0.02
-                                   :diffuse 0.3
-                                   :ambient 0.2
-                                   :pigment yellow))))
+   (flet ((glass (ior)
+            (make-instance 'texture-shader
+                           :transmit 0.8
+                           :reflection 0.1
+                           :ior ior
+                           :specular 0.8
+                           :roughness 0.01
+                           :diffuse 0.2
+                           :ambient 0
+                           :pigment (v 0.1 0.5 0.5))))
+     (list
+      (make-instance 'sphere
+                     :location (v -2 0.6 0)
+                     :shader (glass 1.4))
+      (make-instance 'sphere
+                     :location (v 0 0 0)
+                     :shader (glass 1.6))
+      (make-instance 'sphere
+                     :location (v 2 0.9 0)
+                     :shader (glass 1.02))
+      (make-instance 'sphere
+                     :location (v -1 1.6 -2)
+                     :shader (glass 1.0))
+      (make-instance 'sphere
+                     :location (v 1 0.3 -2.5)
+                     :shader (glass 1.5))))
    (make-instance 'plane
                   :location (v 0 -1 0)
                   :shader *chessboard*))
   (:lights
    (make-instance 'point-light
                   :location (v -30 30 -30)))
-  (:background blue)
+  (:background
+   (make-instance 'sky-sphere-shader
+                  :pigment (make-instance 'noise-pattern
+                                          :type :pigment
+                                          :map `((0.0 ,white)
+                                                 (1.0 ,blue)))))
   (:ambient-light white)
-  (:adaptive-limit 0.01)
-  (:depth-limit 12)
+  (:adaptive-limit 0.001)
+  (:depth-limit 36)
   (:camera
       (make-instance 'pinhole-camera
-                     :location (v 0 0.5 -4)
+                     :location (v 3 2.5 -15)
                      :look-at +origin+
-                     :focal-length 3.0)))
+                     :focal-length 5.0)))
 
 (defscene test-3
     (:objects
@@ -1006,20 +1003,15 @@
                      :look-at +origin+
                      :focal-length 3.0)))
 
-(defvar *test-6-shader*
-  (make-instance
-   'composite-shader
-   :shaders
-   (list
-    (make-instance 'raytrace-shader
-                   :specular 0.1
-                   :transmit 0.9
-                   :ior 1.6)
-    (make-instance 'texture-shader
-                   :specular 0.5
-                   :diffuse 0.3
-                   :ambient 0.1
-                   :pigment yellow))))
+(defparameter *test-6-shader*
+  (make-instance 'texture-shader
+                 :transmit 0.7
+                 :reflection 0.1
+                 :ior 1.6
+                 :specular 0.5
+                 :diffuse 0.15
+                 :ambient 0.05
+                 :pigment yellow))
 
 (defscene test-6
   (:objects
@@ -1381,32 +1373,21 @@
                   :normal (v -0.5 0 -1)
                   :location (v 3 0 3)
                   :shader
-                  (make-instance 'composite-shader
-                                 :shaders
-                                 (list
-                                  (make-instance 'raytrace-shader
-                                                 :specular 0.95
-                                                 :transmit 0.0)
-                                  (make-instance 'flat-shader
-                                                 :ambient 0.05
-                                                 :color black))))
+                  (make-instance 'texture-shader
+                                 :reflection 0.95
+                                 :pigment black))
    (make-instance 'sphere
                   :radius 3.0
                   :location (v -0.5 3 -4)
                   :shader
-                  (make-instance
-                   'composite-shader
-                   :shaders
-                   (list
-                    (make-instance 'raytrace-shader
-                                   :specular 0.1
-                                   :transmit 0.9
-                                   :ior 1.2)
-                    (make-instance 'texture-shader
-                                   :specular 0.5
-                                   :diffuse 0.15
-                                   :ambient 0.1
-                                   :pigment yellow))))
+                  (make-instance 'texture-shader
+                                 :transmit 0.8
+                                 :ior 1.2
+                                 :reflection 0.1
+                                 :specular 0.5
+                                 :diffuse 0.15
+                                 :ambient 0.1
+                                 :pigment yellow))
    (make-instance 'sphere
                   :radius 1.0
                   :location (v 0 1 0)

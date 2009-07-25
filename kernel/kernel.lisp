@@ -89,14 +89,10 @@
               (l (sqrt (+ (* x x) (* y y) (* z z)))))
          (vec (/ x l) (/ y l) (/ z l)))))))
 
-(declaim (inline refracted-ray-direction))
-(defun refracted-ray-direction (normal dot ray rel-ior cs2)
-  (declare (type vec normal)
-           (type ray ray)
-           (type float dot rel-ior cs2))
+(declaim (inline %refracted-ray-direction))
+(defun %refracted-ray-direction (result normal dot ray rel-ior cs2)
   ;; The code below is really this, but avoids
-  ;; intermediate vectors. FIXME: It would be nice if we
-  ;; had compiler-macros to do this...
+  ;; intermediate vectors.
   ;;
   ;;  (normalize
   ;;   (vector-add
@@ -104,14 +100,18 @@
   ;;                (- (* rel-ior (abs dot)) (sqrt cs2)))
   ;;    (vector-mul (ray-direction ray) rel-ior)))
   ;;
-  (let ((result (alloc-vec))
-        (tmp (alloc-vec)))
-    ;; These are all directions, so no worries about the 4th element.
+  (let ((tmp (alloc-vec)))
+    (declare (dynamic-extent tmp))
     (%normalize result
-                (%vec+
-                 result
-                 (%vec* result normal (- (* rel-ior (abs dot)) (sqrt cs2)))
-                 (%vec* tmp (ray-direction ray) rel-ior)))))
+                (%vec+ result
+                       (%vec* result normal (- (* rel-ior (abs dot)) (sqrt cs2)))
+                       (%vec* tmp (ray-direction ray) rel-ior)))))
+
+(declaim (inline weak-ray-p))
+(defun weak-ray-p (ray scene)
+  (declare (ray ray) (scene scene))
+  (or (= (ray-depth ray) (scene-depth-limit scene))
+      (< (ray-weight ray) (scene-adaptive-limit scene))))
 
 (defmacro with-reflected-ray
     ((reflected &key point normal dot-product incident-ray specular counters)
@@ -177,3 +177,25 @@
                    (,thunk ,r1 (load-time-value
                                 (make-ray :origin +origin+ :direction +x+
                                           :weight 0.0)))))))))))
+
+(defmacro with-refracted-ray ((ray &key point normal dot-product incident-ray
+                                   transmit ior counters)
+                              &body body)
+  (once-only (incident-ray dot-product ior point normal transmit)
+    `(flet ((refraction-thunk (,ray) ,@body))
+       (with-rel-ior ((rel-ior new)
+                      :dot-product ,dot-product :local-ior ,ior
+                      :environment (ray-environment ,incident-ray))
+         ;; FIXME: Add derivation of the refraction formula as a comment.
+         (let ((cs2 (- 1.0 (* (square rel-ior) (- 1.0 (square ,dot-product)))))
+               (new-dir (alloc-vec)))
+           (declare (dynamic-extent new-dir))
+           ;; Don't execute the body for total internal reflection.
+           (when (significantp cs2)
+             (with-ray (refracted :origin ,point
+                                  :direction (%refracted-ray-direction new-dir ,normal ,dot-product ,ray rel-ior cs2)
+                                  :weight (* (ray-weight ,ray) ,transmit)
+                                  :depth (1+ (ray-depth ,ray))
+                                  :environment new)
+               (note-refracted-ray ,counters)
+               (refraction-thunk refracted))))))))
