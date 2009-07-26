@@ -36,10 +36,28 @@
 (defparameter *canvas-height* 400)
 (defparameter *canvas-width* 600)
 
+(defclass canvas-pane (application-pane)
+  ((raster
+    :initform nil
+    :accessor canvas-raster)))
+
+(defmethod canvas-raster :around ((canvas canvas-pane))
+  (let ((raster (call-next-method)))
+    (unless raster
+      (setf raster (make-rgba-raster (bounding-rectangle-width canvas)
+                                     (bounding-rectangle-height canvas))
+            (canvas-raster canvas) raster))
+    raster))
+
+(defmethod handle-event ((canvas canvas-pane) (event window-repaint-event))
+  (with-slots (raster) canvas
+    (when raster
+      (medium-draw-pixels* canvas raster 0 0))))
+
 (define-application-frame raylisp-frame ()
   ()
   (:panes
-   (canvas :application :display-time nil
+   (canvas canvas-pane :display-time nil
            :height *canvas-height* :width *canvas-width*)
    (repl :interactor :min-height 500))
   (:layouts
@@ -60,14 +78,14 @@
          (height (bounding-rectangle-height region))
          (min (or min (cons 0 0)))
          (max (or max (cons width height)))
-         (row-offset (car min))
+         (x-min (car min))
+         (y-min (cdr min))
+         (area-width (- (car max) x-min))
          (row-stop (- (car max) 1))
-         (row (make-rgba-raster (1+ (- row-stop row-offset)) 1))
-         (row-data (sb-ext:array-storage-vector row))
-         (end 0))
-    (declare (type (simple-array (unsigned-byte 32) (*)) row-data))
+         (raster (make-rgba-raster width height)))
+    (declare (type (simple-array (unsigned-byte 32) (* *)) raster))
     (declare (optimize speed))
-    (declare (fixnum row-stop row-offset end))
+    (declare (fixnum row-stop))
     (let ((*standard-output* (find-repl)))
       (raylisp::render scene (raylisp::scene-default-camera scene)
                        width height
@@ -75,15 +93,17 @@
                          (declare (type sb-cga:vec color)
                                   (type fixnum i j)
                                   (optimize speed))
-                         (setf end (max end i))
                          ;; FIXME: Gamma...
-                         (setf (aref row-data (- i row-offset)) (vec-rgba color))
+                         (setf (aref raster j i) (vec-rgba color))
                          (when (= i row-stop)
-                           (medium-draw-pixels* sheet row row-offset j)))
+                           (medium-draw-pixels* sheet raster x-min j
+                                                :src-x x-min :src-y j
+                                                :width area-width :height 1)))
                        :normalize-camera t
                        :min min
                        :max max
-                       :verbose (find-repl)))))
+                       :verbose (find-repl)))
+    (setf (canvas-raster sheet) raster)))
 
 (defun shoot-ray-into-scene (scene sheet x y)
   (let* ((region (sheet-region sheet))
@@ -222,8 +242,9 @@
     (cond (scene
            (block point
              (format s "~&Click on to select corners of region to render, ~
-                        outside canvas to abort.")
-             (tracking-pointer (*standard-output*)
+                        outside canvas to abort.~%")
+             (finish-output s)
+             (tracking-pointer (canvas)
                (:pointer-button-press (event x y)
                                       (if (eq canvas (event-sheet event))
                                           (cond (p1

@@ -17,20 +17,23 @@
 ;;; TODO: Extract indexed pattern drawing and convert to one of these
 ;;; functions.
 
-(defmethod clim::medium-draw-pixels* ((sheet sheet) array x y &key)
+(defmethod clim::medium-draw-pixels* ((sheet sheet) array x y &rest args)
   (with-sheet-medium (medium sheet)
-    (clim::medium-draw-pixels* medium array x y)))
+    (apply #'clim::medium-draw-pixels* medium array x y args)))
 
 (defmethod clim::medium-draw-pixels*
-    ((medium clx-medium) array x y &key width height &allow-other-keys)
-  (let* ((width  (or width (array-dimension array 1)))
-         (height (or height (array-dimension array 0)))
-         (image (xlib:create-image :width width :height height :data array
+    ((medium clx-medium) array x y &key width height (src-x 0) (src-y 0) &allow-other-keys)
+  (let* ((image-width (array-dimension array 1))
+         (image-height (array-dimension array 0))
+         (image (xlib:create-image :width image-width :height image-height :data array
                                    :bits-per-pixel 32
                                    :depth 24
                                    :format :z-pixmap)))
     (with-clx-graphics (medium)
-      (xlib:put-image mirror gc image :x x :y y :width width :height height))))
+      (xlib:put-image mirror gc image
+                      :x x :y y
+                      :src-x src-x :src-y src-y
+                      :width (or width image-width) :height (or height image-height)))))
 
 (defmethod clim::medium-get-pixels*
     ((medium clx-medium) array x y &key width height &allow-other-keys)
