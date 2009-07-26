@@ -1,8 +1,9 @@
+;;;; Small McCLIM patches.
+
+;;;; Image drawing
 ;;;; Thanks to Andy Hefner!
 
 (in-package :clim-clx)
-
-;;;; Image drawing
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'clim::medium-draw-pixels* :clim)
@@ -21,9 +22,9 @@
     (clim::medium-draw-pixels* medium array x y)))
 
 (defmethod clim::medium-draw-pixels*
-    ((medium clx-medium) array x y &key &allow-other-keys)
-  (let* ((width  (array-dimension array 1))
-         (height (array-dimension array 0))
+    ((medium clx-medium) array x y &key width height &allow-other-keys)
+  (let* ((width  (or width (array-dimension array 1)))
+         (height (or height (array-dimension array 0)))
          (image (xlib:create-image :width width :height height :data array
                                    :bits-per-pixel 32
                                    :depth 24
@@ -36,6 +37,15 @@
   (let* ((width  (or width (array-dimension array 1)))
          (height (or height (array-dimension array 0))))
     (with-clx-graphics (medium)
-      (xlib:image-z-pixarray (xlib:get-image mirror :x x :y y :data array
+      (xlib:image-z-pixarray (xlib:get-image mirror
+                                             :x x :y y :data array
                                              :width width :height height
                                              :format :z-pixmap)))))
+
+;;;; FINISH-OUTPUT on panes, etc.
+
+(in-package :climi)
+
+(defmethod stream-finish-output :after ((stream standard-extended-output-stream))
+  (with-sheet-medium (medium stream)
+    (medium-finish-output medium)))

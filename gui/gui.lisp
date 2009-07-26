@@ -47,27 +47,34 @@
               (2/3 canvas)
               (:fill repl)))))
 
-(defun render-scene (scene sheet)
-  (declare (optimize speed))
+(defun render-scene (scene sheet &key min max)
   (let* ((region (sheet-region sheet))
          (width (bounding-rectangle-width region))
          (height (bounding-rectangle-height region))
-         (end (- width 1))
-         (row (make-rgba-raster width 1))
-         (row-data (sb-ext:array-storage-vector row)))
+         (min (or min (cons 0 0)))
+         (max (or max (cons width height)))
+         (row-offset (car min))
+         (row-stop (- (car max) 1))
+         (row (make-rgba-raster (1+ (- row-stop row-offset)) 1))
+         (row-data (sb-ext:array-storage-vector row))
+         (end 0))
     (declare (type (simple-array (unsigned-byte 32) (*)) row-data))
-    (declare (fixnum end width height))
+    (declare (optimize speed))
+    (declare (fixnum row-stop row-offset end))
     (raylisp::render scene (raylisp::scene-default-camera scene)
                      width height
-                     (lambda (color x y)
+                     (lambda (color i j)
                        (declare (type sb-cga:vec color)
-                                (type fixnum x y)
+                                (type fixnum i j)
                                 (optimize speed))
+                       (setf end (max end i))
                        ;; FIXME: Gamma...
-                       (setf (aref row-data x) (vec-rgba color))
-                       (when (= x end)
-                         (medium-draw-pixels* sheet row 0 y)))
+                       (setf (aref row-data (- i row-offset)) (vec-rgba color))
+                       (when (= i row-stop)
+                         (medium-draw-pixels* sheet row row-offset j)))
                      :normalize-camera t
+                     :min min
+                     :max max
                      :verbose (find-pane-named *application-frame* 'repl))))
 
 (defun shoot-ray-into-scene (scene sheet x y)
@@ -194,6 +201,43 @@
                                      (format t "~&#x~X = ~S" (ldb (byte 24 0) rgba) (rgba-vec rgba)))
                                    (return-from point nil)))))
     t))
+
+(define-raylisp-frame-command (rerender-region :name t)
+    ()
+  (let* ((name *last-scene-name*)
+         (scene (gethash name raylisp::*scenes*))
+         (canvas (find-pane-named *application-frame* 'canvas))
+         p1 p2)
+    (cond (scene
+           (block point
+             (format t "~&Click on to select corners of region to render, ~
+                        outside canvas to abort.")
+             (tracking-pointer (*standard-output*)
+               (:pointer-button-press (event x y)
+                                      (if (eq canvas (event-sheet event))
+                                          (cond (p1
+                                                 (format t "~&~S, ~S selected" x y)
+                                                 (setf p2 (cons x y))
+                                                 (return-from point))
+                                                (t
+                                                 (format t "~&~S, ~S selected" x y)
+                                                 (setf p1 (cons x y))))
+                                          (return-from point)))))
+           (cond ((and p1 p2)
+                  (let ((minx (min (car p1) (car p2)))
+                        (maxx (max (car p1) (car p2)))
+                        (miny (min (cdr p1) (cdr p2)))
+                        (maxy (max (cdr p1) (cdr p2))))
+                    (draw-rectangle* canvas minx miny maxx maxy :ink +red+
+                                     :filled nil
+                                     :line-thickness 1)
+                    (render-scene scene canvas
+                                  :min (cons minx miny)
+                                  :max (cons (1+ maxx) (1+ maxy)))))
+                 (t
+                  (format t "~&Aborted."))))
+          (t
+           (format t "~&No scene to rerender found.")))))
 
 (define-raylisp-frame-command (com-toggle-kd :name t)
     ()

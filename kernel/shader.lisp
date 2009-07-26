@@ -91,7 +91,6 @@
 (declaim (ftype (function (t t t t) (values shader-function &optional))
                 compile-shader))
 (defun compile-shader (shader object scene transform)
-  (declare (type scene-object object))
   (if shader
       (compute-shader-function shader object scene transform)
       (constantly black)))

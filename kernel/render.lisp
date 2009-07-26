@@ -44,6 +44,7 @@
     result))
 
 (defun render (scene camera width height callback &key (normalize-camera t)
+               (min (cons 0 0)) (max (cons width height))
                (verbose t))
   (declare (fixnum width height) (optimize speed))
   (when normalize-camera
@@ -58,13 +59,20 @@
                          (t
                           (error "Not a valid callback: ~S" callback))))
          (counters (make-counters))
+         (x-start (car min))
+         (y-start (cdr min))
+         (x-end (car max))
+         (y-end (cdr max))
          (fheight (float height))
          (fwidth (float width))
          (result (alloc-vec)))
     (declare (function callback camera)
-             (single-float fheight fwidth))
+             (single-float fheight fwidth)
+             (fixnum x-start y-start x-end y-end))
     (when verbose
       (format verbose "~&Rendering ~A @ ~S x ~S~%" (scene-name scene) width height)
+      (unless (and (= 0 x-start y-start) (= x-end width) (= y-end height))
+        (format verbose "Subregion ~S,~S : ~S,~S~%" x-start y-start x-end y-end))
       (finish-output verbose))
     (let (timing)
       (sb-ext:call-with-timing
@@ -74,23 +82,23 @@
          (flet ((trace-1-ray (ray)
                   (raytrace result ray scene counters)))
            (declare (dynamic-extent #'trace-1-ray))
-           (dotimes (y height)
-             (dotimes (x width)
-               (let ((rx (- (/ (* 2.0 (float x)) fwidth) 1.0))
-                     (ry (- 1.0 (/ (* 2.0 (float y)) fheight)))
-                     (*image-coordinates* (cons x y)))
-                 (funcall callback
-                          (funcall camera
-                                   #'trace-1-ray
-                                   rx
-                                   ry
-                                   counters)
-                          x
-                          y)))
-             (when verbose
-               (when (zerop (mod y note-interval))
-                 (princ "." verbose)
-                 (finish-output verbose)))))))
+           (loop for y from y-start below y-end
+                 do (let ((ry (- 1.0 (/ (* 2.0 (float y)) fheight))))
+                      (loop for x from x-start below x-end
+                            do (let ((rx (- (/ (* 2.0 (float x)) fwidth) 1.0))
+                                     (*image-coordinates* (cons x y)))
+                                 (funcall callback
+                                          (funcall camera
+                                                   #'trace-1-ray
+                                                   rx
+                                                   ry
+                                                   counters)
+                                          x
+                                          y))))
+                    (when verbose
+                      (when (zerop (mod y note-interval))
+                        (princ "." verbose)
+                        (finish-output verbose)))))))
       (when verbose
         (report scene counters timing verbose)))))
 
