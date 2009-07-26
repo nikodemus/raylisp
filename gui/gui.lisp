@@ -47,6 +47,13 @@
               (2/3 canvas)
               (:fill repl)))))
 
+(defmethod frame-standard-output ((frame raylisp-frame))
+  ;; By default, send output to Slime.
+  (swank::connection.user-output swank::*emacs-connection*))
+
+(defun find-repl ()
+  (find-pane-named *application-frame* 'repl))
+
 (defun render-scene (scene sheet &key min max)
   (let* ((region (sheet-region sheet))
          (width (bounding-rectangle-width region))
@@ -61,37 +68,36 @@
     (declare (type (simple-array (unsigned-byte 32) (*)) row-data))
     (declare (optimize speed))
     (declare (fixnum row-stop row-offset end))
-    (raylisp::render scene (raylisp::scene-default-camera scene)
-                     width height
-                     (lambda (color i j)
-                       (declare (type sb-cga:vec color)
-                                (type fixnum i j)
-                                (optimize speed))
-                       (setf end (max end i))
-                       ;; FIXME: Gamma...
-                       (setf (aref row-data (- i row-offset)) (vec-rgba color))
-                       (when (= i row-stop)
-                         (medium-draw-pixels* sheet row row-offset j)))
-                     :normalize-camera t
-                     :min min
-                     :max max
-                     :verbose (find-pane-named *application-frame* 'repl))))
+    (let ((*standard-output* (find-repl)))
+      (raylisp::render scene (raylisp::scene-default-camera scene)
+                       width height
+                       (lambda (color i j)
+                         (declare (type sb-cga:vec color)
+                                  (type fixnum i j)
+                                  (optimize speed))
+                         (setf end (max end i))
+                         ;; FIXME: Gamma...
+                         (setf (aref row-data (- i row-offset)) (vec-rgba color))
+                         (when (= i row-stop)
+                           (medium-draw-pixels* sheet row row-offset j)))
+                       :normalize-camera t
+                       :min min
+                       :max max
+                       :verbose (find-repl)))))
 
 (defun shoot-ray-into-scene (scene sheet x y)
   (let* ((region (sheet-region sheet))
          (width (bounding-rectangle-width region))
          (height (bounding-rectangle-height region))
-         (old (canvas-color sheet x y)))
-    (format t "~&Shooting ray into ~A @~Sx~S point ~S,~S~%" (raylisp::scene-name scene) width height x y)
+         (old (canvas-color sheet x y))
+         (s (find-repl)))
+    (format s "~&Shooting ray into ~A @~Sx~S point ~S,~S~%" (raylisp::scene-name scene) width height x y)
     (let ((color (raylisp::shoot-ray scene (raylisp::scene-default-camera scene)
                                x y width height
                                :normalize-camera t)))
-      (format t "~&Previous color: #x~X, current color: #x~X~%"
+      (format s "~&Previous color: #x~X, current color: #x~X~%"
               (ldb (byte 24 0) old)
               (ldb (byte 24 0) (vec-rgba color))))))
-
-(defmethod frame-standard-output ((frame raylisp-frame))
-  (find-pane-named frame 'repl))
 
 (define-raylisp-frame-command (com-quit :name t)
     ()
@@ -106,11 +112,11 @@
   (let ((mb (accept 'integer :prompt "Mb consed between GCs")))
     (setf (sb-ext:bytes-consed-between-gcs) (* 1024 1024 (abs mb)))))
 
-(define-raylisp-frame-command (com-clear-canvas :name t)
+(define-raylisp-frame-command (com-clear-canvas :name t :menu t)
     ()
   (window-clear (find-pane-named *application-frame* 'canvas)))
 
-(define-raylisp-frame-command (com-clear-repl :name t)
+(define-raylisp-frame-command (com-clear-repl :name t :menu t)
     ()
   (window-clear (find-pane-named *application-frame* 'repl)))
 
@@ -137,12 +143,13 @@
     (fresh-line)
     (let* ((name (accept 'string :prompt "Scene Name"))
            (scene (gethash (setf *last-scene-name* (intern (string-upcase name) :raylisp))
-                           raylisp::*scenes*)))
+                           raylisp::*scenes*))
+           (s (find-repl)))
       (if scene
           (loop (with-simple-restart (retry "Try rendering ~A again." name)
                   (return-from com-render-scene
                     (render-scene scene (find-pane-named *application-frame* 'canvas)))))
-          (format t "No scene named ~S found." name)))))
+          (format s "No scene named ~S found." name)))))
 
 (define-raylisp-frame-command (com-render-all :name t)
     ()
@@ -153,10 +160,11 @@
 
 (define-raylisp-frame-command (com-list-scenes :name t)
     ()
-  (maphash (lambda (name scene)
-             (declare (ignore scene))
-             (format t "~&~A~%" name))
-           raylisp::*scenes*))
+  (let ((s (find-repl)))
+    (maphash (lambda (name scene)
+               (declare (ignore scene))
+               (format s "~&~A~%" name))
+             raylisp::*scenes*)))
 
 (define-raylisp-frame-command (com-stress :name t)
     ()
@@ -175,10 +183,11 @@
     ()
   (let* ((name *last-scene-name*)
          (scene (gethash name raylisp::*scenes*))
-         (canvas (find-pane-named *application-frame* 'canvas)))
+         (canvas (find-pane-named *application-frame* 'canvas))
+         (s (find-repl)))
     (cond (scene
            (block point
-             (format t "~&Click on the canvas to shoot a ray at that point.~%")
+             (format s "~&Click on the canvas to shoot a ray at that point.~%")
              (tracking-pointer (*standard-output*)
                (:pointer-button-press (&key event x y)
                                       (when (eq canvas (event-sheet event))
@@ -186,19 +195,20 @@
                                           (shoot-ray-into-scene scene canvas x y)))))))
           (t
            (if name
-               (format t "Oops: scene ~S seems to have vanished!~%" name)
-               (format t "No last scene to shoot a ray into!~%"))))))
+               (format s "Oops: scene ~S seems to have vanished!~%" name)
+               (format s "No last scene to shoot a ray into!~%"))))))
 
 (define-raylisp-frame-command (pick-color :name t)
     ()
-  (let ((canvas (find-pane-named *application-frame* 'canvas)))
+  (let ((canvas (find-pane-named *application-frame* 'canvas))
+        (s (find-repl)))
     (block point
-      (format t "~&Click on canvas to select a color, outside to stop.")
+      (format s "~&Click on canvas to select a color, outside to stop.")
       (tracking-pointer (*standard-output*)
         (:pointer-button-press (event x y)
                                (if (eq canvas (event-sheet event))
                                    (let ((rgba (canvas-color canvas x y)))
-                                     (format t "~&#x~X = ~S" (ldb (byte 24 0) rgba) (rgba-vec rgba)))
+                                     (format s "~&#x~X = ~S" (ldb (byte 24 0) rgba) (rgba-vec rgba)))
                                    (return-from point nil)))))
     t))
 
@@ -207,20 +217,21 @@
   (let* ((name *last-scene-name*)
          (scene (gethash name raylisp::*scenes*))
          (canvas (find-pane-named *application-frame* 'canvas))
+         (s (find-repl))
          p1 p2)
     (cond (scene
            (block point
-             (format t "~&Click on to select corners of region to render, ~
+             (format s "~&Click on to select corners of region to render, ~
                         outside canvas to abort.")
              (tracking-pointer (*standard-output*)
                (:pointer-button-press (event x y)
                                       (if (eq canvas (event-sheet event))
                                           (cond (p1
-                                                 (format t "~&~S, ~S selected" x y)
+                                                 (format s "~&~S, ~S selected" x y)
                                                  (setf p2 (cons x y))
                                                  (return-from point))
                                                 (t
-                                                 (format t "~&~S, ~S selected" x y)
+                                                 (format s "~&~S, ~S selected" x y)
                                                  (setf p1 (cons x y))))
                                           (return-from point)))))
            (cond ((and p1 p2)
@@ -235,24 +246,26 @@
                                   :min (cons minx miny)
                                   :max (cons (1+ maxx) (1+ maxy)))))
                  (t
-                  (format t "~&Aborted."))))
+                  (format s "~&Aborted."))))
           (t
-           (format t "~&No scene to rerender found.")))))
+           (format s "~&No scene to rerender found.")))))
 
 (define-raylisp-frame-command (com-toggle-kd :name t)
     ()
-  (if (setf raylisp::*use-kd-tree* (not raylisp::*use-kd-tree*))
-      (format t "~&KD tree now in use.~%")
-      (format t "~&KD tree now not in use.~%")))
+  (let ((s (find-repl)))
+    (if (setf raylisp::*use-kd-tree* (not raylisp::*use-kd-tree*))
+        (format s "~&KD tree now in use.~%")
+        (format s "~&KD tree now not in use.~%"))))
 
 (define-raylisp-frame-command (com-again :name t)
     ()
   (let* ((name *last-scene-name*)
-         (scene (gethash name raylisp::*scenes*)))
+         (scene (gethash name raylisp::*scenes*))
+         (s (find-repl)))
     (cond (scene
            (render-scene scene (find-pane-named *application-frame* 'canvas)))
           (t
-           (format t "No scene named ~A" name)))))
+           (format s "No scene named ~A" name)))))
 
 (defun run ()
   (sb-posix:putenv "DISPLAY=:0.0")
