@@ -74,7 +74,7 @@
                                ;; FIXME: Gamma...
                                (setf (canvas-rgba canvas i j) (vec-rgba color))
                                (when (= i row-stop)
-                                 (repaint-sheet canvas +everywhere+)))
+                                 (repaint-sheet canvas (canvas-dirty-region canvas))))
                              :normalize-camera t
                              :min min
                              :max max

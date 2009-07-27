@@ -21,7 +21,8 @@
   (:export
    #:canvas-pane
    #:canvas-rgba
-   #:canvas-selection))
+   #:canvas-selection
+   #:canvas-dirty-region))
 
 (in-package :canvas-pane)
 
@@ -62,21 +63,14 @@
   ((raster
     :initform nil
     :accessor canvas-raster)
-   (dirty
-    :initform nil
-    :accessor canvas-dirty)
+   (dirty-region
+    :initform nil)
    (pixmap
     :initform nil
     :accessor canvas-pixmap)
    (selection
     :initform nil
     :accessor canvas-selection)))
-
-(defun raster-height (raster)
-  (array-dimension raster 0))
-
-(defun raster-width (raster)
-  (array-dimension raster 1))
 
 (defmethod canvas-raster :around ((canvas canvas-pane))
   (let ((raster (call-next-method))
@@ -87,6 +81,13 @@
       (setf raster (make-array (list h w) :element-type '(unsigned-byte 32))
             (canvas-raster canvas) raster))
     raster))
+
+(defmethod canvas-dirty-region ((canvas canvas-pane))
+  (let ((dirty (slot-value canvas 'dirty-region)))
+    (if dirty
+        (destructuring-bind ((minx . miny) . (maxx . maxy)) dirty
+          (make-bounding-rectangle minx miny maxx maxy))
+        +nowhere+)))
 
 (defmethod canvas-pixmap :around ((canvas canvas-pane))
   (let ((pixmap (call-next-method))
@@ -136,16 +137,16 @@
 ;;;; READING AND WRITING COLORS ON CANVAS
 
 (defun (setf canvas-rgba) (rgba canvas x y)
-  ;; Update dirty bounds.
-  (with-slots (dirty) canvas
-    (let ((dirty-area dirty))
-      (if dirty-area
-          (destructuring-bind ((minx . miny) . (maxx . maxy)) dirty-area
-            (setf dirty (cons (cons (min x minx)
-                                    (min y miny))
-                              (cons (max x maxx)
-                                    (max y maxy)))))
-          (setf dirty (cons (cons x y) (cons x y))))))
+  ;; Update dirty-region.
+  (let ((dirty-region (slot-value canvas 'dirty-region)))
+    (setf (slot-value canvas 'dirty-region)
+          (if dirty-region
+              (destructuring-bind ((minx . miny) . (maxx . maxy)) dirty-region
+                (cons (cons (min x minx)
+                            (min y miny))
+                      (cons (max x maxx)
+                            (max y maxy))))
+              (cons (cons x y) (cons x y)))))
   ;; Set color of the point.
   (setf (aref (canvas-raster canvas) y x) rgba))
 
@@ -154,57 +155,62 @@
 
 ;;;; DRAWING
 
-;;; This takes care of updating the dirty pixels from raster: we ignore
-;;; the region, though.
-(defmethod handle-repaint :before ((canvas canvas-pane) region)
-  (let ((dirty (canvas-dirty canvas))
-        (pixmap (canvas-pixmap canvas))
-        (raster (canvas-raster canvas)))
+(defun handle-raster-repaint (canvas region)
+  (let ((dirty (slot-value canvas 'dirty-region))
+        (pixmap (slot-value canvas 'pixmap)))
+    ;; 1. Paint dirty area -- which might be outside the requested region,
+    ;; but what the hell.
     (when dirty
       (destructuring-bind ((minx . miny) . (maxx . maxy)) dirty
         (declare (fixnum minx miny maxx maxy))
         (let ((width (1+ (- maxx minx)))
-              (height (1+ (- maxy miny))))
+              (height (1+ (- maxy miny)))
+              (pixmap (canvas-pixmap canvas))
+              (raster (canvas-raster canvas)))
           ;; Send the dirty area to X.
-          (let* ((r-width (raster-width raster))
-                 (r-height (raster-height raster))
-                 (image (xlib:create-image
-                         :width r-width :height r-height :data raster
-                         :bits-per-pixel 32
-                         :depth 24
-                         :format :z-pixmap)))
-            (with-sheet-medium (medium canvas)
-              (clim-clx::with-clx-graphics (medium)
-                (xlib:put-image clim-clx::mirror clim-clx::gc image
-                                :x minx :y miny
-                                :src-x minx :src-y miny
-                                :width width
-                                :height height))))
+          (with-sheet-medium (medium canvas)
+            (medium-draw-pixels* medium raster minx miny
+                                 :width width :height height
+                                 :src-x minx :src-y miny))
           ;; Update the pixmap from the dirty area.
           (copy-to-pixmap canvas minx miny width height
                           pixmap minx miny)))
-      ;; No longer dirty.
-      (setf (canvas-dirty canvas) nil))))
-
-;;; Just repaint everything: updating from a pixmap is fast, and the
-;;; rectangle doesn't take too long either.
-(defmethod handle-repaint :after ((canvas canvas-pane) region)
-  ;; WITH-SLOTS, because we don't want to allocate a pixmap now
-  ;; if we don't already have one.
-  (with-slots (pixmap) canvas
+      (let ((dirty-region (canvas-dirty-region canvas)))
+        ;; No longer dirty.
+        (setf (slot-value canvas 'dirty-region) nil)
+        (when (region-contains-region-p dirty-region region)
+          ;; If we repainted the entire requested area, then there is nothing
+          ;; more to do.
+          (return-from handle-raster-repaint))))
+    ;; 2. Repaint clean areas by copying from pixmap.
     (when pixmap
-      (copy-from-pixmap pixmap 0 0 (pixmap-width pixmap) (pixmap-height pixmap)
-                        canvas 0 0)))
-  (let ((selection (canvas-selection canvas)))
-    (when selection
-      (destructuring-bind ((minx . miny) . (maxx . maxy)) selection
-        (with-output-recording-options (canvas :record nil :draw t)
-          (draw-rectangle* canvas
-                           minx miny
-                           maxx maxy
-                           :filled nil
-                           :ink +red+
-                           :line-thickness 1))))))
+      (if (bounding-rectangle-p region)
+          (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+            (copy-from-pixmap pixmap x1 y1 (- x2 x1) (- y2 y1)
+                              canvas x1 y1))
+          ;; Everything, then.
+          (copy-from-pixmap pixmap 0 0 (pixmap-width pixmap) (pixmap-height pixmap)
+                            canvas 0 0)))))
+
+(defmethod handle-repaint :after ((canvas canvas-pane) region)
+  (unless (eq region +nowhere+)
+    ;; Raster
+    (handle-raster-repaint canvas region)
+    ;; Selection box.
+    (let ((selection (canvas-selection canvas)))
+      (when selection
+        (destructuring-bind ((minx . miny) . (maxx . maxy)) selection
+          (with-output-recording-options (canvas :record nil :draw t)
+            (draw-rectangle* canvas
+                             ;; KLUDGE/FIXME: The selection area doesn't
+                             ;; quite do the right thing right now...
+                             (max 0 (1- minx)) (max 0 (1- miny))
+                             maxx maxy
+                             :clipping-region region
+                             :filled nil
+                             :ink +red+
+                             :line-thickness 1)))))))
+
 
 
 
