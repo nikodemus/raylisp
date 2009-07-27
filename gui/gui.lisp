@@ -39,27 +39,139 @@
 (defclass canvas-pane (application-pane)
   ((raster
     :initform nil
-    :accessor canvas-raster)))
+    :accessor canvas-raster)
+   (pixmap
+    :initform nil
+    :accessor canvas-pixmap)
+   (selection
+    :initform nil
+    :accessor canvas-selection)
+   (selection-in-progress
+    :initform nil
+    :accessor canvas-selection-in-progress)))
 
 (defmethod canvas-raster :around ((canvas canvas-pane))
-  (let ((raster (call-next-method)))
-    (unless raster
-      (setf raster (make-rgba-raster (bounding-rectangle-width canvas)
-                                     (bounding-rectangle-height canvas))
+  (let ((raster (call-next-method))
+        (w (bounding-rectangle-width canvas))
+        (h (bounding-rectangle-height canvas)))
+    (unless (and raster (= (raster-width raster) w) (= (raster-height raster) h))
+      ;; FIXME: Copy the old raster, scaling contents.
+      (setf raster (make-rgba-raster w h)
             (canvas-raster canvas) raster))
     raster))
 
-(defmethod handle-event ((canvas canvas-pane) (event window-repaint-event))
-  (with-slots (raster) canvas
-    (when raster
-      (medium-draw-pixels* canvas raster 0 0))))
+(defmethod canvas-pixmap :around ((canvas canvas-pane))
+  (let ((pixmap (call-next-method))
+        (w (bounding-rectangle-width canvas))
+        (h (bounding-rectangle-height canvas)))
+    (unless (and pixmap (= (pixmap-width pixmap) w) (= (pixmap-height pixmap) h))
+      ;; FIXME: Copy the old pixmap, scaling contents.
+      (when pixmap
+        (deallocate-pixmap pixmap))
+      (setf pixmap (allocate-pixmap canvas w h)
+            (canvas-pixmap canvas) pixmap))
+    pixmap))
+
+(defun canonicalize-selection (selection bounds)
+  (when selection
+    (let* ((width (bounding-rectangle-width bounds))
+           (height (bounding-rectangle-height bounds)))
+      (destructuring-bind ((minx . miny) (maxx . maxy)) selection
+        (list (cons (max 0 (min minx maxx))
+                    (max 0 (min miny maxy)))
+              (cons (min (- width 1) (max minx maxx))
+                    (min (- height 1) (max miny maxy))))))))
+
+(defmethod (setf canvas-selection) :around (selection canvas)
+  (call-next-method (canonicalize-selection selection canvas) canvas))
+
+(defmethod (setf canvas-selection-in-progress) :around (selection canvas)
+  (call-next-method (canonicalize-selection selection canvas) canvas))
+
+(defun canvas-current-selection-extents (canvas)
+  (let ((selection (or (canvas-selection-in-progress canvas)
+                       (canvas-selection canvas))))
+    (if selection
+        (destructuring-bind ((minx . miny) (maxx . maxy)) selection
+          (values minx miny maxx maxy t))
+        (values nil nil nil nil nil))))
+
+(defun paint-selection-border (canvas)
+  (multiple-value-bind (min-x min-y max-x max-y ok) (canvas-current-selection-extents canvas)
+    (when ok
+      (with-output-recording-options (canvas :record nil :draw t)
+        (draw-rectangle* canvas
+                         min-x min-y
+                         max-x max-y
+                         :filled nil
+                         :ink +red+
+                         :line-thickness 1)))))
+
+(defmethod handle-repaint :after ((canvas canvas-pane) region)
+  (with-slots (pixmap) canvas
+    (when pixmap
+      (copy-from-pixmap pixmap 0 0 (pixmap-width pixmap) (pixmap-height pixmap)
+                        canvas 0 0))
+    (paint-selection-border canvas)))
+
+(defmethod dispatch-event ((canvas canvas-pane) (event pointer-button-press-event))
+  (handle-event canvas event))
+
+(defun find-common-ancestor (sheet1 sheet2)
+  (if (sheet-ancestor-p sheet1 sheet2)
+      sheet2
+      (find-common-ancestor sheet1 (sheet-parent sheet2))))
+
+(defun map-sheet-position-to-ancestor (sheet ancestor x y)
+  (if (eq sheet ancestor)
+      (values x y)
+      (multiple-value-bind (xt yt) (map-sheet-position-to-parent sheet x y)
+        (map-sheet-position-to-ancestor (sheet-parent sheet) ancestor xt yt))))
+
+(defun map-sheet-position-from-ancestor (sheet ancestor x y)
+  (if (eq sheet ancestor)
+      (values x y)
+      (multiple-value-bind (xt yt)
+          (map-sheet-position-from-ancestor (sheet-parent sheet) ancestor x y)
+        (map-sheet-position-to-child sheet xt yt))))
+
+(defun map-sheet-position-via-ancestor (source target source-x source-y)
+  (if (eq source target)
+      (values source-x source-y)
+      (let ((ancestor (find-common-ancestor source target)))
+        (multiple-value-bind (xa ya)
+            (map-sheet-position-to-ancestor source ancestor source-x source-y)
+          (map-sheet-position-from-ancestor target ancestor xa ya)))))
+
+(defmethod handle-event ((canvas canvas-pane) (start-event pointer-button-press-event))
+  (let ((start (cons (pointer-event-x start-event)
+                     (pointer-event-y start-event))))
+    (setf (canvas-selection-in-progress canvas) (list start start))
+    (tracking-pointer (canvas)
+      (:pointer-motion
+       (&key x y window)
+       (multiple-value-bind (x y)
+           (map-sheet-position-via-ancestor window canvas x y)
+         (setf (canvas-selection-in-progress canvas) (list start (cons x y))))
+       (repaint-sheet canvas +everywhere+))
+      (:pointer-button-release
+       (&key x y window)
+       (multiple-value-bind (x y)
+           (map-sheet-position-via-ancestor window canvas x y)
+         (setf (canvas-selection canvas) (list start (cons x y))
+               (canvas-selection-in-progress canvas) nil))
+       (repaint-sheet canvas +everywhere+)
+       (return-from handle-event)))))
 
 (define-application-frame raylisp-frame ()
   ()
   (:panes
-   (canvas canvas-pane :display-time nil
+   (canvas canvas-pane
+           :display-time nil
            :height *canvas-height* :width *canvas-width*)
-   (repl :interactor :min-height 500))
+   (repl
+    :interactor
+    :min-height 500))
   (:layouts
    (default (vertically (:width *canvas-width* :height (round (* 1.5 *canvas-height*)))
               (2/3 canvas)
@@ -72,38 +184,49 @@
 (defun find-repl ()
   (find-pane-named *application-frame* 'repl))
 
-(defun render-scene (scene sheet &key min max)
-  (let* ((region (sheet-region sheet))
+(defun find-canvas ()
+  (find-pane-named *application-frame* 'canvas))
+
+(defun render-scene (scene canvas &key min max)
+  (let* ((region (sheet-region canvas))
          (width (bounding-rectangle-width region))
          (height (bounding-rectangle-height region))
          (min (or min (cons 0 0)))
          (max (or max (cons width height)))
          (x-min (car min))
-         (y-min (cdr min))
          (area-width (- (car max) x-min))
          (row-stop (- (car max) 1))
-         (raster (make-rgba-raster width height)))
+         (raster (canvas-raster canvas))
+         (pixmap (canvas-pixmap canvas)))
     (declare (type (simple-array (unsigned-byte 32) (* *)) raster))
     (declare (optimize speed))
     (declare (fixnum row-stop))
     (let ((*standard-output* (find-repl)))
-      (raylisp::render scene (raylisp::scene-default-camera scene)
-                       width height
-                       (lambda (color i j)
-                         (declare (type sb-cga:vec color)
-                                  (type fixnum i j)
-                                  (optimize speed))
-                         ;; FIXME: Gamma...
-                         (setf (aref raster j i) (vec-rgba color))
-                         (when (= i row-stop)
-                           (medium-draw-pixels* sheet raster x-min j
-                                                :src-x x-min :src-y j
-                                                :width area-width :height 1)))
-                       :normalize-camera t
-                       :min min
-                       :max max
-                       :verbose (find-repl)))
-    (setf (canvas-raster sheet) raster)))
+      (loop
+        (with-simple-restart (retry "Try rendering ~A again."
+                                    (or (raylisp::scene-name scene) "scene"))
+          (return
+            (raylisp::render scene (raylisp::scene-default-camera scene)
+                             width height
+                             (lambda (color i j)
+                               (declare (type sb-cga:vec color)
+                                        (type fixnum i j)
+                                        (optimize speed))
+                               ;; FIXME: Gamma...
+                               (setf (aref raster j i) (vec-rgba color))
+                               (when (= i row-stop)
+                                 (medium-draw-pixels* canvas raster x-min j
+                                                      :src-x x-min :src-y j
+                                                      :width area-width :height 1)
+                                 (copy-to-pixmap canvas x-min j area-width 1
+                                                 pixmap x-min j)
+                                 (paint-selection-border canvas)))
+                             :normalize-camera t
+                             :min min
+                             :max max
+                             :verbose (find-repl))))))
+    (setf (canvas-raster canvas) raster
+          (canvas-pixmap canvas) pixmap)))
 
 (defun shoot-ray-into-scene (scene sheet x y)
   (let* ((region (sheet-region sheet))
@@ -132,13 +255,15 @@
   (let ((mb (accept 'integer :prompt "Mb consed between GCs")))
     (setf (sb-ext:bytes-consed-between-gcs) (* 1024 1024 (abs mb)))))
 
-(define-raylisp-frame-command (com-clear-canvas :name t :menu t)
+(define-raylisp-frame-command (com-clear-canvas :name t)
     ()
-  (window-clear (find-pane-named *application-frame* 'canvas)))
+  (let ((canvas (find-canvas)))
+    (setf (canvas-raster canvas) nil)
+    (repaint-sheet canvas +everywhere+)))
 
-(define-raylisp-frame-command (com-clear-repl :name t :menu t)
+(define-raylisp-frame-command (com-clear-repl :name t)
     ()
-  (window-clear (find-pane-named *application-frame* 'repl)))
+  (window-clear (find-repl)))
 
 (define-raylisp-frame-command (com-start-profiling :name t)
     ()
@@ -157,25 +282,25 @@
 
 (defvar *last-scene-name* nil)
 
+(defun ensure-scene (&optional (name *last-scene-name*))
+  (or (and name (gethash name raylisp::*scenes*))
+      (loop
+        (let* ((name (accept 'string :prompt "Scene Name"))
+               (scene (gethash (setf *last-scene-name* (intern (string-upcase name) :raylisp))
+                               raylisp::*scenes*)))
+          (when scene
+            (return scene))
+          (format (find-repl) "No scene named ~S found." name)))))
+
 (define-raylisp-frame-command (com-render-scene :name t)
     ()
-  (loop
-    (fresh-line)
-    (let* ((name (accept 'string :prompt "Scene Name"))
-           (scene (gethash (setf *last-scene-name* (intern (string-upcase name) :raylisp))
-                           raylisp::*scenes*))
-           (s (find-repl)))
-      (if scene
-          (loop (with-simple-restart (retry "Try rendering ~A again." name)
-                  (return-from com-render-scene
-                    (render-scene scene (find-pane-named *application-frame* 'canvas)))))
-          (format s "No scene named ~S found." name)))))
+  (render-scene (ensure-scene nil) (find-canvas)))
 
 (define-raylisp-frame-command (com-render-all :name t)
     ()
   (maphash (lambda (name scene)
              (declare (ignore name))
-             (render-scene scene (find-pane-named *application-frame* 'canvas)))
+             (render-scene scene (find-canvas)))
            raylisp::*scenes*))
 
 (define-raylisp-frame-command (com-list-scenes :name t)
@@ -191,7 +316,7 @@
   (loop
     (maphash (lambda (name scene)
                (declare (ignore name))
-               (render-scene scene (find-pane-named *application-frame* 'canvas)))
+               (render-scene scene (find-canvas)))
              raylisp::*scenes*)))
 
 (defun canvas-color (canvas x y)
@@ -201,26 +326,20 @@
 
 (define-raylisp-frame-command (com-shoot-ray :name t)
     ()
-  (let* ((name *last-scene-name*)
-         (scene (gethash name raylisp::*scenes*))
-         (canvas (find-pane-named *application-frame* 'canvas))
+  (let* ((scene (ensure-scene))
+         (canvas (find-canvas))
          (s (find-repl)))
-    (cond (scene
-           (block point
-             (format s "~&Click on the canvas to shoot a ray at that point.~%")
-             (tracking-pointer (*standard-output*)
-               (:pointer-button-press (&key event x y)
-                                      (when (eq canvas (event-sheet event))
-                                        (return-from point
-                                          (shoot-ray-into-scene scene canvas x y)))))))
-          (t
-           (if name
-               (format s "Oops: scene ~S seems to have vanished!~%" name)
-               (format s "No last scene to shoot a ray into!~%"))))))
+    (block point
+      (format s "~&Click on the canvas to shoot a ray at that point.~%")
+      (tracking-pointer (canvas)
+        (:pointer-button-press (&key event x y)
+                               (when (eq canvas (event-sheet event))
+                                 (return-from point
+                                   (shoot-ray-into-scene scene canvas x y))))))))
 
 (define-raylisp-frame-command (pick-color :name t)
     ()
-  (let ((canvas (find-pane-named *application-frame* 'canvas))
+  (let ((canvas (find-canvas))
         (s (find-repl)))
     (block point
       (format s "~&Click on canvas to select a color, outside to stop.")
@@ -232,44 +351,22 @@
                                    (return-from point nil)))))
     t))
 
-(define-raylisp-frame-command (rerender-region :name t)
+(define-raylisp-frame-command (clear-selection :name t)
     ()
-  (let* ((name *last-scene-name*)
-         (scene (gethash name raylisp::*scenes*))
-         (canvas (find-pane-named *application-frame* 'canvas))
-         (s (find-repl))
-         p1 p2)
-    (cond (scene
-           (block point
-             (format s "~&Click on to select corners of region to render, ~
-                        outside canvas to abort.~%")
-             (finish-output s)
-             (tracking-pointer (canvas)
-               (:pointer-button-press (event x y)
-                                      (if (eq canvas (event-sheet event))
-                                          (cond (p1
-                                                 (format s "~&~S, ~S selected" x y)
-                                                 (setf p2 (cons x y))
-                                                 (return-from point))
-                                                (t
-                                                 (format s "~&~S, ~S selected" x y)
-                                                 (setf p1 (cons x y))))
-                                          (return-from point)))))
-           (cond ((and p1 p2)
-                  (let ((minx (min (car p1) (car p2)))
-                        (maxx (max (car p1) (car p2)))
-                        (miny (min (cdr p1) (cdr p2)))
-                        (maxy (max (cdr p1) (cdr p2))))
-                    (draw-rectangle* canvas minx miny maxx maxy :ink +red+
-                                     :filled nil
-                                     :line-thickness 1)
-                    (render-scene scene canvas
-                                  :min (cons minx miny)
-                                  :max (cons (1+ maxx) (1+ maxy)))))
-                 (t
-                  (format s "~&Aborted."))))
-          (t
-           (format s "~&No scene to rerender found.")))))
+  (let ((canvas (find-canvas)))
+    (setf (canvas-selection canvas) nil
+          (canvas-selection-in-progress canvas) nil)
+    (repaint-sheet canvas +everywhere+)))
+
+(define-raylisp-frame-command (render-selection :name t)
+    ()
+  (let* ((canvas (find-canvas))
+         (scene (ensure-scene))
+         (selection (canvas-selection canvas)))
+    (if selection
+      (destructuring-bind (start end) selection
+        (render-scene scene canvas :min start :max end))
+      (format (find-repl) "~&No selection.~%"))))
 
 (define-raylisp-frame-command (com-toggle-kd :name t)
     ()
@@ -284,7 +381,7 @@
          (scene (gethash name raylisp::*scenes*))
          (s (find-repl)))
     (cond (scene
-           (render-scene scene (find-pane-named *application-frame* 'canvas)))
+           (render-scene scene (find-canvas)))
           (t
            (format s "No scene named ~A" name)))))
 
