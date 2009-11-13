@@ -137,14 +137,27 @@
                   :look-at (v 1.25 1 0)
                   :focal-length 6.0)))
 
+(defvar *models*
+  (merge-pathnames "models/"
+                   (make-pathname :defaults
+                                  (truename (asdf:system-definition-pathname
+                                             (asdf:find-system :raylisp)))
+                                  :name nil
+                                  :type nil)))
+
 ;;; One-time conversion to create meshes that load fast -- or to test KD-tree
 ;;; contruction speed, delete the .mesh files. The models can be found at:
 ;;; http://graphics.stanford.edu/data/3Dscanrep/ -- this assumes that they
 ;;; are under models/originals/.
 (flet ((conv (path name)
-         (let ((target (merge-pathnames name "models/")))
+         (let ((target (merge-pathnames name *models*))
+               (orig (merge-pathnames path (merge-pathnames "originals/" *models*))))
            (unless (probe-file target)
-             (convert-mesh (merge-pathnames path "models/originals/")
+             (loop until (probe-file orig)
+                   do (cerror "Retry" "Model missing: ~S~%~
+                                       Get it from http://graphics.stanford.edu/data/3Dscanrep/"
+                              orig))
+             (convert-mesh orig
                            target
                            ;; The stanford models are quite small, so scale them up!
                            :scale 50)))))
@@ -152,12 +165,12 @@
   (conv "dragon_recon/dragon_vrip.ply" "stanford-dragon.mesh")
   (conv "happy_recon/happy_vrip.ply" "stanford-buddha.mesh"))
 
-(defvar *stanford-bunny* (load-mesh "models/stanford-bunny.mesh"))
-(defvar *stanford-dragon* (load-mesh "models/stanford-dragon.mesh"))
-(defvar *stanford-buddha* (load-mesh "models/stanford-buddha.mesh"))
+(defvar *stanford-bunny* (load-mesh (merge-pathnames "stanford-bunny.mesh" *models*)))
+(defvar *stanford-dragon* (load-mesh (merge-pathnames "stanford-dragon.mesh" *models*)))
+(defvar *stanford-buddha* (load-mesh (merge-pathnames "stanford-buddha.mesh" *models*)))
 
 (defvar *utah-teapot*
-  (load-mesh "models/utah-teapot.obj" :rotate (v (deg -90) 0 0)))
+  (load-mesh (merge-pathnames "utah-teapot.obj" *models*) :rotate (v (deg -90) 0 0)))
 
 (defscene test-bunny
   (:objects

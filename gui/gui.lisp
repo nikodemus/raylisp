@@ -38,7 +38,7 @@
     :min-height 500))
   (:layouts
    (default (vertically (:width *canvas-width* :height (round (* 1.5 *canvas-height*)))
-              (2/3 canvas)
+              (3/5 canvas)
               (:fill repl)))))
 
 (defmethod frame-standard-output ((frame raylisp-frame))

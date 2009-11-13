@@ -57,6 +57,14 @@
             (map-sheet-position-to-ancestor source ancestor source-x source-y)
           (map-sheet-position-from-ancestor target ancestor xa ya)))))
 
+;;; RASTER
+
+(deftype raster ()
+  `(simple-array (unsigned-byte 32) (* *)))
+
+(defun make-raster (width height)
+  (make-array (list height width) ))
+
 ;;;; CANVAS-PANE
 
 (defclass canvas-pane (application-pane)
@@ -71,6 +79,12 @@
    (selection
     :initform nil
     :accessor canvas-selection)))
+
+(defun raster-width (raster)
+  (array-dimension raster 1))
+
+(defun raster-height (raster)
+  (array-dimension raster 0))
 
 (defmethod canvas-raster :around ((canvas canvas-pane))
   (let ((raster (call-next-method))
