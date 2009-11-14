@@ -38,26 +38,13 @@
 (defun floatp (x)
   (typep x 'single-float))
 
-(macrolet ((def (name)
-	     `(defconstant ,(intern (format nil "~A-FLOAT" name))
-		,(intern (format nil "~A-SINGLE-FLOAT" name)))))
-  (def most-positive)
-  (def least-positive-normalized)
-  (def least-positive)
-  (def least-negative)
-  (def least-negative-normalized)
-  (def most-negative))
-
-(defconstant float-epsilon single-float-epsilon)
-
-(defconstant float-positive-infinity (/ 1.0 0.0))
-(defconstant float-negative-infinity (/ -1.0 0.0))
-
 (defun negative-infinity-vec ()
-  (vec float-negative-infinity float-negative-infinity float-negative-infinity))
+  (let ((inf sb-ext:single-float-negative-infinity))
+    (vec inf inf inf)))
 
 (defun positive-infinity-vec ()
-  (vec float-positive-infinity float-positive-infinity float-positive-infinity))
+  (let ((inf sb-ext:single-float-positive-infinity))
+    (vec inf inf inf)))
 
 ;;; Damned inconvenient that SBCL insists on using (SIGNED-BYTE 32) for these!
 (declaim (inline pack-single unpack-single))

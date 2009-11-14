@@ -34,7 +34,7 @@
 (defstruct (ray)
   (origin (required-argument) :type vec)
   (direction (required-argument) :type vec)
-  (extent float-positive-infinity :type float)
+  (extent sb-ext:single-float-positive-infinity :type float)
   (weight 1.0 :type (float 0.0 1.0))
   (depth 0 :type (and fixnum unsigned-byte))
   (environment *global-environment* :type environment))

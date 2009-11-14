@@ -217,7 +217,7 @@
                       (if (> t1 t2)
                           (values t2 t1)
                           (values t1 t2)))
-		    (values 0.0 float-positive-infinity))))
+		    (values 0.0 sb-ext:single-float-positive-infinity))))
          (declare (inline sides))
          (let-values (((x1 x2) (sides 0 ox dx))
                       ((y1 y2) (sides 1 oy dy))
