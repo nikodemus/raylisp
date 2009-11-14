@@ -54,9 +54,7 @@
 (defun unpack-single (word)
   (declare (type (unsigned-byte 32) word))
   (sb-kernel:make-single-float
-   (if (logtest #x80000000 word)
-       (logeqv  #xffffffff word)
-       word)))
+   (logior (- (logand #x80000000 word)) word)))
 
 ;;;# Utilities
 ;;;
