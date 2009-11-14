@@ -729,6 +729,9 @@
                  (setf (aref np k) 0))))
     (values best-e best-k best-side best-cost)))
 
+;;;; This would be 1.0, but for FP instability.
+(defconstant +sah-limit+ 0.9999)
+
 (defun surface-area-heuristic (min max e k nl nr np)
   (declare (optimize speed)
            (fixnum nl nr np))
@@ -739,8 +742,8 @@
                   (z (- (aref max 2) (aref min 2))))
               (+ (* x y) (* x z) (* y z))))
           (split-cost (pl pr nl nr)
-            (if (or (and (= 1.0 pl) (= 0 nr))
-                    (and (= 1.0 pr) (= 0 nl)))
+            (if (or (and (< +sah-limit+ pl) (= 0 nr))
+                    (and (< +sah-limit+ pr) (= 0 nl)))
                 #.sb-ext:single-float-positive-infinity
                 (* (if (or (= 0 nl) (= 0 nr))
                        0.8
