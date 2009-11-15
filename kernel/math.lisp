@@ -72,12 +72,6 @@
   (declare (type float ax ay az bx by bz))
   (+ (* ax bx) (* ay by) (* az bz)))
 
-(declaim (inline normalized-vec))
-(defun normalized-vec (x y z)
-  (declare (type float x y z))
-  (let ((len (sqrt (+ (square x) (square y) (square z)))))
-    (vec (/ x len) (/ y len) (/ z len))))
-
 ;;;### Some Constant Vectors
 ;;;
 ;;; We provide some constant vectors for convenience. Currently

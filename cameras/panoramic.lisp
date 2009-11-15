@@ -30,7 +30,7 @@
         (macrolet ((dim (n)
                      `(+ (* a (aref dir ,n))
                          (* b (aref right ,n)) (* ry (aref up ,n)))))
-          (let ((dir (normalized-vec (dim 0) (dim 1) (dim 2))))
+          (let ((dir (normalize (vec (dim 0) (dim 1) (dim 2)))))
             (declare (dynamic-extent dir))
             (with-ray (ray :origin location :direction dir)
               (funcall fun ray))))))))

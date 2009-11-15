@@ -27,7 +27,7 @@
                  `(+ (aref dir ,n)
                      (* rx (aref right ,n)) (* ry (aref up ,n)))))
       (with-ray (ray :origin location
-                     :direction (normalized-vec (dim 0) (dim 1) (dim 2)))
+                     :direction (normalize (vec (dim 0) (dim 1) (dim 2))))
         (funcall fun ray)))))
 
 
