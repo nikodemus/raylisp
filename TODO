@@ -3,9 +3,6 @@
 #+STARTUP: odd
 #+STARTUP: oddeven
 
-* TODO Backtraces broken from type errors
-  1. Test with x86 -- I hope this is a backend bug!
-  2. Reduce a test-case and post to sbcl-devel.
 * TODO Rename constants +FOO +
 * TODO Rename "transform" variables into "matrix"
 * TODO Rename VECTOR-NOISE &co into VEC-NOISE, etc.
