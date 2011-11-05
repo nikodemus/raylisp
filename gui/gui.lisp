@@ -109,7 +109,7 @@
 
 (define-raylisp-frame-command (com-clear-canvas :name t)
     ()
-  (break "fixme"))
+  (window-clear (find-canvas)))
 
 (define-raylisp-frame-command (com-clear-repl :name t)
     ()
