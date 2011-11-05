@@ -44,8 +44,8 @@
       At least IDENTITY-MATRIX should be shared -- or maybe I should
       go back to punning it to NIL, so that a single test is enough
       for the common case?
-*** TODO Shared CSG shaders
-    It should be possible to specify a toplevel shader for an entire CGS.
+***** TODO Shared CSG shaders
+      It should be possible to specify a toplevel shader for an entire CGS.
 *** TODO Patterns
 ***** TODO COMPOSITE should be COMPOSITE-PATTERN instead
       But keys are not keys, weights! And the whole thing is not
@@ -60,7 +60,6 @@
       This is tricky: it needs the surface normal! So need to
       reconsider things a bit...
       
-
 *** TODO Integrate pertubated normals into general shader framework
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference
@@ -68,7 +67,7 @@
 *** TODO Experiment with colors using generic functions
 *** TODO Prototype-style operations on scene components
     Cloning with alterate transforms, etc.
-*** TODO Named scene components (from master)
+*** TODO Named scene components (from old)
 *** TODO CSG differences showing the cuttee-surface
     This is kind of nice the way it now works, actually, but it should
     be possible to tell the system to use the either to cuttee or the
@@ -139,4 +138,4 @@
 * TODO MISCELLANY
 *** Shearing transformations
     Nice constructor on SB-CGA needed.
-
+*** TODO Scene Description Language
