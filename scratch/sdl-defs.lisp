@@ -22,10 +22,10 @@
 ;;;;
 ;;;; A small domain specific extension to CL via a few macros.
 
-(defmacro in-scene (name &optional clear)
-  (check-type name symbol)
-  (check-type clear boolean)
-  `(setf *scene* (ensure-scene ',name ,clear)))
+(defmacro in-scene (name &key extend)
+  (check-type name string)
+  (check-type extend boolean)
+  `(setf *scene* (ensure-scene ,name :extend ,extend)))
 
 (defmacro object (class &body initargs)
   `(add-object (make-instance ',class ,@initargs) *scene*))

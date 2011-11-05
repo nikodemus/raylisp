@@ -9,8 +9,9 @@
 
 (in-package :raylisp-user)
 
-;;; T says to clean whatever was in the scene before, and create it if necessary.
-(in-scene :test-metal t)
+;;; Names the scene. If a previous scene already existed, we clear it up first.
+;;; Using :EXTEND T would have kept previous contents.
+(in-scene "Test Metals")
 
 ;;; MARBLE FLOOR
 (flet ((marble (color1 color2 &optional matrix)
@@ -26,10 +27,10 @@
       :scale 6.0
       :pigment (pattern tiles
                  :color-map (list
-                             (marble +black+ white (rotate* 1.0 2.7 0.3))
-                             (marble white +black+ (translate* 1.2 0.5 1.5))
-                             (marble white +black+ (rotate* 0.0 1.0 0.0))
-                             (marble +black+ +white+)))
+                             (marble +black+ +white+ (rotate* 1.0 2.7 0.3))
+                             (marble +white+ +black+ (translate* 1.2 0.5 1.5))
+                             (marble +white+ +black+ (rotate* 0.0 1.0 0.0))
+                             (marble +black+ ++white++)))
       :diffuse 1.0)))
 
 ;;; Small sky-sphere
