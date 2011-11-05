@@ -7,33 +7,55 @@
 ;;; RAYLISP shadows some Common Lisp symbols that are just too
 ;;; convenient to reserve.
 
-(defpackage "RAYLISP"
+(defpackage :raylisp
+  #+nil
   (:nicknames "RL")
-  (:use "CL" "ALEXANDRIA" "SB-CGA")
+  (:use :cl :alexandria :sb-cga)
   (:shadow
-   "FLOAT"
-   "FLOATP"
-   "INTERSECTION"
-   "SIMPLE-VECTOR"
-   "VECTOR"
-   "TYPE-OF")
+   #:float
+   #:floatp
+   #:intersection
+   #:simple-vector
+   #:vector
+   #:type-of)
   (:shadowing-import-from :sb-cga #:rotate)
   (:export
    ;; protocol classes
-   "SCENE-OBJECT"
-   "SCENE-LIGHT"
+   #:scene-object
+   #:scene-light
    ;; protocol functions
-   "COMPUTE-OBJECT-PROPERTIES"
-   "COMPUTE-OBJECT-EXTENTS"
-   "COMPUTE-LIGHT-PROPERTIES"
+   #:compute-object-properties
+   #:compute-object-extents
+   #:compute-light-properties
    ;; scene compilation
-   "COMPILE-SCENE-OBJECT"
-   "COMPILE-SCENE-LIGHT"
+   #:compile-scene-object
+   #:compile-scene-light
 
-   "PI"
-   "FLOAT"
-   "FLOATP"
-   "INTERSECTION"
-   "VECTOR"
-   "SIMPLE-VECTOR"
-   "TYPE-OF"))
+   #:pi
+   #:float
+   #:floatp
+   #:intersection
+   #:vector
+   #:simple-vector
+   #:type-of
+
+   #:define-raylisp-package))
+
+(in-package :raylisp)
+
+(defmacro define-raylisp-package (name &body options)
+  `(defpackage ,name
+     ,@options
+     (:use :cl :sb-cga :raylisp)
+     (:shadowing-import-from :raylisp
+                             #:float
+                             #:floatp
+                             #:intersection
+                             #:simple-vector
+                             #:vector
+                             #:type-of)
+     (:shadowing-import-from :sb-cga #:rotate)))
+
+(define-raylisp-package :raylisp-user)
+
+
