@@ -23,7 +23,7 @@
                          (declare (dynamic-extent o))
                          (- (/ (aref o 1) dy))))))
            (declare (dynamic-extent d))
-           (if (< epsilon s (ray-extent ray))
+           (if (< +epsilon+ s (ray-extent ray))
                (progn
                  (setf (ray-extent ray) s)
                  t)
@@ -54,7 +54,7 @@
 	     #())))
      :inside
      (lambda (point)
-       (> epsilon
+       (> +epsilon+
           (let ((p (transform-point point inverse)))
             (declare (dynamic-extent p))
             (aref p 1)))))))

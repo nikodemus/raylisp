@@ -45,10 +45,10 @@
                         (t2 (min x2 y2 z2))
                         (ext (ray-extent ray)))
                     (unless (> t1 t2)
-                      (cond ((< epsilon t1 ext)
+                      (cond ((< +epsilon+ t1 ext)
                              (setf (ray-extent ray) t1)
                              t)
-                            ((< epsilon t2 ext)
+                            ((< +epsilon+ t2 ext)
                              (setf (ray-extent ray) t2)
                              t)))))))))))
      :normal
@@ -110,11 +110,13 @@
                        (t2 (min x2 y2 z2)))
                    (if (> t1 t2)
                        #()
-                       (cond ((< epsilon t1)
-                              (simple-vector (make-csg-intersection :distance t1 :object compiled)
-                                             (make-csg-intersection :distance t2 :object compiled)))
-                             ((< epsilon t2)
-                              (simple-vector (make-csg-intersection :distance t2 :object compiled)))
+                       (cond ((< +epsilon+ t1)
+                              (simple-vector
+                               (make-csg-intersection :distance t1 :object compiled)
+                               (make-csg-intersection :distance t2 :object compiled)))
+                             ((< +epsilon+ t2)
+                              (simple-vector
+                               (make-csg-intersection :distance t2 :object compiled)))
                              (t
                               #()))))))))))
      :inside

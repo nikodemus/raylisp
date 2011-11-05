@@ -113,7 +113,7 @@
          (vertices (slot-value mesh 'vertices))
          (indices (sb-ext:array-storage-vector (slot-value mesh 'indices)))
          ;; KLUDGE -- we don't have a better way to pass normals around right now.
-         (normal black))
+         (normal +x+))
     (declare (type (simple-array (unsigned-byte 32) (*)) indices)
              (type (simple-array vec (*)) vertices))
     (declare (optimize speed))
@@ -127,8 +127,8 @@
                     (declare (type (simple-array (unsigned-byte 32) (*)) triangles)
                              (type (or null single-float) start end))
                     (let* ((ext (ray-extent local))
-                           (end (if end (min (+ end epsilon) ext) ext))
-                           (start (if start (max (- start epsilon) epsilon) epsilon))
+                           (end (if end (min (+ end +epsilon+) ext) ext))
+                           (start (if start (max (- start +epsilon+) +epsilon+) +epsilon+))
                            (best end)
                            (e1 (alloc-vec))
                            (e2 (alloc-vec)))
@@ -155,14 +155,14 @@
                                  ;; Calculate U parameter and test bounds
                                  (u (* (dot-product tvec pvec) inv-det)))
                             (declare (dynamic-extent tvec))
-                            (unless (<= (- epsilon) u (+ 1.0 epsilon))
+                            (unless (<= (- +epsilon+) u (+ 1.0 +epsilon+))
                               (go :next))
                             (let* ( ;; Prepare to test V parameter
                                    (qvec (cross-product tvec edge1))
                                    ;; Calculate V parameter and test bounds
                                    (v (* (dot-product dir qvec) inv-det)))
                               (declare (dynamic-extent qvec))
-                              (when (or (< v (- epsilon)) (> (+ v u) (+ epsilon 1.0)))
+                              (when (or (< v (- +epsilon+)) (> (+ v u) (+ +epsilon+ 1.0)))
                                 (go :next))
                               ;; Calculate intersection distance
                               (let ((s (* (dot-product edge2 qvec) inv-det)))

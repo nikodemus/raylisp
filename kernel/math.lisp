@@ -85,13 +85,13 @@
   (def +x+ 1.0 0.0 0.0)
   (def +y+ 0.0 1.0 0.0)
   (def +z+ 0.0 0.0 1.0)
-  (def black  0.0 0.0 0.0)
-  (def white  1.0 1.0 1.0)
-  (def red    1.0 0.0 0.0)
-  (def green  0.0 1.0 0.0)
-  (def blue   0.0 0.0 1.0)
-  (def yellow 1.0 1.0 0.0)
-  (def purple 1.0 0.0 1.0))
+  (def +black+  0.0 0.0 0.0)
+  (def +white+  1.0 1.0 1.0)
+  (def +red+    1.0 0.0 0.0)
+  (def +green+  0.0 1.0 0.0)
+  (def +blue+   0.0 0.0 1.0)
+  (def +yellow+ 1.0 1.0 0.0)
+  (def +purple+ 1.0 0.0 1.0))
 
 ;;;## Matrices
 

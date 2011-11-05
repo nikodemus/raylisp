@@ -3,7 +3,6 @@
 #+STARTUP: odd
 #+STARTUP: oddeven
 
-* TODO Rename constants +FOO +
 * TODO Rename "transform" variables into "matrix"
 * TODO Rename VECTOR-NOISE &co into VEC-NOISE, etc.
 * TODO Need RAY-MIN in addition to RAY-EXTENT
@@ -56,7 +55,6 @@
 ***** TODO SLOPE-PATTERN
       This is tricky: it needs the surface normal! So need to
       reconsider things a bit...
-      
 *** TODO Integrate pertubated normals into general shader framework
 *** TODO Automated tests
     In addition to functional unit tests, test-scenes and reference

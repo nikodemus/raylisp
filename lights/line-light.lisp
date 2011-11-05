@@ -39,4 +39,4 @@
                (incf p power))))
          (if (plusp p)
              (values (vec* color p) (vec-length light-vector))
-             (values black -1.0)))))))
+             (values +black+ -1.0)))))))

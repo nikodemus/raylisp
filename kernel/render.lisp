@@ -144,16 +144,16 @@
                (minf (ray-extent ray) max))
              (setf hit (recurse all-objects nil)))
         (cond (hit
-               ;; FIXME: Just EPSILON here doesn't seem to be good enough --
+               ;; FIXME: Just +EPSILON+ here doesn't seem to be good enough --
                ;; and even that should not really be needed, but TEST-KD-SPLIT-2
-               ;; catches here without the 2xEPSILON, and I don't have the energy
+               ;; catches here without the 2x+EPSILON+, and I don't have the energy
                ;; to track down the issue right now.
                ;;
                ;; ...but probably it is because object intersection functions
                ;; are not aware of MIN: so we probably need RAY-MIN and
                ;; RAY-MAX instead of just RAY-EXTENT.
                #+nil
-               (assert (<= (- min (* 2 epsilon)) (ray-extent ray) (+ max (* 2 epsilon)))
+               (assert (<= (- min (* 2 +epsilon+)) (ray-extent ray) (+ max (* 2 +epsilon+)))
                        (min max (ray-extent ray))
                        "~S is not in range ~S - ~S" (ray-extent ray) min max))
               (t

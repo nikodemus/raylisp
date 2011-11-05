@@ -33,6 +33,6 @@
       (let ((p (transform-point point inverse)))
         (declare (dynamic-extent p))
         (macrolet ((dim (n)
-                     `(ffloor (+ epsilon (aref p ,n)))))
+                     `(ffloor (+ +epsilon+ (aref p ,n)))))
           (mod (truncate (+ (dim 0) (dim 1) (dim 2))) mod))))))
 

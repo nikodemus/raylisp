@@ -7,19 +7,19 @@
           (make-instance 'texture-shader
                          :pigment (make-instance 'checker-pattern
                                                :type :pigment
-                                               :map `(,black ,white))))
+                                               :map `(,+black+ ,+white+))))
          (bright-red
-          (make-instance 'texture-shader :pigment red))
+          (make-instance 'texture-shader :pigment +red+))
          (bright-blue
-          (make-instance 'texture-shader :pigment blue))
+          (make-instance 'texture-shader :pigment +blue+))
          (bright-green
-          (make-instance 'texture-shader :pigment green))
+          (make-instance 'texture-shader :pigment +green+))
          (floor
           (make-instance 'plane :shader chessboard))
          (lamp
-          (make-instance 'point-light :location (v 0 30 0) :color white))
+          (make-instance 'point-light :location (v 0 30 0) :color +white+))
          (sun
-          (make-instance 'solar-light :direction (v 1 1 0) :color white))
+          (make-instance 'solar-light :direction (v 1 1 0) :color +white+))
          (view
           (make-instance 'pinhole-camera
                          :location (v 0 18 -30)
@@ -59,19 +59,19 @@
   (:objects
    (make-instance 'plane
                   :shader (make-instance 'texture-shader
-                                         :pigment white
+                                         :pigment +white+
                                          :ambient 0.3))
    (make-instance 'sphere
                   :location (v -2 1 -0.5)
                   :shader (make-instance 'texture-shader
-                                         :pigment yellow
+                                         :pigment +yellow+
                                          :normal (make-instance 'bump-normal
                                                                 :height 0.3
                                                                 :scale 0.2)))
    (make-instance 'sphere
                   :location (v 0.5 1 0)
                   :shader (make-instance 'texture-shader
-                                         :pigment green
+                                         :pigment +green+
                                          :normal (make-instance 'wrinkle-normal
                                                                 :octaves 4
                                                                 :height 0.3
@@ -88,16 +88,16 @@
                                         (make-instance 'sphere
                                                        :location (v 2 1 0)
                                                        :shader (make-instance 'texture-shader
-                                                                              :pigment red))
+                                                                              :pigment +red+))
                                         (make-instance 'plane
                                                        :location (v 0 1 0)
                                                        :shader (make-instance 'texture-shader
-                                                                              :pigment red))))
+                                                                              :pigment +red+))))
                         (make-instance 'sphere
                                        :radius 0.9
                                        :location (v 2 1 0)
                                        :shader (make-instance 'texture-shader
-                                                              :pigment red))))
+                                                              :pigment +red+))))
    ;; Cheap liquid
    (make-instance 'csg
                   :type 'intersection
@@ -124,8 +124,8 @@
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
                                           :type :pigment
-                                          :map `((0.0 ,white)
-                                                 (1.0 ,blue)))))
+                                          :map `((0.0 ,+white+)
+                                                 (1.0 ,+blue+)))))
   (:lights
    (make-instance 'spotlight
                   :location (v -10 10 -20)
@@ -175,10 +175,10 @@
 (defscene test-bunny
   (:objects
    (make-instance 'plane
-                  :shader (make-instance 'texture-shader :pigment white))
+                  :shader (make-instance 'texture-shader :pigment +white+))
    (make-instance 'model
                   :mesh *stanford-bunny*
-                  :shader (make-instance 'texture-shader :pigment white)
+                  :shader (make-instance 'texture-shader :pigment +white+)
                   :rotate (v 0.0 -3.0 0.0)
                   :translate (v 0.0 -2.0 0.0)))
   (:lights
@@ -194,10 +194,10 @@
 (defscene test-buddha
   (:objects
    (make-instance 'plane
-                  :shader (make-instance 'texture-shader :pigment white))
+                  :shader (make-instance 'texture-shader :pigment +white+))
    (make-instance 'model
                   :mesh *stanford-buddha*
-                  :shader (make-instance 'texture-shader :pigment white)
+                  :shader (make-instance 'texture-shader :pigment +white+)
                   :rotate (v 0 (deg 180) 0)
                   :translate (v -2.0 -3.0 -4)))
   (:lights
@@ -223,7 +223,7 @@
                                     (1.0 ,color2))))))
      (make-instance 'plane
                    :shader (make-instance 'texture-shader
-                                          :pigment white
+                                          :pigment +white+
                                           :scale (v 6.0 1.0 6.0)
                                           :diffuse 1.0)))
    (flet ((dragon (c refl f rou m &optional (r +identity-matrix+))
@@ -253,8 +253,8 @@
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
                                           :type :pigment
-                                          :map `((0.0 ,white)
-                                                 (1.0 ,blue)))))
+                                          :map `((0.0 ,+white+)
+                                                 (1.0 ,+blue+)))))
   (:lights
    (make-instance 'spotlight
                   :location (v -1 8 -10)
@@ -281,7 +281,7 @@
                                              20.0 200 20.0 200
                                              :translate (v -10 0 -10)
                                              :scale (v 1 0.3 1))
-                  :shader (make-instance 'texture-shader :pigment white)))
+                  :shader (make-instance 'texture-shader :pigment +white+)))
   (:lights
    *lamp*)
   (:camera
@@ -316,10 +316,10 @@
                                           :pigment (make-instance 'tile-pattern
                                                                   :type :pigment
                                                                   :map (list
-                                                                        (marble black white (rotate* 1.0 2.7 0.3))
-                                                                        (marble white black (translate* 1.2 0.5 1.5))
-                                                                        (marble white black (rotate* 0.0 1.0 0.0))
-                                                                        (marble black white)))
+                                                                        (marble +black+ +white+ (rotate* 1.0 2.7 0.3))
+                                                                        (marble +white+ +black+ (translate* 1.2 0.5 1.5))
+                                                                        (marble +white+ +black+ (rotate* 0.0 1.0 0.0))
+                                                                        (marble +black+ +white+)))
                                           :scale (v 6.0 1.0 6.0)
                                           :diffuse 1.0)))
    (make-instance 'sphere
@@ -396,21 +396,21 @@
   (:objects
    (make-instance 'model
                   :mesh *utah-teapot*
-                  :shader (make-instance 'texture-shader :pigment white))
+                  :shader (make-instance 'texture-shader :pigment +white+))
    (make-instance 'model
                   :mesh *utah-teapot*
-                  :shader (make-instance 'texture-shader :pigment red)
+                  :shader (make-instance 'texture-shader :pigment +red+)
                   :translate (v 0 50 250))
    (make-instance 'model
                   :mesh *utah-teapot*
-                  :shader (make-instance 'texture-shader :pigment green)
+                  :shader (make-instance 'texture-shader :pigment +green+)
                   :translate (v 0 -50 -350)))
   (:background
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
                                           :type :pigment
-                                          :map `((0.0 ,white)
-                                                 (1.0 ,blue)))))
+                                          :map `((0.0 ,+white+)
+                                                 (1.0 ,+blue+)))))
   (:lights
    (make-instance 'solar-light
                   :direction (v 2 8 -1)))
@@ -447,11 +447,11 @@
                                                 :type :pigment
                                                 :axis (vec 1.0 0.0 2.0)
                                                 :scale 4.0
-                                                :map `((0.0 ,black)
-                                                       (0.2 ,red)
-                                                       (0.3 ,red)
-                                                       (0.5 ,blue)
-                                                       (1.0 ,white))))))
+                                                :map `((0.0 ,+black+)
+                                                       (0.2 ,+red+)
+                                                       (0.3 ,+red+)
+                                                       (0.5 ,+blue+)
+                                                       (1.0 ,+white+))))))
   (:lights
    *lamp*)
   (:camera
@@ -464,8 +464,8 @@
                   :shader
                   (make-instance 'gradient-pattern
                                  :type :shader
-                                 :map `((0.0 ,(make-instance 'texture-shader :pigment white))
-                                        (1.0 ,(make-instance 'flat-shader :color white))))))
+                                 :map `((0.0 ,(make-instance 'texture-shader :pigment +white+))
+                                        (1.0 ,(make-instance 'flat-shader :color +white+))))))
   (:lights
    *lamp*)
   (:camera
@@ -505,24 +505,24 @@
    (make-instance 'cylinder
                   :axis +x+
                   :translate (v 0.0 -5.0 0.0)
-                  :shader (make-instance 'texture-shader :pigment yellow))
+                  :shader (make-instance 'texture-shader :pigment +yellow+))
    (make-instance 'cylinder
                   :start (v 0 5 -4)
                   :start-cap t
                   :start-cap-shader *bright-green*
-                  :shader (make-instance 'texture-shader :pigment purple))
+                  :shader (make-instance 'texture-shader :pigment +purple+))
    (make-instance 'cylinder
                   :start (v 4 0 0)
                   :end (v 4 -2 10)
                   :end-cap t
-                  :end-cap-shader (make-instance 'texture-shader :pigment white)
+                  :end-cap-shader (make-instance 'texture-shader :pigment +white+)
                   :radius 1.5
                   :shader *bright-red*)
    (make-instance 'cylinder
                   :start (v -6 0 0)
                   :end (v -6 -2 10)
                   :start-cap t
-                  :start-cap-shader (make-instance 'texture-shader :pigment white)
+                  :start-cap-shader (make-instance 'texture-shader :pigment +white+)
                   :radius 1.5
                   :shader *bright-red*)
    (make-instance 'cylinder
@@ -551,7 +551,7 @@
   (:objects
    (make-instance 'plane
                   :light-group '(:left)
-                  :shader (make-instance 'texture-shader :pigment white))
+                  :shader (make-instance 'texture-shader :pigment +white+))
    (make-instance 'sphere
                   :light-group :left
                   :location (v -3.0 1.0 0.0)
@@ -584,7 +584,7 @@
                                          :rotate (v 0.0 0.0 1.0)
                                          :pigment (make-instance 'marble-pattern
                                                                :type :pigment
-                                                               :map `((0.0 ,black)
+                                                               :map `((0.0 ,+black+)
                                                                       (1.0 ,(vec 0.7 0.7 0.7)))))))
   (:lights
    (make-instance 'line-light
@@ -603,7 +603,7 @@
                                          :scale 0.2
                                          :pigment (make-instance 'wood-pattern
                                                                :type :pigment
-                                                               :map `((0.0 ,black)
+                                                               :map `((0.0 ,+black+)
                                                                       (1.0 ,(vec 0.6 0.3 0.25)))))))
   (:lights
    (make-instance 'point-light
@@ -644,11 +644,11 @@
               (list (make-instance 'sphere
                                    :radius 0.2
                                    :location (min-of box)
-                                   :shader (make-instance 'texture-shader :pigment green))
+                                   :shader (make-instance 'texture-shader :pigment +green+))
                     (make-instance 'sphere
                                    :radius 0.2
                                    :location (max-of box)
-                                   :shader (make-instance 'texture-shader :pigment green)))))
+                                   :shader (make-instance 'texture-shader :pigment +green+)))))
        (append (list box1 box2)
                (mark box1)
                (mark box2)))))
@@ -665,19 +665,19 @@
                   :objects (list (make-instance 'box
                                                 :min (vec -1.0 0.0 -1.0)
                                                 :max (vec 1.0 2.0 1.0)
-                                                :shader (make-instance 'texture-shader :pigment white))
+                                                :shader (make-instance 'texture-shader :pigment +white+))
                                  (make-instance 'box
                                                 :min (vec -0.8 0.2 -1.1)
                                                 :max (vec 0.8 1.8 1.1)
-                                                :shader (make-instance 'texture-shader :pigment yellow))
+                                                :shader (make-instance 'texture-shader :pigment +yellow+))
                                  (make-instance 'box
                                                 :min (vec -1.1 0.2 -0.8)
                                                 :max (vec 1.1 1.8 0.8)
-                                                :shader (make-instance 'texture-shader :pigment blue))
+                                                :shader (make-instance 'texture-shader :pigment +blue+))
                                  (make-instance 'box
                                                 :min (vec -0.8 -0.1 -0.8)
                                                 :max (vec 0.8 2.1 0.8)
-                                                :shader (make-instance 'texture-shader :pigment red)))))
+                                                :shader (make-instance 'texture-shader :pigment +red+)))))
   (:lights
    (make-instance 'point-light
                   :location (vec -10.0 30.0 -20.0)))
@@ -794,8 +794,8 @@
                                  :pigment (make-instance 'gradient-pattern
                                                        :type :pigment
                                                        :axis +x+
-                                                       :map `((0.0 ,blue)
-                                                              (1.0 ,green)))))
+                                                       :map `((0.0 ,+blue+)
+                                                              (1.0 ,+green+)))))
    (make-instance 'sphere
                   :location (v 0 0 0)
                   :scale (v 3 0.5 0.5)
@@ -805,8 +805,8 @@
                                                        :type :pigment
                                                        :smooth t
                                                        :rotate (v 0 (deg 90) 0)
-                                                       :map `((0.0 ,black)
-                                                              (1.0 ,white)))))
+                                                       :map `((0.0 ,+black+)
+                                                              (1.0 ,+white+)))))
    (make-instance 'sphere
                   :location (v 0 1 0)
                   :scale (v 3 0.5 0.5)
@@ -814,8 +814,8 @@
                   (make-instance 'texture-shader
                                  :pigment (make-instance 'gradient-pattern
                                                        :type :pigment
-                                                       :map `((0.0 ,red)
-                                                              (1.0 ,yellow))))))
+                                                       :map `((0.0 ,+red+)
+                                                              (1.0 ,+yellow+))))))
   (:lights
    (make-instance 'point-light
                   :location (v 10 5 -20)))
@@ -864,9 +864,9 @@
    (make-instance 'sky-sphere-shader
                   :pigment (make-instance 'noise-pattern
                                           :type :pigment
-                                          :map `((0.0 ,white)
-                                                 (1.0 ,blue)))))
-  (:ambient-light white)
+                                          :map `((0.0 ,+white+)
+                                                 (1.0 ,+blue+)))))
+  (:ambient-light +white+)
   (:adaptive-limit 0.001)
   (:depth-limit 36)
   (:camera
@@ -884,20 +884,20 @@
                 (make-instance 'sphere
                                :location (v -0.5 0 0)
                                :shader
-                               (make-instance 'texture-shader :pigment red))
+                               (make-instance 'texture-shader :pigment +red+))
                 (make-instance 'sphere
                                :location (v 0.5 0 0)
                                :shader
                                (make-instance 'texture-shader
-                                              :pigment blue))
+                                              :pigment +blue+))
                 (make-instance 'sphere
                                :location (v 0 -0.1 0)
                                :shader
                                (make-instance 'texture-shader
-                                              :pigment green)))))
+                                              :pigment +green+)))))
   (:lights
    (make-instance 'solar-light :direction +y+))
-  (:ambient-light white)
+  (:ambient-light +white+)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
@@ -915,15 +915,15 @@
                 (make-instance 'sphere
                                :location (v -0.5 0 0)
                                :shader
-                               (make-instance 'texture-shader :pigment red))
+                               (make-instance 'texture-shader :pigment +red+))
                 (make-instance 'sphere
                                :location (v 0.5 0 0)
                                :shader
                                (make-instance 'texture-shader
-                                              :pigment blue)))))
+                                              :pigment +blue+)))))
   (:lights
    (make-instance 'solar-light :direction +y+))
-  (:ambient-light white)
+  (:ambient-light +white+)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
@@ -940,20 +940,20 @@
                   (list
                    (make-instance 'sphere
                                   :shader
-                                  (make-instance 'texture-shader :pigment red))
+                                  (make-instance 'texture-shader :pigment +red+))
                    (make-instance 'sphere
                                   :location (v 0 1 0)
                                   :shader
                                   (make-instance 'texture-shader
-                                                 :pigment blue))
+                                                 :pigment +blue+))
                    (make-instance 'sphere
                                   :location (v 1 0 0)
                                   :shader
                                   (make-instance 'texture-shader
-                                                 :pigment green)))))
+                                                 :pigment +green+)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 0.5)))
-  (:ambient-light white)
+  (:ambient-light +white+)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
@@ -970,24 +970,24 @@
     (make-instance 'sphere
                    :radius 1.0
                    :translate (v 1 0 0)
-                   :shader (make-instance 'texture-shader :pigment red))
+                   :shader (make-instance 'texture-shader :pigment +red+))
     (make-instance 'sphere
                    :radius 1.0
                    :translate (v 0 1 0)
-                   :shader (make-instance 'texture-shader :pigment green))
+                   :shader (make-instance 'texture-shader :pigment +green+))
     (make-instance 'sphere
                    :radius 1.0
                    :translate (v 0 0 1)
-                   :shader (make-instance 'texture-shader :pigment blue)))
+                   :shader (make-instance 'texture-shader :pigment +blue+)))
    (make-instance 'plane
                   :normal (v -0.5 1 0)
-                  :shader (make-instance 'texture-shader :pigment white))
+                  :shader (make-instance 'texture-shader :pigment +white+))
    #+nil
    (loop for i from -100 upto 100
          collect (make-instance 'sphere
                                 :radius 0.5
                                 :translate (v 0 0 i)
-                                :shader (make-instance 'texture-shader :pigment purple)))
+                                :shader (make-instance 'texture-shader :pigment +purple+)))
    (make-instance
     'csg
     :type 'intersection
@@ -996,18 +996,18 @@
      (make-instance 'plane
                     :normal (v 0 1 0)
                     :location (v 0 -1 0)
-                    :shader (make-instance 'texture-shader :pigment yellow))
+                    :shader (make-instance 'texture-shader :pigment +yellow+))
      (make-instance 'plane
                     :normal (v 0.5 1 0)
-                    :shader (make-instance 'texture-shader :pigment white))
+                    :shader (make-instance 'texture-shader :pigment +white+))
      (make-instance 'plane
                     :normal (v -0.5 1 0)
-                    :shader (make-instance 'texture-shader :pigment purple)))))
+                    :shader (make-instance 'texture-shader :pigment +purple+)))))
   (:lights
    #+nil
    (make-instance 'solar-light :direction +y+)
    (make-instance 'point-light :location (v 0 200 0)))
-  (:ambient-light white)
+  (:ambient-light +white+)
   (:adaptive-limit 0.01)
   (:depth-limit 5)
   (:camera
@@ -1024,7 +1024,7 @@
                  :specular 0.5
                  :diffuse 0.15
                  :ambient 0.05
-                 :pigment yellow))
+                 :pigment +yellow+))
 
 (defscene test-6
   (:objects
@@ -1180,15 +1180,15 @@
     :shader
     (make-instance 'checker-pattern
                    :type :shader
-                   :map (list (make-instance 'texture-shader :pigment black)
-                              (make-instance 'texture-shader :pigment white :ambient 0.1)))))
+                   :map (list (make-instance 'texture-shader :pigment +black+)
+                              (make-instance 'texture-shader :pigment +white+ :ambient 0.1)))))
   (:lights
    (make-instance 'spotlight
                   :location (v -30 30 -30)
                   :direction (v 30 -30 35)
                   :aperture 0.98))
-  (:background blue)
-  (:ambient-light white)
+  (:background +blue+)
+  (:ambient-light +white+)
   (:adaptive-limit 0.01)
   (:depth-limit 16)
   (:camera
@@ -1201,7 +1201,7 @@
   (:objects
    (make-instance 'plane
                   :location (v 0 0 0)
-                  :shader (make-instance 'texture-shader :pigment white))
+                  :shader (make-instance 'texture-shader :pigment +white+))
    (flet ((obj (x mode)
             (make-instance 'sphere
                            :radius 3.0
@@ -1211,7 +1211,7 @@
                                           :type :shader
                                           :mode mode
                                           :map `((0.0 ,(make-instance 'texture-shader :pigment (v 0.2 0.2 1.0)))
-                                                 (1.0 ,(make-instance 'texture-shader :pigment white)))))))
+                                                 (1.0 ,(make-instance 'texture-shader :pigment +white+)))))))
      (list
       (obj -6 :scale)
       (obj 0 :clamp)
@@ -1227,14 +1227,14 @@
 
 (defscene test-x-axis-camera
   (:objects
-   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment red))
+   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment +red+))
    (make-instance 'plane
                   :normal +x+
                   :location (v -1 0 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
-                                         :map (list (make-instance 'texture-shader :pigment black)
-                                                    (make-instance 'texture-shader :pigment white :ambient 0.1)))))
+                                         :map (list (make-instance 'texture-shader :pigment +black+)
+                                                    (make-instance 'texture-shader :pigment +white+ :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1244,14 +1244,14 @@
 
 (defscene test-y-axis-camera
   (:objects
-   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment green))
+   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment +green+))
    (make-instance 'plane
                   :normal +y+
                   :location (v 0 -1 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
-                                         :map (list (make-instance 'texture-shader :pigment black)
-                                                    (make-instance 'texture-shader :pigment white :ambient 0.1)))))
+                                         :map (list (make-instance 'texture-shader :pigment +black+)
+                                                    (make-instance 'texture-shader :pigment +white+ :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1261,14 +1261,14 @@
 
 (defscene test-z-axis-camera
   (:objects
-   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment blue))
+   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment +blue+))
    (make-instance 'plane
                   :normal +z+
                   :location (v 0 0 -1)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
-                                         :map (list (make-instance 'texture-shader :pigment black)
-                                                    (make-instance 'texture-shader :pigment white :ambient 0.1)))))
+                                         :map (list (make-instance 'texture-shader :pigment +black+)
+                                                    (make-instance 'texture-shader :pigment +white+ :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1278,17 +1278,17 @@
 
 (defscene test-transform
   (:objects
-   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment red))
+   (make-instance 'sphere :shader (make-instance 'texture-shader :pigment +red+))
    (make-instance 'sphere
-                  :shader (make-instance 'texture-shader :pigment blue)
+                  :shader (make-instance 'texture-shader :pigment +blue+)
                   :translate (v 0 2 0)
                   :matrix (rotate-around +z+ 1.5))
    (make-instance 'plane
                   :location (v 0 -1 0)
                   :shader (make-instance 'checker-pattern
                                          :type :shader
-                                         :map (list (make-instance 'texture-shader :pigment black)
-                                                    (make-instance 'texture-shader :pigment white :ambient 0.1)))))
+                                         :map (list (make-instance 'texture-shader :pigment +black+)
+                                                    (make-instance 'texture-shader :pigment +white+ :ambient 0.1)))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1299,11 +1299,11 @@
 (defscene test-perspective
   (:objects
    (make-instance 'sphere
-                  :location (v 10 0 0) :shader (make-instance 'texture-shader :pigment red))
+                  :location (v 10 0 0) :shader (make-instance 'texture-shader :pigment +red+))
    (make-instance 'sphere
-                  :location (v -10 0 0) :shader (make-instance 'texture-shader :pigment green))
+                  :location (v -10 0 0) :shader (make-instance 'texture-shader :pigment +green+))
    (make-instance 'sphere
-                  :location (v 0 0 0) :shader (make-instance 'texture-shader :pigment blue))
+                  :location (v 0 0 0) :shader (make-instance 'texture-shader :pigment +blue+))
    (make-instance 'sphere
                   :location (v 0 0 10) :shader (make-instance 'texture-shader :pigment (v 1 1 0)))
    (make-instance 'sphere
@@ -1317,16 +1317,16 @@
                                            :matrix (rotate-around +z+ (/ +pi+ -4))
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
-                                                                  :map (list (make-instance 'texture-shader :pigment black)
-                                                                             (make-instance 'texture-shader :pigment white :ambient 0.1))))
+                                                                  :map (list (make-instance 'texture-shader :pigment +black+)
+                                                                             (make-instance 'texture-shader :pigment +white+ :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (v 0 0 -0.01)
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
                                                                   :scale 2.0
-                                                                  :map (list (make-instance 'texture-shader :pigment black)
-                                                                             (make-instance 'texture-shader :pigment white :ambient 0.1)))))))
+                                                                  :map (list (make-instance 'texture-shader :pigment +black+)
+                                                                             (make-instance 'texture-shader :pigment +white+ :ambient 0.1)))))))
   (:lights
    (make-instance 'solar-light :direction (v 1 1 1)))
   (:camera
@@ -1347,16 +1347,16 @@
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
                                                                   :scale 5
-                                                                  :map (list (make-instance 'texture-shader :pigment black)
-                                                                             (make-instance 'texture-shader :pigment white :ambient 0.1))))
+                                                                  :map (list (make-instance 'texture-shader :pigment +black+)
+                                                                             (make-instance 'texture-shader :pigment +white+ :ambient 0.1))))
                             (make-instance 'plane
                                            :normal (v 0 0 -1)
                                            :location (v 0 0 -0.01)
                                            :shader (make-instance 'checker-pattern
                                                                   :type :shader
                                                                   :scale 5
-                                                                  :map (list (make-instance 'texture-shader :pigment black)
-                                                                             (make-instance 'texture-shader :pigment white :ambient 0.1))))))
+                                                                  :map (list (make-instance 'texture-shader :pigment +black+)
+                                                                             (make-instance 'texture-shader :pigment +white+ :ambient 0.1))))))
    (make-instance 'csg
                   :type 'difference
                   :matrix (rotate-around +x+ (/ +pi+ 4))
@@ -1388,7 +1388,7 @@
                   :shader
                   (make-instance 'texture-shader
                                  :reflection 0.95
-                                 :pigment black))
+                                 :pigment +black+))
    (make-instance 'sphere
                   :radius 3.0
                   :location (v -0.5 3 -4)
@@ -1400,7 +1400,7 @@
                                  :specular 0.5
                                  :diffuse 0.15
                                  :ambient 0.1
-                                 :pigment yellow))
+                                 :pigment +yellow+))
    (make-instance 'sphere
                   :radius 1.0
                   :location (v 0 1 0)
@@ -1445,18 +1445,18 @@
   (:objects
    (make-instance 'sphere
                   :radius 0.2
-                  :shader (make-instance 'texture-shader :pigment green))
+                  :shader (make-instance 'texture-shader :pigment +green+))
    (make-instance 'plane
                   :location (v 0 0.1 0)
                   :shader
                   (make-instance 'checker-pattern
                                  :type :shader
                                  :scale 2
-                                 :map (list (make-instance 'texture-shader :pigment white)
+                                 :map (list (make-instance 'texture-shader :pigment +white+)
                                             (make-instance 'checker-pattern
                                                            :type :shader
-                                                           :map (list (make-instance 'texture-shader :pigment black)
-                                                                      (make-instance 'texture-shader :pigment white))
+                                                           :map (list (make-instance 'texture-shader :pigment +black+)
+                                                                      (make-instance 'texture-shader :pigment +white+))
                                                            :matrix-list (list
                                                                          (translate* 0.5 0.0 0.5)
                                                                          (let ((s (/ 1.0 (sqrt 2.0))))

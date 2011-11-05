@@ -20,6 +20,6 @@
        (let* ((len (vec-length light-vector))
 	      (nlv (vec/ light-vector len)))
 	 (if (funcall shadow-fun point nlv len counters)
-	     (values black -1.0)
+	     (values +black+ -1.0)
 	     (values color len)))))))
 

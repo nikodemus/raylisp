@@ -127,7 +127,7 @@
                            (oy (aref o 1))
                            (dx (aref d 0))
                            (dy (aref d 1))
-                           (limit epsilon))
+                           (limit +epsilon+))
                       (declare (dynamic-extent o d))
                       (multiple-value-bind (t1 t2)
                           (quadratic-roots-above limit
@@ -177,7 +177,7 @@
                            (oy (aref o 1))
                            (dx (aref d 0))
                            (dy (aref d 1))
-                           (limit epsilon))
+                           (limit +epsilon+))
                       (declare (dynamic-extent o d))
                       (multiple-value-bind (t1 t2)
                           (quadratic-roots-above limit
@@ -200,7 +200,7 @@
                               ;; May have hit a cap.
                               (when start-cap
                                 (let ((t3 (/ (- oz) dz)))
-                                  (when (and (< epsilon t3 ext) (or (< t3 t0) (= t0 limit))
+                                  (when (and (< +epsilon+ t3 ext) (or (< t3 t0) (= t0 limit))
                                              (or (< z1 0.0 z2) (< z2 0.0 z1)))
                                     ;; Two intersections, one on both side of the start cap:
                                     ;; real intersection is on the cap.
@@ -220,7 +220,7 @@
                            (oy (aref o 1))
                            (dx (aref d 0))
                            (dy (aref d 1))
-                           (limit epsilon))
+                           (limit +epsilon+))
                       (declare (dynamic-extent o d))
                       (multiple-value-bind (t1 t2)
                           (quadratic-roots-above limit

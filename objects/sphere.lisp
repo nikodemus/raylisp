@@ -40,7 +40,7 @@
          (declare (optimize speed))
          (let* ((o2 (transform-point (ray-origin ray) inverse))
                 (d2 (transform-direction (ray-direction ray) inverse))
-                (limit epsilon))
+                (limit +epsilon+))
            (declare (dynamic-extent o2 d2))
            (let ((t1 (quadratic-roots-above limit
                                             (dot-product d2 d2)
@@ -71,7 +71,7 @@
        (declare (optimize speed))
        (let ((o (transform-point origin inverse))
              (d (transform-direction direction inverse))
-             (limit epsilon))
+             (limit +epsilon+))
          (declare (dynamic-extent o d))
          (multiple-value-bind (r1 r2)
              (quadratic-roots-above limit
@@ -87,7 +87,7 @@
                                  (make-csg-intersection :distance r2 :object compiled)))))))
      :inside
      (lambda (point)
-       (> (+ 1.0 epsilon)
+       (> (+ 1.0 +epsilon+)
           (let ((p (transform-point point inverse)))
             (declare (dynamic-extent p))
             (vec-length p)))))))

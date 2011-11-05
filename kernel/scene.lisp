@@ -94,7 +94,7 @@
   (lights nil :type list)
   (tree nil :type (or null kd-node))
   (light-groups (make-hash-table :test #'equal))
-  (background (constant-background-shader-function black)
+  (background (constant-background-shader-function +black+)
               :type background-shader-function))
 
 (defun scene-light-groups (scene)

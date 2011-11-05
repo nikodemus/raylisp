@@ -97,24 +97,23 @@ so that (ARRAY ...) corresponds to (AREF ARRAY ...)."
 		      arrays)
      ,@body))
 
-;;; Note: our EPSILON formula is purely experimental.
-
-(defconstant epsilon 0.001
+;;; Note: our +EPSILON+ is purely experimental.
+(defconstant +epsilon+ 0.001
   "Used as a liminal value to work around floating point inaccuracy.")
 
 (declaim (inline significantp))
 (defun significantp (x)
-  "True if X is greater then EPSILON."
+  "True if X is greater then +EPSILON+."
   (declare (type float x))
-  (< epsilon x))
+  (< +epsilon+ x))
 
 (defun approximates (x y)
   "An loose equality. Two floats approximate each other if they are within
-EPSILON of each other. Two sequences approximate each other if all their
++EPSILON+ of each other. Two sequences approximate each other if all their
 elements are approximate each other. Everything else is an approximate only if
 they are EQUAL."
   (cond ((and (floatp x) (floatp y))
-         (>= epsilon (abs (- x y))))
+         (>= +epsilon+ (abs (- x y))))
         ((and (typep x 'sequence) (typep y 'sequence))
           (every #'approximates x y))
         (t
@@ -123,7 +122,7 @@ they are EQUAL."
 (declaim (inline =~))
 (defun =~ (x y)
   (declare (single-float x y))
-  (<= (- epsilon) (- x y) epsilon))
+  (<= (- +epsilon+) (- x y) +epsilon+))
 
 (defmacro let-values (bindings &body forms)
   "MULTIPLE-VALUE-BIND equivalent for multiple bindings."

@@ -26,10 +26,10 @@
       :scale 6.0
       :pigment (pattern tiles
                  :color-map (list
-                             (marble black white (rotate* 1.0 2.7 0.3))
-                             (marble white black (translate* 1.2 0.5 1.5))
-                             (marble white black (rotate* 0.0 1.0 0.0))
-                             (marble black white)))
+                             (marble +black+ white (rotate* 1.0 2.7 0.3))
+                             (marble white +black+ (translate* 1.2 0.5 1.5))
+                             (marble white +black+ (rotate* 0.0 1.0 0.0))
+                             (marble +black+ +white+)))
       :diffuse 1.0)))
 
 ;;; Small sky-sphere
@@ -59,7 +59,7 @@
 (light spot
   :location (v -10 10 -10)
   :point-at (v -3 0 -2)
-  :color white
+  :color +white+
   :aperture 0.8)
 
 (light point

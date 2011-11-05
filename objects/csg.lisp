@@ -40,7 +40,7 @@ CSG-NODE instances immediately before compilation."))
   "Holds an intersection distance and the primitive (not CSG)
 object responsible for it. Used during calculation of RAY/CSG
 intersections."
-  (distance (required-argument) :type (float #.epsilon))
+  (distance (required-argument) :type (float #.+epsilon+))
   (object (required-argument) :type shading-object))
 
 (definterface make-csg-intersection (distance object)
@@ -86,7 +86,9 @@ intersections."
                                                 sx
                                                 sy)
                                             (or sx sy))))
-                                 (when (and s (< epsilon (csg-intersection-distance s) (ray-extent ray)))
+                                 (when (and s (< +epsilon+
+                                                 (csg-intersection-distance s)
+                                                 (ray-extent ray)))
                                    (setf (ray-extent ray) (csg-intersection-distance s))
                                    (values t (csg-intersection-object s))))))))
                      (ecase (type-of node)

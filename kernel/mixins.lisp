@@ -79,7 +79,7 @@
 
 (defclass color-mixin ()
   ((color
-    :initform white
+    :initform +white+
     :initarg :color
     :accessor color-of)))
 

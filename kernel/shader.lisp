@@ -73,7 +73,7 @@
   (call-next-method shader object scene (matrix* transform (transform-of shader))))
 
 (defmethod compute-shader-function ((shader null) object scene transform)
-  (constant-shader-function black))
+  (constant-shader-function +black+))
 
 (declaim (ftype (function (t t) background-shader-function)
                 compute-background-shader-function))
@@ -83,7 +83,7 @@
   (check-function-type (call-next-method) 'background-shader-function))
 
 (defmethod compute-background-shader-function ((shader null) scene)
-  (constant-background-shader-function black))
+  (constant-background-shader-function +black+))
 
 (defmethod compute-background-shader-function ((shader #.(class-of (alloc-vec))) scene)
   (constant-background-shader-function shader))
@@ -93,7 +93,7 @@
 (defun compile-shader (shader object scene transform)
   (if shader
       (compute-shader-function shader object scene transform)
-      (constantly black)))
+      (constantly +black+)))
 
 (declaim (inline coefficient))
 (defun coefficient (value shader)

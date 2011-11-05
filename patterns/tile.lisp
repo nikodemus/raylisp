@@ -31,7 +31,7 @@
       (let ((p (transform-point point inverse)))
         (declare (dynamic-extent p) (vec p))
         (macrolet ((dim (n)
-                     `(ifloor (+ epsilon (aref p ,n)) 1.0)))
+                     `(ifloor (+ +epsilon+ (aref p ,n)) 1.0)))
           (if (oddp (dim 0))
               (if (oddp (dim 2))
                   0

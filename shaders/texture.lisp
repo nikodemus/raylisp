@@ -34,7 +34,7 @@
 (defclass texture-shader (shader diffuse-shader-mixin ambient-shader-mixin)
   ((pigment
     :initarg :pigment
-    :initform white
+    :initform +white+
     :reader pigment-of)
    (metallic
     :initarg :metallic
