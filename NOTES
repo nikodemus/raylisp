@@ -1,0 +1,107 @@
+KD TREE BUILD TIMES
+
+BUNNY
+Building mesh bounding tree for 69451 faces
+  Tree depth: 29
+  Real: 4.22, User: 3.91 System: 0.30 seconds
+  GC: 0.18 seconds, 573.14 Mb consed
+
+BUDDHA
+Building mesh bounding tree for 1087716 faces
+  Tree depth: 39
+  Real: 72.43, User: 57.41 System: 14.30 seconds
+  GC: 17.81 seconds, 6314.31 Mb consed
+
+DRILL
+Building mesh bounding tree for 3855 faces
+  Tree depth: 18
+  Real: 0.07, User: 0.06 System: 0.002 seconds
+  GC: 0.00 seconds, 10.46 Mb consed
+Building mesh bounding tree for 1288 faces
+  Tree depth: 17
+  Real: 0.04, User: 0.04 System: 0.001 seconds
+  GC: 0.00 seconds, 6.88 Mb consed
+
+DRAGON
+Building mesh bounding tree for 871414 faces
+  Tree depth: 37
+  Real: 47.96, User: 44.59 System: 3.06 seconds
+  GC: 6.64 seconds, 4851.75 Mb consed
+
+
+
+Normal Transformations
+
+  See Apple Technical Report #22:
+    papers/Turkowski--Transformations_of_Surface_Normal_Vectors--1990.pdf
+    http://www.worldserver.com/turk/computergraphics/NormalTransformations.pdf
+
+Efficiency Issues for Ray Tracing
+
+Brilliance
+
+  1.0 - inf
+
+  High values cause shallow light angles to decrease diffuse component.
+
+  Usage: (N.L)^brilliance
+
+Diffuse component (POV)
+
+  I_d = a * d * I * C * (N . L) ^ b
+
+   where d : surface's diffuse reflection coefficient
+         b : surface's brilliance
+         C : surface's color
+         N : surface's normal vector
+         L : light vector (pointing at the light)
+         I : intensity of the incoming light
+         a : attenuation factor
+
+Phong (highlight) component (POV)
+
+    I_p = p * C * (R . L) ^ s
+
+    where p : surface's phong reflection coefficient
+          s : surface's phong size
+          C : surface's color/light color depending on the metallic flag
+          R : reflection vector
+          L : light vector (pointing at the light)
+
+    The reflection vector is calculated from the surface normal and
+    the viewing vector (looking at the surface point):
+
+      R = -2 * (V . N) * N + V, with R . R = 1
+
+Specular component (POV)
+
+     I_s = s * C * (H . N) ^ (1 / r)
+
+   where s : surface's specular reflection coefficient
+         r : surface's roughness
+         C : surface's color/light color depending on the metallic flag
+         N : surface's normal
+         H : bisection vector between V and L
+
+   The bisecting vector H is calculated by
+
+     H = (L - V) / sqrt((L - V).(L - V))
+
+
+----
+
+PATTERN TYPES
+
+ * pigment (currently called color)
+ * shader (about what POV calls texture_map)
+ * normal
+ * finish
+
+COMPOSITE-PATTERN
+
+ * What POV calls average pattern.
+
+TEXTURE
+
+ (make-instance 'texture
+                :normal (make-instance '
